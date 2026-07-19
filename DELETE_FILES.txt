@@ -1,0 +1,2 @@
+supabase/migrations/20260719192014_initial.sql
+supabase/RESET_AND_INSTALL_CLEAN.sql

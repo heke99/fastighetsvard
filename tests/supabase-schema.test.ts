@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { readFileSync } from "node:fs";
+import { readFileSync, readdirSync } from "node:fs";
 import { resolve } from "node:path";
 
 describe("Supabase-native projekt", () => {
@@ -9,10 +9,22 @@ describe("Supabase-native projekt", () => {
     expect(pkg.devDependencies?.prisma).toBeUndefined();
   });
 
-  it("har SQL-migration, RLS och Supabase Auth-koppling", () => {
-    const sql = readFileSync(resolve("supabase/migrations/20260719192014_initial.sql"), "utf8");
-    expect(sql).toContain('REFERENCES auth.users(id)');
+  it("har komplett delad SQL-migration, RLS och Supabase Auth-koppling", () => {
+    const migrationDir = resolve("supabase/migrations");
+    const files = readdirSync(migrationDir)
+      .filter((name) => name.endsWith(".sql"))
+      .sort();
+
+    expect(files.length).toBeGreaterThanOrEqual(15);
+
+    const sql = files
+      .map((file) => readFileSync(resolve(migrationDir, file), "utf8"))
+      .join("\n");
+
+    expect(sql).toContain("REFERENCES auth.users(id)");
     expect(sql).toContain("ENABLE ROW LEVEL SECURITY");
     expect(sql).toContain("storage.buckets");
+    expect(sql).toContain('CREATE TABLE IF NOT EXISTS public."Organization"');
+    expect(sql).toContain('CREATE TABLE IF NOT EXISTS public."Counter"');
   });
 });
