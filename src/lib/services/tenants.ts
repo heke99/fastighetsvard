@@ -3,6 +3,8 @@ import { audit } from "@/lib/audit";
 import { nextNumber } from "@/lib/counters";
 import { generateToken, sha256 } from "@/lib/crypto";
 import type { Prisma, Person } from "@prisma/client";
+import { sendInvitationEmail } from "@/lib/email";
+import { getAppUrl } from "@/lib/app-url";
 
 /**
  * Hantering av befintliga hyresgäster som registreras i efterhand.
@@ -287,9 +289,8 @@ export async function createInvitation(
     entityId: invitation.id,
     after: { personId, email: person.email },
   });
-  // I produktion skickas e-post här. Utan SMTP loggas länken.
-  const url = `${process.env.APP_URL ?? "http://localhost:3000"}/aktivera/${token}`;
-  console.info(`[invitation] ${person.email}: ${url}`);
+  const url = `${getAppUrl()}/aktivera/${token}`;
+  await sendInvitationEmail(person.email, url);
   return { invitation, activationUrl: url };
 }
 

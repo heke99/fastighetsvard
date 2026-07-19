@@ -8,7 +8,7 @@ import { hasPermission } from "@/lib/permissions";
  * Processar kön av utgående webhookleveranser (retries m.m.).
  * Anropas av cron eller manuellt av admin.
  */
-export async function POST(req: NextRequest) {
+async function processWebhookQueue(req: NextRequest) {
   const cronSecret = process.env.CRON_SECRET;
   const authHeader = req.headers.get("authorization");
   const viaCron = cronSecret && authHeader === `Bearer ${cronSecret}`;
@@ -26,3 +26,6 @@ export async function POST(req: NextRequest) {
   const result = await processPendingDeliveries();
   return NextResponse.json({ data: result });
 }
+
+export const GET = processWebhookQueue;
+export const POST = processWebhookQueue;

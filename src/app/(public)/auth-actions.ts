@@ -1,5 +1,8 @@
 "use server";
 
+import { sendPasswordResetEmail } from "@/lib/email";
+import { getAppUrl } from "@/lib/app-url";
+
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { login, setSessionCookie, getClientIp, AuthError } from "@/lib/auth";
@@ -130,8 +133,8 @@ export async function requestPasswordResetAction(
         expiresAt: new Date(Date.now() + 60 * 60 * 1000),
       },
     });
-    const url = `${process.env.APP_URL ?? "http://localhost:3000"}/aterstall-losenord/${token}`;
-    console.info(`[password-reset] ${email}: ${url}`);
+    const url = `${getAppUrl()}/aterstall-losenord/${token}`;
+    await sendPasswordResetEmail(email, url);
     await audit({
       organizationId: user.organizationId,
       userId: user.id,

@@ -96,3 +96,7 @@ docs/                       API-, webhook-, arkitektur- och driftdokumentation
   UI-behörighet räcker aldrig. Tenant-isolering i alla queries.
 - **Spårbarhet** – alla ekonomiska/juridiska förändringar loggas i `AuditEvent`
   med maskering av känsliga fält.
+
+## Supabase och Vercel
+
+Projektet är konfigurerat för Supabase PostgreSQL med Prisma och Vercel. Följ den kompletta instruktionen i [`SUPABASE_VERCEL_SETUP.md`](./SUPABASE_VERCEL_SETUP.md). Runtime använder poolad `DATABASE_URL` och Prisma Migrate använder separat `DIRECT_URL`.
