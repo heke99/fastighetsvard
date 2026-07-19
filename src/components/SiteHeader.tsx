@@ -210,8 +210,9 @@ export function SiteHeader({ user }: { user: HeaderUser | null }) {
         role="dialog"
         aria-modal="true"
         aria-label="Mobilmeny"
+        aria-hidden={!mobileOpen}
         className={`fixed inset-y-0 right-0 z-50 w-80 max-w-[90vw] transform overflow-y-auto bg-white shadow-xl transition-transform xl:hidden ${
-          mobileOpen ? "translate-x-0" : "translate-x-full"
+          mobileOpen ? "translate-x-0" : "pointer-events-none invisible translate-x-full"
         }`}
       >
         <div className="flex items-center justify-between border-b border-stone-200 p-4">
