@@ -8,8 +8,7 @@ export function SiteFooter() {
         <div>
           <Logo variant="light" />
           <p className="mt-4 text-sm leading-relaxed">
-            Östgöta El Teknik äger, förvaltar och hyr ut bostäder, lokaler och
-            parkeringsplatser i Östergötland.
+            Östgöta El Teknik äger, förvaltar och hyr ut bostäder, lokaler i Östergötland.
           </p>
         </div>
         <nav aria-label="Bostäder">
@@ -18,7 +17,6 @@ export function SiteFooter() {
             <li><Link className="hover:text-white" href="/lediga-bostader">Lediga bostäder</Link></li>
             <li><Link className="hover:text-white" href="/till-salu">Bostäder till salu</Link></li>
             <li><Link className="hover:text-white" href="/lokaler">Lediga lokaler</Link></li>
-            <li><Link className="hover:text-white" href="/parkering">Parkeringsplatser</Link></li>
             <li><Link className="hover:text-white" href="/vara-fastigheter">Våra fastigheter</Link></li>
           </ul>
         </nav>
@@ -36,9 +34,9 @@ export function SiteFooter() {
           <address className="not-italic">
             <ul className="space-y-2 text-sm">
               <li>Östgöta El Teknik AB</li>
-              <li>Industrigatan 12, 582 55 Linköping</li>
+              <li>VASAVÄGEN 19, 595 40 Mjölby,</li>
               <li>
-                <a className="hover:text-white" href="tel:+4613100000">013-10 00 00</a>
+                <a className="hover:text-white" href="tel:+4613100000">070 0650690</a>
               </li>
               <li>
                 <a className="hover:text-white" href="mailto:info@ostgotaelteknik.se">
@@ -54,7 +52,7 @@ export function SiteFooter() {
       </div>
       <div className="border-t border-white/10">
         <div className="mx-auto flex max-w-7xl flex-col gap-2 px-4 py-4 text-xs text-stone-400 sm:flex-row sm:items-center sm:justify-between sm:px-6">
-          <p>© {new Date().getFullYear()} Östgöta El Teknik AB. Org.nr 556000-0000. Alla rättigheter förbehållna.</p>
+          <p>© {new Date().getFullYear()} Östgöta El Teknik AB. Org.nr 559350-5620. Alla rättigheter förbehållna.</p>
           <div className="flex gap-4">
             <Link className="hover:text-white" href="/integritetspolicy">Integritetspolicy</Link>
             <Link className="hover:text-white" href="/tillganglighet">Tillgänglighet</Link>
