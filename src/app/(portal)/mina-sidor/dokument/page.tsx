@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
-import { prisma } from "@/lib/db";
+import { db } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth";
 
 export const metadata = { title: "Dokument" };
@@ -28,7 +28,7 @@ export default async function DocumentsPage() {
   if (!user?.personId) redirect("/logga-in");
 
   // Behörighet: endast dokument kopplade till min person eller mina avtal.
-  const documents = await prisma.document.findMany({
+  const documents = await db.document.findMany({
     where: {
       OR: [
         { personId: user.personId },

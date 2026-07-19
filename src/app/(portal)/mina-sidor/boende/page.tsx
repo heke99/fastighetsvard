@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { prisma } from "@/lib/db";
+import { db } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth";
 import { formatSek } from "@/components/ListingCard";
 
@@ -10,7 +10,7 @@ export default async function MyHousingPage() {
   const user = await getCurrentUser();
   if (!user?.personId) redirect("/logga-in");
 
-  const contracts = await prisma.contract.findMany({
+  const contracts = await db.contract.findMany({
     where: {
       status: { in: ["ACTIVE", "TERMINATED"] },
       parties: { some: { personId: user.personId, role: { in: ["TENANT", "CO_TENANT"] } } },

@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
-import { prisma } from "@/lib/db";
+import { db } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth";
 import { hasPermission } from "@/lib/permissions";
 import { ApplicationStatusBadge } from "@/components/StatusBadges";
@@ -15,7 +15,7 @@ export default async function AdminApplicationsPage() {
     redirect("/admin");
   }
 
-  const applications = await prisma.application.findMany({
+  const applications = await db.application.findMany({
     where: { organizationId: user.organizationId },
     include: {
       listing: { include: { unit: { select: { address: true, unitNumber: true } } } },

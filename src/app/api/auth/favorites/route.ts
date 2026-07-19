@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
-import { prisma } from "@/lib/db";
+import { db } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth";
 
 const schema = z.object({ listingId: z.string().min(1) });
@@ -22,7 +22,7 @@ export async function POST(req: NextRequest) {
     );
   }
   const { listingId } = parsed.data;
-  const listing = await prisma.listing.findFirst({
+  const listing = await db.listing.findFirst({
     where: { id: listingId, organizationId: user.organizationId },
   });
   if (!listing) {
@@ -32,14 +32,14 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  const existing = await prisma.favorite.findUnique({
+  const existing = await db.favorite.findUnique({
     where: { personId_listingId: { personId: user.personId, listingId } },
   });
   if (existing) {
-    await prisma.favorite.delete({ where: { id: existing.id } });
+    await db.favorite.delete({ where: { id: existing.id } });
     return NextResponse.json({ favorite: false });
   }
-  await prisma.favorite.create({
+  await db.favorite.create({
     data: { organizationId: user.organizationId, personId: user.personId, listingId },
   });
   return NextResponse.json({ favorite: true });

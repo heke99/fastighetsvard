@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
-import { prisma } from "@/lib/db";
+import { db } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth";
 import { hasPermission } from "@/lib/permissions";
 import { WorkOrderStatusBadge } from "@/components/StatusBadges";
@@ -15,7 +15,7 @@ export default async function AdminWorkOrdersPage() {
     redirect("/admin");
   }
 
-  const workOrders = await prisma.workOrder.findMany({
+  const workOrders = await db.workOrder.findMany({
     where: { organizationId: user.organizationId },
     include: {
       supplier: { select: { name: true } },

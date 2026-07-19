@@ -1,7 +1,7 @@
-import { prisma } from "@/lib/db";
+import { db } from "@/lib/db";
 import { withApiAuth, parsePagination, paginatedResponse } from "@/lib/api/helpers";
 import { serializePerson } from "@/lib/api/serializers";
-import type { Prisma } from "@prisma/client";
+import type { Database } from "@/lib/database-types";
 
 /** GET /api/v1/tenants – personer med rollen TENANT. */
 export const GET = withApiAuth("tenants:read", async (req, ctx) => {
@@ -9,7 +9,7 @@ export const GET = withApiAuth("tenants:read", async (req, ctx) => {
   const pagination = parsePagination(req);
   const activeOnly = url.searchParams.get("active") === "true";
 
-  const where: Prisma.PersonWhereInput = {
+  const where: Database.PersonWhereInput = {
     organizationId: ctx.organizationId,
     roles: { some: { role: "TENANT" } },
     ...(activeOnly
@@ -22,14 +22,14 @@ export const GET = withApiAuth("tenants:read", async (req, ctx) => {
   };
 
   const [items, total] = await Promise.all([
-    prisma.person.findMany({
+    db.person.findMany({
       where,
       include: { externalReferences: { where: { entityType: "customer" } } },
       orderBy: { lastName: "asc" },
       skip: pagination.skip,
       take: pagination.take,
     }),
-    prisma.person.count({ where }),
+    db.person.count({ where }),
   ]);
 
   return paginatedResponse(items.map(serializePerson), total, pagination, ctx);

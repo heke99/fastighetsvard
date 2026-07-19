@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { prisma } from "@/lib/db";
+import { db } from "@/lib/db";
 import {
   withApiAuth,
   parsePagination,
@@ -8,26 +8,26 @@ import {
 } from "@/lib/api/helpers";
 import { serializeMaintenanceRequest } from "@/lib/api/serializers";
 import { createMaintenanceRequest } from "@/lib/services/maintenance";
-import type { Prisma, MaintenanceStatus } from "@prisma/client";
+import type { Database, MaintenanceStatus } from "@/lib/database-types";
 
 export const GET = withApiAuth("maintenance:read", async (req, ctx) => {
   const url = new URL(req.url);
   const pagination = parsePagination(req);
   const status = url.searchParams.get("status");
 
-  const where: Prisma.MaintenanceRequestWhereInput = {
+  const where: Database.MaintenanceRequestWhereInput = {
     organizationId: ctx.organizationId,
     ...(status ? { status: status.toUpperCase() as MaintenanceStatus } : {}),
   };
 
   const [items, total] = await Promise.all([
-    prisma.maintenanceRequest.findMany({
+    db.maintenanceRequest.findMany({
       where,
       orderBy: { createdAt: "desc" },
       skip: pagination.skip,
       take: pagination.take,
     }),
-    prisma.maintenanceRequest.count({ where }),
+    db.maintenanceRequest.count({ where }),
   ]);
 
   return paginatedResponse(items.map(serializeMaintenanceRequest), total, pagination, ctx);

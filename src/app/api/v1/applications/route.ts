@@ -1,7 +1,7 @@
-import { prisma } from "@/lib/db";
+import { db } from "@/lib/db";
 import { withApiAuth, parsePagination, paginatedResponse } from "@/lib/api/helpers";
 import { serializeApplication } from "@/lib/api/serializers";
-import type { Prisma, ApplicationStatus } from "@prisma/client";
+import type { Database, ApplicationStatus } from "@/lib/database-types";
 
 export const GET = withApiAuth("applications:read", async (req, ctx) => {
   const url = new URL(req.url);
@@ -9,20 +9,20 @@ export const GET = withApiAuth("applications:read", async (req, ctx) => {
   const status = url.searchParams.get("status");
   const listingId = url.searchParams.get("listing_id");
 
-  const where: Prisma.ApplicationWhereInput = {
+  const where: Database.ApplicationWhereInput = {
     organizationId: ctx.organizationId,
     ...(status ? { status: status.toUpperCase() as ApplicationStatus } : {}),
     ...(listingId ? { listingId } : {}),
   };
 
   const [items, total] = await Promise.all([
-    prisma.application.findMany({
+    db.application.findMany({
       where,
       orderBy: { createdAt: "desc" },
       skip: pagination.skip,
       take: pagination.take,
     }),
-    prisma.application.count({ where }),
+    db.application.count({ where }),
   ]);
 
   return paginatedResponse(items.map(serializeApplication), total, pagination, ctx);

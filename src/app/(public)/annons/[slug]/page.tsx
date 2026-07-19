@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { prisma } from "@/lib/db";
+import { db } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth";
 import { formatSek, formatDate } from "@/components/ListingCard";
 import { FavoriteButton } from "@/components/FavoriteButton";
@@ -13,7 +13,7 @@ export default async function ListingDetailPage({
   params: Promise<{ slug: string }>;
 }) {
   const { slug } = await params;
-  const listing = await prisma.listing.findFirst({
+  const listing = await db.listing.findFirst({
     where: { slug, status: "PUBLISHED" },
     include: {
       unit: {
@@ -34,7 +34,7 @@ export default async function ListingDetailPage({
   const user = await getCurrentUser();
   const isFavorite = user?.personId
     ? Boolean(
-        await prisma.favorite.findUnique({
+        await db.favorite.findUnique({
           where: { personId_listingId: { personId: user.personId, listingId: listing.id } },
         })
       )
@@ -42,7 +42,7 @@ export default async function ListingDetailPage({
 
   const hasActiveContract = user?.personId
     ? Boolean(
-        await prisma.contract.findFirst({
+        await db.contract.findFirst({
           where: {
             status: "ACTIVE",
             parties: { some: { personId: user.personId, role: { in: ["TENANT", "CO_TENANT"] } } },

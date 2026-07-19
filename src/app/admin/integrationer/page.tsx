@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
-import { prisma } from "@/lib/db";
+import { db } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth";
 import { hasPermission } from "@/lib/permissions";
 import { ActionForm } from "@/components/admin/ActionForm";
@@ -18,22 +18,22 @@ export default async function AdminIntegrationsPage() {
   }
 
   const [connections, syncJobs, reviewItems, persons] = await Promise.all([
-    prisma.integrationConnection.findMany({
+    db.integrationConnection.findMany({
       where: { organizationId: user.organizationId },
       orderBy: { createdAt: "desc" },
     }),
-    prisma.integrationSyncJob.findMany({
+    db.integrationSyncJob.findMany({
       where: { organizationId: user.organizationId },
       include: { connection: { select: { name: true, provider: true } } },
       orderBy: { createdAt: "desc" },
       take: 15,
     }),
-    prisma.syncReviewItem.findMany({
+    db.syncReviewItem.findMany({
       where: { organizationId: user.organizationId, status: "PENDING" },
       orderBy: { createdAt: "asc" },
       take: 50,
     }),
-    prisma.person.findMany({
+    db.person.findMany({
       where: { organizationId: user.organizationId },
       orderBy: [{ lastName: "asc" }],
       select: { id: true, firstName: true, lastName: true, email: true },

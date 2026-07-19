@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { prisma } from "@/lib/db";
+import { db } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth";
 import { ListingCard, type ListingWithUnit } from "@/components/ListingCard";
 
@@ -8,48 +8,48 @@ export const dynamic = "force-dynamic";
 async function getHomeData(personId: string | null) {
   const [rentals, sales, commercial, parking, latest, upcoming, featured, favorites] =
     await Promise.all([
-      prisma.listing.findMany({
+      db.listing.findMany({
         where: { status: "PUBLISHED", category: "RENTAL" },
         include: { unit: { include: { media: { where: { kind: "IMAGE" }, take: 1, orderBy: { sortOrder: "asc" } } } } },
         orderBy: { publishedAt: "desc" },
         take: 6,
       }),
-      prisma.listing.findMany({
+      db.listing.findMany({
         where: { status: "PUBLISHED", category: "SALE" },
         include: { unit: { include: { media: { where: { kind: "IMAGE" }, take: 1, orderBy: { sortOrder: "asc" } } } } },
         orderBy: { publishedAt: "desc" },
         take: 3,
       }),
-      prisma.listing.findMany({
+      db.listing.findMany({
         where: { status: "PUBLISHED", category: "COMMERCIAL" },
         include: { unit: { include: { media: { where: { kind: "IMAGE" }, take: 1, orderBy: { sortOrder: "asc" } } } } },
         orderBy: { publishedAt: "desc" },
         take: 3,
       }),
-      prisma.listing.findMany({
+      db.listing.findMany({
         where: { status: "PUBLISHED", category: "PARKING" },
         include: { unit: { include: { media: { where: { kind: "IMAGE" }, take: 1, orderBy: { sortOrder: "asc" } } } } },
         orderBy: { publishedAt: "desc" },
         take: 3,
       }),
-      prisma.listing.findMany({
+      db.listing.findMany({
         where: { status: "PUBLISHED" },
         include: { unit: { include: { media: { where: { kind: "IMAGE" }, take: 1, orderBy: { sortOrder: "asc" } } } } },
         orderBy: { publishedAt: "desc" },
         take: 3,
       }),
-      prisma.unit.findMany({
+      db.unit.findMany({
         where: { status: "UPCOMING" },
         orderBy: { availableFrom: "asc" },
         take: 4,
       }),
-      prisma.listing.findMany({
+      db.listing.findMany({
         where: { status: "PUBLISHED", featured: true },
         include: { unit: { include: { media: { where: { kind: "IMAGE" }, take: 1, orderBy: { sortOrder: "asc" } } } } },
         take: 3,
       }),
       personId
-        ? prisma.favorite.findMany({ where: { personId }, select: { listingId: true } })
+        ? db.favorite.findMany({ where: { personId }, select: { listingId: true } })
         : Promise.resolve([]),
     ]);
   return {
@@ -60,7 +60,7 @@ async function getHomeData(personId: string | null) {
     latest,
     upcoming,
     featured,
-    favoriteIds: new Set(favorites.map((f) => f.listingId)),
+    favoriteIds: new Set<string>((favorites as any[]).map((f: any) => String(f.listingId))),
   };
 }
 

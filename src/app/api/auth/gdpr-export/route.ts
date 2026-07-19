@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { prisma } from "@/lib/db";
+import { db } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth";
 import { audit } from "@/lib/audit";
 
@@ -16,7 +16,7 @@ export async function GET() {
     );
   }
 
-  const person = await prisma.person.findUnique({
+  const person = await db.person.findUnique({
     where: { id: user.personId },
     include: {
       roles: true,

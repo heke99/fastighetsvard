@@ -4,7 +4,7 @@
 
 Plattformen är en Next.js-monolit med tre skikt:
 
-1. **Datamodell** (`prisma/schema.prisma`) – normaliserad PostgreSQL-modell.
+1. **Datamodell** (`supabase/migrations/`) – normaliserad PostgreSQL-modell med RLS.
 2. **Domänlager** (`src/lib`) – all affärslogik i rena serverfunktioner som
    både UI (server actions) och API-routes använder. Ingen affärslogik i
    komponenter, API:t är aldrig beroende av UI.
@@ -98,7 +98,7 @@ Samma upsert-kodväg används av batchsynk, API-push (`/invoices/sync`,
   `retentionUntil` på dokument, anonymiseringsfält på person. Ekonomiska/
   juridiska poster raderas inte under lagstadgad tid.
 - **Serverheaders**: `X-Frame-Options: DENY`, `nosniff`, referrer-policy m.m.
-  XSS skyddas av Reacts escaping; SQL injection av Prismas parametrisering;
+  XSS skyddas av Reacts escaping; SQL injection av Supabase Data API:s parametrisering;
   CSRF av sameSite-cookies + Next.js origin-kontroll för server actions.
 
 ## Kända avgränsningar / kvarvarande risker

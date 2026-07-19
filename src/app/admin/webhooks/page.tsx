@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
-import { prisma } from "@/lib/db";
+import { db } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth";
 import { hasPermission } from "@/lib/permissions";
 import {
@@ -17,18 +17,18 @@ export default async function AdminWebhooksPage() {
   }
 
   const [subscriptions, deliveries, inboundEvents] = await Promise.all([
-    prisma.webhookSubscription.findMany({
+    db.webhookSubscription.findMany({
       where: { organizationId: user.organizationId },
       include: { _count: { select: { deliveries: true } } },
       orderBy: { createdAt: "desc" },
     }),
-    prisma.webhookDelivery.findMany({
+    db.webhookDelivery.findMany({
       where: { organizationId: user.organizationId },
       include: { subscription: { select: { url: true } } },
       orderBy: { createdAt: "desc" },
       take: 30,
     }),
-    prisma.inboundWebhookEvent.findMany({
+    db.inboundWebhookEvent.findMany({
       where: { organizationId: user.organizationId },
       orderBy: { createdAt: "desc" },
       take: 20,

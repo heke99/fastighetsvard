@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
-import { prisma } from "@/lib/db";
+import { db } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth";
 
 const schema = z.object({
@@ -23,7 +23,7 @@ export async function POST(req: NextRequest) {
       { status: 422 }
     );
   }
-  const saved = await prisma.savedSearch.create({
+  const saved = await db.savedSearch.create({
     data: {
       organizationId: user.organizationId,
       personId: user.personId,
@@ -50,7 +50,7 @@ export async function DELETE(req: NextRequest) {
     );
   }
   // Ägarkontroll: endast egna bevakningar kan tas bort.
-  const deleted = await prisma.savedSearch.deleteMany({
+  const deleted = await db.savedSearch.deleteMany({
     where: { id, personId: user.personId },
   });
   return NextResponse.json({ data: { deleted: deleted.count > 0 } });

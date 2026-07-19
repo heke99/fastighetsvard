@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
-import { prisma } from "@/lib/db";
+import { db } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth";
 import { hasPermission } from "@/lib/permissions";
 import { ActionForm } from "@/components/admin/ActionForm";
@@ -13,7 +13,7 @@ export default async function AdminPropertiesPage() {
     redirect("/admin");
   }
 
-  const properties = await prisma.property.findMany({
+  const properties = await db.property.findMany({
     where: { organizationId: user.organizationId },
     include: { _count: { select: { units: true, buildings: true } } },
     orderBy: [{ city: "asc" }, { name: "asc" }],

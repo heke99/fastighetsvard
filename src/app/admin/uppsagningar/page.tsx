@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
-import { prisma } from "@/lib/db";
+import { db } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth";
 import { hasPermission } from "@/lib/permissions";
 
@@ -19,7 +19,7 @@ export default async function AdminTerminationsPage() {
     redirect("/admin");
   }
 
-  const terminations = await prisma.termination.findMany({
+  const terminations = await db.termination.findMany({
     where: { organizationId: user.organizationId },
     include: {
       contract: { include: { unit: { select: { unitNumber: true, address: true } } } },

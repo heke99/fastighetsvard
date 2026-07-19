@@ -1,7 +1,7 @@
-import { prisma } from "@/lib/db";
+import { db } from "@/lib/db";
 import { withApiAuth, parsePagination, paginatedResponse } from "@/lib/api/helpers";
 import { serializeContract } from "@/lib/api/serializers";
-import type { Prisma, ContractStatus } from "@prisma/client";
+import type { Database, ContractStatus } from "@/lib/database-types";
 
 export const GET = withApiAuth("contracts:read", async (req, ctx) => {
   const url = new URL(req.url);
@@ -10,7 +10,7 @@ export const GET = withApiAuth("contracts:read", async (req, ctx) => {
   const unitId = url.searchParams.get("unit_id");
   const personId = url.searchParams.get("person_id");
 
-  const where: Prisma.ContractWhereInput = {
+  const where: Database.ContractWhereInput = {
     organizationId: ctx.organizationId,
     ...(status ? { status: status.toUpperCase() as ContractStatus } : {}),
     ...(unitId ? { unitId } : {}),
@@ -18,14 +18,14 @@ export const GET = withApiAuth("contracts:read", async (req, ctx) => {
   };
 
   const [items, total] = await Promise.all([
-    prisma.contract.findMany({
+    db.contract.findMany({
       where,
       include: { externalReferences: true },
       orderBy: { createdAt: "desc" },
       skip: pagination.skip,
       take: pagination.take,
     }),
-    prisma.contract.count({ where }),
+    db.contract.count({ where }),
   ]);
 
   return paginatedResponse(items.map(serializeContract), total, pagination, ctx);

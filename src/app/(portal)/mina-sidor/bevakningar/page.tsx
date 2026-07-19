@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { prisma } from "@/lib/db";
+import { db } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth";
 import { DeleteSavedSearchButton } from "./DeleteSavedSearchButton";
 
@@ -10,7 +10,7 @@ export default async function SavedSearchesPage() {
   const user = await getCurrentUser();
   if (!user?.personId) redirect("/logga-in");
 
-  const searches = await prisma.savedSearch.findMany({
+  const searches = await db.savedSearch.findMany({
     where: { personId: user.personId },
     orderBy: { createdAt: "desc" },
   });

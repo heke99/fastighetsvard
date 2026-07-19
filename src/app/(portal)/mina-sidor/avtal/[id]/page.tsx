@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
-import { prisma } from "@/lib/db";
+import { db } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth";
 import { formatSek } from "@/components/ListingCard";
 import { ContractStatusBadge } from "@/components/StatusBadges";
@@ -19,7 +19,7 @@ export default async function ContractDetailPage({
   const { id } = await params;
 
   // Tenant-isolering: endast avtal där personen är part.
-  const contract = await prisma.contract.findFirst({
+  const contract = await db.contract.findFirst({
     where: { id, parties: { some: { personId: user.personId } } },
     include: {
       unit: { include: { property: true } },

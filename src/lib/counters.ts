@@ -1,4 +1,4 @@
-import type { Prisma } from "@prisma/client";
+import type { Database } from "@/lib/database-types";
 
 /**
  * Atomiskt löpnummer per organisation och nyckel (t.ex. "maintenance",
@@ -6,7 +6,7 @@ import type { Prisma } from "@prisma/client";
  * som anroparen för att undvika race conditions.
  */
 export async function nextNumber(
-  tx: Prisma.TransactionClient,
+  tx: Database.TransactionClient,
   organizationId: string,
   key: string
 ): Promise<number> {

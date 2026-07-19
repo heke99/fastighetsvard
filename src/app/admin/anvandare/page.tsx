@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
-import { prisma } from "@/lib/db";
+import { db } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth";
 import { hasPermission } from "@/lib/permissions";
 import { ActionForm } from "@/components/admin/ActionForm";
@@ -14,7 +14,7 @@ export default async function AdminUsersPage() {
   }
 
   const [users, roles] = await Promise.all([
-    prisma.user.findMany({
+    db.user.findMany({
       where: { organizationId: user.organizationId },
       include: {
         person: { select: { firstName: true, lastName: true } },
@@ -24,7 +24,7 @@ export default async function AdminUsersPage() {
       orderBy: { createdAt: "desc" },
       take: 200,
     }),
-    prisma.role.findMany({
+    db.role.findMany({
       where: { OR: [{ organizationId: null }, { organizationId: user.organizationId }] },
       include: { permissions: true, _count: { select: { userRoles: true } } },
       orderBy: { name: "asc" },

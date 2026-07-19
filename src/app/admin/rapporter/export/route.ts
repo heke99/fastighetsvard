@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { prisma } from "@/lib/db";
+import { db } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth";
 import { hasPermission } from "@/lib/permissions";
 import { audit } from "@/lib/audit";
@@ -14,7 +14,7 @@ export async function GET() {
     );
   }
 
-  const units = await prisma.unit.findMany({
+  const units = await db.unit.findMany({
     where: { organizationId: user.organizationId },
     include: {
       property: { select: { name: true } },

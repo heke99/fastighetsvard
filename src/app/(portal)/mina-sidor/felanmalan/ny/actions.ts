@@ -2,7 +2,7 @@
 
 import { redirect } from "next/navigation";
 import { z } from "zod";
-import { prisma } from "@/lib/db";
+import { db } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth";
 import { createMaintenanceRequest } from "@/lib/services/maintenance";
 
@@ -45,7 +45,7 @@ export async function createMaintenanceAction(
   let propertyId: string | undefined;
   if (data.unitId !== "common") {
     // Behörighetskontroll: endast objekt personen har avtal på.
-    const contract = await prisma.contract.findFirst({
+    const contract = await db.contract.findFirst({
       where: {
         unitId: data.unitId,
         organizationId: user.organizationId,

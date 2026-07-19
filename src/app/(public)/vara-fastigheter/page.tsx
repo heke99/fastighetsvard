@@ -1,10 +1,10 @@
-import { prisma } from "@/lib/db";
+import { db } from "@/lib/db";
 
 export const metadata = { title: "Våra fastigheter" };
 export const dynamic = "force-dynamic";
 
 export default async function PropertiesPage() {
-  const properties = await prisma.property.findMany({
+  const properties = await db.property.findMany({
     where: { status: { in: ["ACTIVE", "UNDER_RENOVATION"] } },
     include: { _count: { select: { units: true } } },
     orderBy: [{ city: "asc" }, { name: "asc" }],

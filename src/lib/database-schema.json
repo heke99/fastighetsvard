@@ -1,0 +1,4575 @@
+{
+  "models": {
+    "Organization": {
+      "table": "Organization",
+      "scalars": [
+        "id",
+        "name",
+        "orgNumber",
+        "email",
+        "phone",
+        "address",
+        "createdAt",
+        "updatedAt"
+      ],
+      "dates": [
+        "createdAt",
+        "updatedAt"
+      ],
+      "json": [],
+      "enums": {},
+      "relations": {
+        "users": {
+          "target": "User",
+          "many": true,
+          "localFields": [
+            "id"
+          ],
+          "targetFields": [
+            "organizationId"
+          ],
+          "relationName": null,
+          "reverse": true,
+          "oppositeField": "organization"
+        },
+        "persons": {
+          "target": "Person",
+          "many": true,
+          "localFields": [
+            "id"
+          ],
+          "targetFields": [
+            "organizationId"
+          ],
+          "relationName": null,
+          "reverse": true,
+          "oppositeField": "organization"
+        },
+        "properties": {
+          "target": "Property",
+          "many": true,
+          "localFields": [
+            "id"
+          ],
+          "targetFields": [
+            "organizationId"
+          ],
+          "relationName": null,
+          "reverse": true,
+          "oppositeField": "organization"
+        },
+        "units": {
+          "target": "Unit",
+          "many": true,
+          "localFields": [
+            "id"
+          ],
+          "targetFields": [
+            "organizationId"
+          ],
+          "relationName": null,
+          "reverse": true,
+          "oppositeField": "organization"
+        },
+        "listings": {
+          "target": "Listing",
+          "many": true,
+          "localFields": [
+            "id"
+          ],
+          "targetFields": [
+            "organizationId"
+          ],
+          "relationName": null,
+          "reverse": true,
+          "oppositeField": "organization"
+        },
+        "applications": {
+          "target": "Application",
+          "many": true,
+          "localFields": [
+            "id"
+          ],
+          "targetFields": [
+            "organizationId"
+          ],
+          "relationName": null,
+          "reverse": true,
+          "oppositeField": "organization"
+        },
+        "contracts": {
+          "target": "Contract",
+          "many": true,
+          "localFields": [
+            "id"
+          ],
+          "targetFields": [
+            "organizationId"
+          ],
+          "relationName": null,
+          "reverse": true,
+          "oppositeField": "organization"
+        },
+        "invoices": {
+          "target": "Invoice",
+          "many": true,
+          "localFields": [
+            "id"
+          ],
+          "targetFields": [
+            "organizationId"
+          ],
+          "relationName": null,
+          "reverse": true,
+          "oppositeField": "organization"
+        },
+        "payments": {
+          "target": "Payment",
+          "many": true,
+          "localFields": [
+            "id"
+          ],
+          "targetFields": [
+            "organizationId"
+          ],
+          "relationName": null,
+          "reverse": true,
+          "oppositeField": "organization"
+        },
+        "maintenanceRequests": {
+          "target": "MaintenanceRequest",
+          "many": true,
+          "localFields": [
+            "id"
+          ],
+          "targetFields": [
+            "organizationId"
+          ],
+          "relationName": null,
+          "reverse": true,
+          "oppositeField": "organization"
+        },
+        "workOrders": {
+          "target": "WorkOrder",
+          "many": true,
+          "localFields": [
+            "id"
+          ],
+          "targetFields": [
+            "organizationId"
+          ],
+          "relationName": null,
+          "reverse": true,
+          "oppositeField": "organization"
+        },
+        "suppliers": {
+          "target": "Supplier",
+          "many": true,
+          "localFields": [
+            "id"
+          ],
+          "targetFields": [
+            "organizationId"
+          ],
+          "relationName": null,
+          "reverse": true,
+          "oppositeField": "organization"
+        },
+        "documents": {
+          "target": "Document",
+          "many": true,
+          "localFields": [
+            "id"
+          ],
+          "targetFields": [
+            "organizationId"
+          ],
+          "relationName": null,
+          "reverse": true,
+          "oppositeField": "organization"
+        },
+        "messages": {
+          "target": "Message",
+          "many": true,
+          "localFields": [
+            "id"
+          ],
+          "targetFields": [
+            "organizationId"
+          ],
+          "relationName": null,
+          "reverse": true,
+          "oppositeField": "organization"
+        },
+        "notifications": {
+          "target": "Notification",
+          "many": true,
+          "localFields": [
+            "id"
+          ],
+          "targetFields": [
+            "organizationId"
+          ],
+          "relationName": null,
+          "reverse": true,
+          "oppositeField": "organization"
+        },
+        "apiKeys": {
+          "target": "ApiKey",
+          "many": true,
+          "localFields": [
+            "id"
+          ],
+          "targetFields": [
+            "organizationId"
+          ],
+          "relationName": null,
+          "reverse": true,
+          "oppositeField": "organization"
+        },
+        "webhookSubscriptions": {
+          "target": "WebhookSubscription",
+          "many": true,
+          "localFields": [
+            "id"
+          ],
+          "targetFields": [
+            "organizationId"
+          ],
+          "relationName": null,
+          "reverse": true,
+          "oppositeField": "organization"
+        },
+        "webhookDeliveries": {
+          "target": "WebhookDelivery",
+          "many": true,
+          "localFields": [
+            "id"
+          ],
+          "targetFields": [
+            "organizationId"
+          ],
+          "relationName": null,
+          "reverse": true,
+          "oppositeField": "organization"
+        },
+        "inboundWebhookEvents": {
+          "target": "InboundWebhookEvent",
+          "many": true,
+          "localFields": [
+            "id"
+          ],
+          "targetFields": [
+            "organizationId"
+          ],
+          "relationName": null,
+          "reverse": true,
+          "oppositeField": "organization"
+        },
+        "integrationConnections": {
+          "target": "IntegrationConnection",
+          "many": true,
+          "localFields": [
+            "id"
+          ],
+          "targetFields": [
+            "organizationId"
+          ],
+          "relationName": null,
+          "reverse": true,
+          "oppositeField": "organization"
+        },
+        "integrationSyncJobs": {
+          "target": "IntegrationSyncJob",
+          "many": true,
+          "localFields": [
+            "id"
+          ],
+          "targetFields": [
+            "organizationId"
+          ],
+          "relationName": null,
+          "reverse": true,
+          "oppositeField": "organization"
+        },
+        "syncReviewItems": {
+          "target": "SyncReviewItem",
+          "many": true,
+          "localFields": [
+            "id"
+          ],
+          "targetFields": [
+            "organizationId"
+          ],
+          "relationName": null,
+          "reverse": true,
+          "oppositeField": "organization"
+        },
+        "auditEvents": {
+          "target": "AuditEvent",
+          "many": true,
+          "localFields": [
+            "id"
+          ],
+          "targetFields": [
+            "organizationId"
+          ],
+          "relationName": null,
+          "reverse": true,
+          "oppositeField": "organization"
+        },
+        "roles": {
+          "target": "Role",
+          "many": true,
+          "localFields": [
+            "id"
+          ],
+          "targetFields": [
+            "organizationId"
+          ],
+          "relationName": null,
+          "reverse": true,
+          "oppositeField": "organization"
+        },
+        "savedSearches": {
+          "target": "SavedSearch",
+          "many": true,
+          "localFields": [
+            "id"
+          ],
+          "targetFields": [
+            "organizationId"
+          ],
+          "relationName": null,
+          "reverse": true,
+          "oppositeField": "organization"
+        },
+        "favorites": {
+          "target": "Favorite",
+          "many": true,
+          "localFields": [
+            "id"
+          ],
+          "targetFields": [
+            "organizationId"
+          ],
+          "relationName": null,
+          "reverse": true,
+          "oppositeField": "organization"
+        },
+        "offers": {
+          "target": "Offer",
+          "many": true,
+          "localFields": [
+            "id"
+          ],
+          "targetFields": [
+            "organizationId"
+          ],
+          "relationName": null,
+          "reverse": true,
+          "oppositeField": "organization"
+        },
+        "viewings": {
+          "target": "Viewing",
+          "many": true,
+          "localFields": [
+            "id"
+          ],
+          "targetFields": [
+            "organizationId"
+          ],
+          "relationName": null,
+          "reverse": true,
+          "oppositeField": "organization"
+        },
+        "importJobs": {
+          "target": "ImportJob",
+          "many": true,
+          "localFields": [
+            "id"
+          ],
+          "targetFields": [
+            "organizationId"
+          ],
+          "relationName": null,
+          "reverse": true,
+          "oppositeField": "organization"
+        },
+        "invitations": {
+          "target": "Invitation",
+          "many": true,
+          "localFields": [
+            "id"
+          ],
+          "targetFields": [
+            "organizationId"
+          ],
+          "relationName": null,
+          "reverse": true,
+          "oppositeField": "organization"
+        },
+        "externalReferences": {
+          "target": "ExternalReference",
+          "many": true,
+          "localFields": [
+            "id"
+          ],
+          "targetFields": [
+            "organizationId"
+          ],
+          "relationName": null,
+          "reverse": true,
+          "oppositeField": "organization"
+        },
+        "masterDataConfigs": {
+          "target": "MasterDataConfig",
+          "many": true,
+          "localFields": [
+            "id"
+          ],
+          "targetFields": [
+            "organizationId"
+          ],
+          "relationName": null,
+          "reverse": true,
+          "oppositeField": "organization"
+        },
+        "buildings": {
+          "target": "Building",
+          "many": true,
+          "localFields": [
+            "id"
+          ],
+          "targetFields": [
+            "organizationId"
+          ],
+          "relationName": null,
+          "reverse": true,
+          "oppositeField": "organization"
+        },
+        "terminations": {
+          "target": "Termination",
+          "many": true,
+          "localFields": [
+            "id"
+          ],
+          "targetFields": [
+            "organizationId"
+          ],
+          "relationName": null,
+          "reverse": true,
+          "oppositeField": "organization"
+        },
+        "inspections": {
+          "target": "Inspection",
+          "many": true,
+          "localFields": [
+            "id"
+          ],
+          "targetFields": [
+            "organizationId"
+          ],
+          "relationName": null,
+          "reverse": true,
+          "oppositeField": "organization"
+        }
+      }
+    },
+    "MasterDataConfig": {
+      "table": "MasterDataConfig",
+      "scalars": [
+        "id",
+        "organizationId",
+        "domain",
+        "masterSystem",
+        "createdAt",
+        "updatedAt"
+      ],
+      "dates": [
+        "createdAt",
+        "updatedAt"
+      ],
+      "json": [],
+      "enums": {
+        "domain": "MasterDataDomain"
+      },
+      "relations": {
+        "organization": {
+          "target": "Organization",
+          "many": false,
+          "localFields": [
+            "organizationId"
+          ],
+          "targetFields": [
+            "id"
+          ],
+          "relationName": null,
+          "reverse": false
+        }
+      }
+    },
+    "Person": {
+      "table": "Person",
+      "scalars": [
+        "id",
+        "organizationId",
+        "firstName",
+        "lastName",
+        "email",
+        "phone",
+        "personalNumber",
+        "orgNumber",
+        "isCompany",
+        "companyName",
+        "address",
+        "postalCode",
+        "city",
+        "country",
+        "protectedIdentity",
+        "gdprAnonymizedAt",
+        "notes",
+        "createdAt",
+        "updatedAt"
+      ],
+      "dates": [
+        "gdprAnonymizedAt",
+        "createdAt",
+        "updatedAt"
+      ],
+      "json": [],
+      "enums": {},
+      "relations": {
+        "organization": {
+          "target": "Organization",
+          "many": false,
+          "localFields": [
+            "organizationId"
+          ],
+          "targetFields": [
+            "id"
+          ],
+          "relationName": null,
+          "reverse": false
+        },
+        "user": {
+          "target": "User",
+          "many": false,
+          "localFields": [
+            "id"
+          ],
+          "targetFields": [
+            "personId"
+          ],
+          "relationName": null,
+          "reverse": true,
+          "oppositeField": "person"
+        },
+        "roles": {
+          "target": "PersonRole",
+          "many": true,
+          "localFields": [
+            "id"
+          ],
+          "targetFields": [
+            "personId"
+          ],
+          "relationName": null,
+          "reverse": true,
+          "oppositeField": "person"
+        },
+        "applicationMembers": {
+          "target": "ApplicationMember",
+          "many": true,
+          "localFields": [
+            "id"
+          ],
+          "targetFields": [
+            "personId"
+          ],
+          "relationName": null,
+          "reverse": true,
+          "oppositeField": "person"
+        },
+        "contractParties": {
+          "target": "ContractParty",
+          "many": true,
+          "localFields": [
+            "id"
+          ],
+          "targetFields": [
+            "personId"
+          ],
+          "relationName": null,
+          "reverse": true,
+          "oppositeField": "person"
+        },
+        "invoices": {
+          "target": "Invoice",
+          "many": true,
+          "localFields": [
+            "id"
+          ],
+          "targetFields": [
+            "personId"
+          ],
+          "relationName": null,
+          "reverse": true,
+          "oppositeField": "person"
+        },
+        "maintenanceRequests": {
+          "target": "MaintenanceRequest",
+          "many": true,
+          "localFields": [
+            "id"
+          ],
+          "targetFields": [
+            "personId"
+          ],
+          "relationName": null,
+          "reverse": true,
+          "oppositeField": "person"
+        },
+        "documents": {
+          "target": "Document",
+          "many": true,
+          "localFields": [
+            "id"
+          ],
+          "targetFields": [
+            "personId"
+          ],
+          "relationName": null,
+          "reverse": true,
+          "oppositeField": "person"
+        },
+        "favorites": {
+          "target": "Favorite",
+          "many": true,
+          "localFields": [
+            "id"
+          ],
+          "targetFields": [
+            "personId"
+          ],
+          "relationName": null,
+          "reverse": true,
+          "oppositeField": "person"
+        },
+        "savedSearches": {
+          "target": "SavedSearch",
+          "many": true,
+          "localFields": [
+            "id"
+          ],
+          "targetFields": [
+            "personId"
+          ],
+          "relationName": null,
+          "reverse": true,
+          "oppositeField": "person"
+        },
+        "offers": {
+          "target": "Offer",
+          "many": true,
+          "localFields": [
+            "id"
+          ],
+          "targetFields": [
+            "personId"
+          ],
+          "relationName": null,
+          "reverse": true,
+          "oppositeField": "person"
+        },
+        "viewingAttendees": {
+          "target": "ViewingAttendee",
+          "many": true,
+          "localFields": [
+            "id"
+          ],
+          "targetFields": [
+            "personId"
+          ],
+          "relationName": null,
+          "reverse": true,
+          "oppositeField": "person"
+        },
+        "invitations": {
+          "target": "Invitation",
+          "many": true,
+          "localFields": [
+            "id"
+          ],
+          "targetFields": [
+            "personId"
+          ],
+          "relationName": null,
+          "reverse": true,
+          "oppositeField": "person"
+        },
+        "externalReferences": {
+          "target": "ExternalReference",
+          "many": true,
+          "localFields": [
+            "id"
+          ],
+          "targetFields": [
+            "personId"
+          ],
+          "relationName": null,
+          "reverse": true,
+          "oppositeField": "person"
+        },
+        "messagesReceived": {
+          "target": "Message",
+          "many": true,
+          "localFields": [
+            "id"
+          ],
+          "targetFields": [
+            "recipientPersonId"
+          ],
+          "relationName": "MessageRecipient",
+          "reverse": true,
+          "oppositeField": "recipient"
+        },
+        "messagesSent": {
+          "target": "Message",
+          "many": true,
+          "localFields": [
+            "id"
+          ],
+          "targetFields": [
+            "senderPersonId"
+          ],
+          "relationName": "MessageSender",
+          "reverse": true,
+          "oppositeField": "sender"
+        },
+        "notifications": {
+          "target": "Notification",
+          "many": true,
+          "localFields": [
+            "id"
+          ],
+          "targetFields": [
+            "personId"
+          ],
+          "relationName": null,
+          "reverse": true,
+          "oppositeField": "person"
+        },
+        "terminationsRequested": {
+          "target": "Termination",
+          "many": true,
+          "localFields": [
+            "id"
+          ],
+          "targetFields": [
+            "requestedByPersonId"
+          ],
+          "relationName": null,
+          "reverse": true,
+          "oppositeField": "requestedBy"
+        }
+      }
+    },
+    "PersonRole": {
+      "table": "PersonRole",
+      "scalars": [
+        "id",
+        "personId",
+        "role",
+        "createdAt"
+      ],
+      "dates": [
+        "createdAt"
+      ],
+      "json": [],
+      "enums": {
+        "role": "PersonRoleType"
+      },
+      "relations": {
+        "person": {
+          "target": "Person",
+          "many": false,
+          "localFields": [
+            "personId"
+          ],
+          "targetFields": [
+            "id"
+          ],
+          "relationName": null,
+          "reverse": false
+        }
+      }
+    },
+    "User": {
+      "table": "User",
+      "scalars": [
+        "id",
+        "authUserId",
+        "organizationId",
+        "personId",
+        "email",
+        "emailVerifiedAt",
+        "phoneVerifiedAt",
+        "lastLoginAt",
+        "isActive",
+        "createdAt",
+        "updatedAt",
+        "supplierId"
+      ],
+      "dates": [
+        "emailVerifiedAt",
+        "phoneVerifiedAt",
+        "lockedUntil",
+        "lastLoginAt",
+        "createdAt",
+        "updatedAt"
+      ],
+      "json": [],
+      "enums": {},
+      "relations": {
+        "person": {
+          "target": "Person",
+          "many": false,
+          "localFields": [
+            "personId"
+          ],
+          "targetFields": [
+            "id"
+          ],
+          "relationName": null,
+          "reverse": false
+        },
+        "organization": {
+          "target": "Organization",
+          "many": false,
+          "localFields": [
+            "organizationId"
+          ],
+          "targetFields": [
+            "id"
+          ],
+          "relationName": null,
+          "reverse": false
+        },
+        "userRoles": {
+          "target": "UserRole",
+          "many": true,
+          "localFields": [
+            "id"
+          ],
+          "targetFields": [
+            "userId"
+          ],
+          "relationName": null,
+          "reverse": true,
+          "oppositeField": "user"
+        },
+        "auditEvents": {
+          "target": "AuditEvent",
+          "many": true,
+          "localFields": [
+            "id"
+          ],
+          "targetFields": [
+            "userId"
+          ],
+          "relationName": null,
+          "reverse": true,
+          "oppositeField": "user"
+        },
+        "assignedWorkOrders": {
+          "target": "WorkOrder",
+          "many": true,
+          "localFields": [
+            "id"
+          ],
+          "targetFields": [
+            "assigneeUserId"
+          ],
+          "relationName": "WorkOrderAssignee",
+          "reverse": true,
+          "oppositeField": "assignee"
+        },
+        "supplier": {
+          "target": "Supplier",
+          "many": false,
+          "localFields": [
+            "supplierId"
+          ],
+          "targetFields": [
+            "id"
+          ],
+          "relationName": null,
+          "reverse": false
+        }
+      }
+    },
+    "Invitation": {
+      "table": "Invitation",
+      "scalars": [
+        "id",
+        "organizationId",
+        "personId",
+        "email",
+        "tokenHash",
+        "expiresAt",
+        "acceptedAt",
+        "createdAt"
+      ],
+      "dates": [
+        "expiresAt",
+        "acceptedAt",
+        "createdAt"
+      ],
+      "json": [],
+      "enums": {},
+      "relations": {
+        "organization": {
+          "target": "Organization",
+          "many": false,
+          "localFields": [
+            "organizationId"
+          ],
+          "targetFields": [
+            "id"
+          ],
+          "relationName": null,
+          "reverse": false
+        },
+        "person": {
+          "target": "Person",
+          "many": false,
+          "localFields": [
+            "personId"
+          ],
+          "targetFields": [
+            "id"
+          ],
+          "relationName": null,
+          "reverse": false
+        }
+      }
+    },
+    "Role": {
+      "table": "Role",
+      "scalars": [
+        "id",
+        "organizationId",
+        "name",
+        "slug",
+        "description",
+        "isSystem",
+        "createdAt",
+        "updatedAt"
+      ],
+      "dates": [
+        "createdAt",
+        "updatedAt"
+      ],
+      "json": [],
+      "enums": {},
+      "relations": {
+        "organization": {
+          "target": "Organization",
+          "many": false,
+          "localFields": [
+            "organizationId"
+          ],
+          "targetFields": [
+            "id"
+          ],
+          "relationName": null,
+          "reverse": false
+        },
+        "permissions": {
+          "target": "RolePermission",
+          "many": true,
+          "localFields": [
+            "id"
+          ],
+          "targetFields": [
+            "roleId"
+          ],
+          "relationName": null,
+          "reverse": true,
+          "oppositeField": "role"
+        },
+        "userRoles": {
+          "target": "UserRole",
+          "many": true,
+          "localFields": [
+            "id"
+          ],
+          "targetFields": [
+            "roleId"
+          ],
+          "relationName": null,
+          "reverse": true,
+          "oppositeField": "role"
+        }
+      }
+    },
+    "RolePermission": {
+      "table": "RolePermission",
+      "scalars": [
+        "id",
+        "roleId",
+        "permission"
+      ],
+      "dates": [],
+      "json": [],
+      "enums": {},
+      "relations": {
+        "role": {
+          "target": "Role",
+          "many": false,
+          "localFields": [
+            "roleId"
+          ],
+          "targetFields": [
+            "id"
+          ],
+          "relationName": null,
+          "reverse": false
+        }
+      }
+    },
+    "UserRole": {
+      "table": "UserRole",
+      "scalars": [
+        "id",
+        "userId",
+        "roleId",
+        "propertyId",
+        "createdAt"
+      ],
+      "dates": [
+        "createdAt"
+      ],
+      "json": [],
+      "enums": {},
+      "relations": {
+        "user": {
+          "target": "User",
+          "many": false,
+          "localFields": [
+            "userId"
+          ],
+          "targetFields": [
+            "id"
+          ],
+          "relationName": null,
+          "reverse": false
+        },
+        "role": {
+          "target": "Role",
+          "many": false,
+          "localFields": [
+            "roleId"
+          ],
+          "targetFields": [
+            "id"
+          ],
+          "relationName": null,
+          "reverse": false
+        },
+        "property": {
+          "target": "Property",
+          "many": false,
+          "localFields": [
+            "propertyId"
+          ],
+          "targetFields": [
+            "id"
+          ],
+          "relationName": null,
+          "reverse": false
+        }
+      }
+    },
+    "Property": {
+      "table": "Property",
+      "scalars": [
+        "id",
+        "organizationId",
+        "name",
+        "designation",
+        "address",
+        "postalCode",
+        "city",
+        "municipality",
+        "country",
+        "ownerName",
+        "managerName",
+        "yearBuilt",
+        "yearRenovated",
+        "energyClass",
+        "insuranceInfo",
+        "contactInfo",
+        "emergencyPhone",
+        "status",
+        "notes",
+        "createdAt",
+        "updatedAt"
+      ],
+      "dates": [
+        "createdAt",
+        "updatedAt"
+      ],
+      "json": [],
+      "enums": {
+        "status": "PropertyStatus"
+      },
+      "relations": {
+        "organization": {
+          "target": "Organization",
+          "many": false,
+          "localFields": [
+            "organizationId"
+          ],
+          "targetFields": [
+            "id"
+          ],
+          "relationName": null,
+          "reverse": false
+        },
+        "buildings": {
+          "target": "Building",
+          "many": true,
+          "localFields": [
+            "id"
+          ],
+          "targetFields": [
+            "propertyId"
+          ],
+          "relationName": null,
+          "reverse": true,
+          "oppositeField": "property"
+        },
+        "units": {
+          "target": "Unit",
+          "many": true,
+          "localFields": [
+            "id"
+          ],
+          "targetFields": [
+            "propertyId"
+          ],
+          "relationName": null,
+          "reverse": true,
+          "oppositeField": "property"
+        },
+        "userRoles": {
+          "target": "UserRole",
+          "many": true,
+          "localFields": [
+            "id"
+          ],
+          "targetFields": [
+            "propertyId"
+          ],
+          "relationName": null,
+          "reverse": true,
+          "oppositeField": "property"
+        },
+        "documents": {
+          "target": "Document",
+          "many": true,
+          "localFields": [
+            "id"
+          ],
+          "targetFields": [
+            "propertyId"
+          ],
+          "relationName": null,
+          "reverse": true,
+          "oppositeField": "property"
+        },
+        "maintenanceRequests": {
+          "target": "MaintenanceRequest",
+          "many": true,
+          "localFields": [
+            "id"
+          ],
+          "targetFields": [
+            "propertyId"
+          ],
+          "relationName": null,
+          "reverse": true,
+          "oppositeField": "property"
+        }
+      }
+    },
+    "Building": {
+      "table": "Building",
+      "scalars": [
+        "id",
+        "organizationId",
+        "propertyId",
+        "name",
+        "address",
+        "yearBuilt",
+        "floorsCount",
+        "createdAt",
+        "updatedAt"
+      ],
+      "dates": [
+        "createdAt",
+        "updatedAt"
+      ],
+      "json": [],
+      "enums": {},
+      "relations": {
+        "organization": {
+          "target": "Organization",
+          "many": false,
+          "localFields": [
+            "organizationId"
+          ],
+          "targetFields": [
+            "id"
+          ],
+          "relationName": null,
+          "reverse": false
+        },
+        "property": {
+          "target": "Property",
+          "many": false,
+          "localFields": [
+            "propertyId"
+          ],
+          "targetFields": [
+            "id"
+          ],
+          "relationName": null,
+          "reverse": false
+        },
+        "entrances": {
+          "target": "Entrance",
+          "many": true,
+          "localFields": [
+            "id"
+          ],
+          "targetFields": [
+            "buildingId"
+          ],
+          "relationName": null,
+          "reverse": true,
+          "oppositeField": "building"
+        },
+        "units": {
+          "target": "Unit",
+          "many": true,
+          "localFields": [
+            "id"
+          ],
+          "targetFields": [
+            "buildingId"
+          ],
+          "relationName": null,
+          "reverse": true,
+          "oppositeField": "building"
+        }
+      }
+    },
+    "Entrance": {
+      "table": "Entrance",
+      "scalars": [
+        "id",
+        "buildingId",
+        "name",
+        "address"
+      ],
+      "dates": [],
+      "json": [],
+      "enums": {},
+      "relations": {
+        "building": {
+          "target": "Building",
+          "many": false,
+          "localFields": [
+            "buildingId"
+          ],
+          "targetFields": [
+            "id"
+          ],
+          "relationName": null,
+          "reverse": false
+        },
+        "floors": {
+          "target": "Floor",
+          "many": true,
+          "localFields": [
+            "id"
+          ],
+          "targetFields": [
+            "entranceId"
+          ],
+          "relationName": null,
+          "reverse": true,
+          "oppositeField": "entrance"
+        },
+        "units": {
+          "target": "Unit",
+          "many": true,
+          "localFields": [
+            "id"
+          ],
+          "targetFields": [
+            "entranceId"
+          ],
+          "relationName": null,
+          "reverse": true,
+          "oppositeField": "entrance"
+        }
+      }
+    },
+    "Floor": {
+      "table": "Floor",
+      "scalars": [
+        "id",
+        "entranceId",
+        "level",
+        "name"
+      ],
+      "dates": [],
+      "json": [],
+      "enums": {},
+      "relations": {
+        "entrance": {
+          "target": "Entrance",
+          "many": false,
+          "localFields": [
+            "entranceId"
+          ],
+          "targetFields": [
+            "id"
+          ],
+          "relationName": null,
+          "reverse": false
+        },
+        "units": {
+          "target": "Unit",
+          "many": true,
+          "localFields": [
+            "id"
+          ],
+          "targetFields": [
+            "floorId"
+          ],
+          "relationName": null,
+          "reverse": true,
+          "oppositeField": "floor"
+        }
+      }
+    },
+    "Unit": {
+      "table": "Unit",
+      "scalars": [
+        "id",
+        "organizationId",
+        "propertyId",
+        "buildingId",
+        "entranceId",
+        "floorId",
+        "parentUnitId",
+        "unitNumber",
+        "apartmentNumber",
+        "type",
+        "status",
+        "address",
+        "postalCode",
+        "city",
+        "area",
+        "floorLevel",
+        "rooms",
+        "livingArea",
+        "secondaryArea",
+        "rent",
+        "price",
+        "operatingCost",
+        "deposit",
+        "availableFrom",
+        "noticePeriodMonths",
+        "hasElevator",
+        "hasBalcony",
+        "hasPatio",
+        "hasStorage",
+        "hasParking",
+        "furnished",
+        "accessible",
+        "petsAllowed",
+        "smokingAllowed",
+        "internetIncluded",
+        "tvIncluded",
+        "heatingIncluded",
+        "waterIncluded",
+        "electricityIncluded",
+        "shortTermAllowed",
+        "seniorHousing",
+        "studentHousing",
+        "description",
+        "internalNotes",
+        "createdAt",
+        "updatedAt"
+      ],
+      "dates": [
+        "availableFrom",
+        "createdAt",
+        "updatedAt"
+      ],
+      "json": [],
+      "enums": {
+        "type": "UnitType",
+        "status": "UnitStatus"
+      },
+      "relations": {
+        "organization": {
+          "target": "Organization",
+          "many": false,
+          "localFields": [
+            "organizationId"
+          ],
+          "targetFields": [
+            "id"
+          ],
+          "relationName": null,
+          "reverse": false
+        },
+        "property": {
+          "target": "Property",
+          "many": false,
+          "localFields": [
+            "propertyId"
+          ],
+          "targetFields": [
+            "id"
+          ],
+          "relationName": null,
+          "reverse": false
+        },
+        "building": {
+          "target": "Building",
+          "many": false,
+          "localFields": [
+            "buildingId"
+          ],
+          "targetFields": [
+            "id"
+          ],
+          "relationName": null,
+          "reverse": false
+        },
+        "entrance": {
+          "target": "Entrance",
+          "many": false,
+          "localFields": [
+            "entranceId"
+          ],
+          "targetFields": [
+            "id"
+          ],
+          "relationName": null,
+          "reverse": false
+        },
+        "floor": {
+          "target": "Floor",
+          "many": false,
+          "localFields": [
+            "floorId"
+          ],
+          "targetFields": [
+            "id"
+          ],
+          "relationName": null,
+          "reverse": false
+        },
+        "parentUnit": {
+          "target": "Unit",
+          "many": false,
+          "localFields": [
+            "parentUnitId"
+          ],
+          "targetFields": [
+            "id"
+          ],
+          "relationName": "UnitChildren",
+          "reverse": false
+        },
+        "childUnits": {
+          "target": "Unit",
+          "many": true,
+          "localFields": [
+            "id"
+          ],
+          "targetFields": [
+            "parentUnitId"
+          ],
+          "relationName": "UnitChildren",
+          "reverse": true,
+          "oppositeField": "parentUnit"
+        },
+        "media": {
+          "target": "UnitMedia",
+          "many": true,
+          "localFields": [
+            "id"
+          ],
+          "targetFields": [
+            "unitId"
+          ],
+          "relationName": null,
+          "reverse": true,
+          "oppositeField": "unit"
+        },
+        "listings": {
+          "target": "Listing",
+          "many": true,
+          "localFields": [
+            "id"
+          ],
+          "targetFields": [
+            "unitId"
+          ],
+          "relationName": null,
+          "reverse": true,
+          "oppositeField": "unit"
+        },
+        "contracts": {
+          "target": "Contract",
+          "many": true,
+          "localFields": [
+            "id"
+          ],
+          "targetFields": [
+            "unitId"
+          ],
+          "relationName": null,
+          "reverse": true,
+          "oppositeField": "unit"
+        },
+        "invoices": {
+          "target": "Invoice",
+          "many": true,
+          "localFields": [
+            "id"
+          ],
+          "targetFields": [
+            "unitId"
+          ],
+          "relationName": null,
+          "reverse": true,
+          "oppositeField": "unit"
+        },
+        "maintenanceRequests": {
+          "target": "MaintenanceRequest",
+          "many": true,
+          "localFields": [
+            "id"
+          ],
+          "targetFields": [
+            "unitId"
+          ],
+          "relationName": null,
+          "reverse": true,
+          "oppositeField": "unit"
+        },
+        "documents": {
+          "target": "Document",
+          "many": true,
+          "localFields": [
+            "id"
+          ],
+          "targetFields": [
+            "unitId"
+          ],
+          "relationName": null,
+          "reverse": true,
+          "oppositeField": "unit"
+        },
+        "externalReferences": {
+          "target": "ExternalReference",
+          "many": true,
+          "localFields": [
+            "id"
+          ],
+          "targetFields": [
+            "unitId"
+          ],
+          "relationName": null,
+          "reverse": true,
+          "oppositeField": "unit"
+        },
+        "inspections": {
+          "target": "Inspection",
+          "many": true,
+          "localFields": [
+            "id"
+          ],
+          "targetFields": [
+            "unitId"
+          ],
+          "relationName": null,
+          "reverse": true,
+          "oppositeField": "unit"
+        }
+      }
+    },
+    "UnitMedia": {
+      "table": "UnitMedia",
+      "scalars": [
+        "id",
+        "unitId",
+        "kind",
+        "url",
+        "caption",
+        "sortOrder",
+        "createdAt"
+      ],
+      "dates": [
+        "createdAt"
+      ],
+      "json": [],
+      "enums": {
+        "kind": "MediaKind"
+      },
+      "relations": {
+        "unit": {
+          "target": "Unit",
+          "many": false,
+          "localFields": [
+            "unitId"
+          ],
+          "targetFields": [
+            "id"
+          ],
+          "relationName": null,
+          "reverse": false
+        }
+      }
+    },
+    "Listing": {
+      "table": "Listing",
+      "scalars": [
+        "id",
+        "organizationId",
+        "unitId",
+        "title",
+        "slug",
+        "description",
+        "category",
+        "status",
+        "publishAt",
+        "publishedAt",
+        "applicationDeadline",
+        "moveInDate",
+        "rent",
+        "price",
+        "contactName",
+        "contactEmail",
+        "contactPhone",
+        "requirementProfile",
+        "queueRules",
+        "seoTitle",
+        "seoDescription",
+        "featured",
+        "unpublishedAt",
+        "completedAt",
+        "createdAt",
+        "updatedAt"
+      ],
+      "dates": [
+        "publishAt",
+        "publishedAt",
+        "applicationDeadline",
+        "moveInDate",
+        "unpublishedAt",
+        "completedAt",
+        "createdAt",
+        "updatedAt"
+      ],
+      "json": [],
+      "enums": {
+        "category": "ListingCategory",
+        "status": "ListingStatus"
+      },
+      "relations": {
+        "organization": {
+          "target": "Organization",
+          "many": false,
+          "localFields": [
+            "organizationId"
+          ],
+          "targetFields": [
+            "id"
+          ],
+          "relationName": null,
+          "reverse": false
+        },
+        "unit": {
+          "target": "Unit",
+          "many": false,
+          "localFields": [
+            "unitId"
+          ],
+          "targetFields": [
+            "id"
+          ],
+          "relationName": null,
+          "reverse": false
+        },
+        "publications": {
+          "target": "ListingPublication",
+          "many": true,
+          "localFields": [
+            "id"
+          ],
+          "targetFields": [
+            "listingId"
+          ],
+          "relationName": null,
+          "reverse": true,
+          "oppositeField": "listing"
+        },
+        "applications": {
+          "target": "Application",
+          "many": true,
+          "localFields": [
+            "id"
+          ],
+          "targetFields": [
+            "listingId"
+          ],
+          "relationName": null,
+          "reverse": true,
+          "oppositeField": "listing"
+        },
+        "favorites": {
+          "target": "Favorite",
+          "many": true,
+          "localFields": [
+            "id"
+          ],
+          "targetFields": [
+            "listingId"
+          ],
+          "relationName": null,
+          "reverse": true,
+          "oppositeField": "listing"
+        },
+        "viewings": {
+          "target": "Viewing",
+          "many": true,
+          "localFields": [
+            "id"
+          ],
+          "targetFields": [
+            "listingId"
+          ],
+          "relationName": null,
+          "reverse": true,
+          "oppositeField": "listing"
+        },
+        "offers": {
+          "target": "Offer",
+          "many": true,
+          "localFields": [
+            "id"
+          ],
+          "targetFields": [
+            "listingId"
+          ],
+          "relationName": null,
+          "reverse": true,
+          "oppositeField": "listing"
+        }
+      }
+    },
+    "ListingPublication": {
+      "table": "ListingPublication",
+      "scalars": [
+        "id",
+        "listingId",
+        "channel",
+        "publishedAt",
+        "unpublishedAt",
+        "externalUrl",
+        "createdAt"
+      ],
+      "dates": [
+        "publishedAt",
+        "unpublishedAt",
+        "createdAt"
+      ],
+      "json": [],
+      "enums": {},
+      "relations": {
+        "listing": {
+          "target": "Listing",
+          "many": false,
+          "localFields": [
+            "listingId"
+          ],
+          "targetFields": [
+            "id"
+          ],
+          "relationName": null,
+          "reverse": false
+        }
+      }
+    },
+    "Favorite": {
+      "table": "Favorite",
+      "scalars": [
+        "id",
+        "organizationId",
+        "personId",
+        "listingId",
+        "createdAt"
+      ],
+      "dates": [
+        "createdAt"
+      ],
+      "json": [],
+      "enums": {},
+      "relations": {
+        "organization": {
+          "target": "Organization",
+          "many": false,
+          "localFields": [
+            "organizationId"
+          ],
+          "targetFields": [
+            "id"
+          ],
+          "relationName": null,
+          "reverse": false
+        },
+        "person": {
+          "target": "Person",
+          "many": false,
+          "localFields": [
+            "personId"
+          ],
+          "targetFields": [
+            "id"
+          ],
+          "relationName": null,
+          "reverse": false
+        },
+        "listing": {
+          "target": "Listing",
+          "many": false,
+          "localFields": [
+            "listingId"
+          ],
+          "targetFields": [
+            "id"
+          ],
+          "relationName": null,
+          "reverse": false
+        }
+      }
+    },
+    "SavedSearch": {
+      "table": "SavedSearch",
+      "scalars": [
+        "id",
+        "organizationId",
+        "personId",
+        "name",
+        "criteria",
+        "emailAlerts",
+        "smsAlerts",
+        "lastNotifiedAt",
+        "createdAt",
+        "updatedAt"
+      ],
+      "dates": [
+        "lastNotifiedAt",
+        "createdAt",
+        "updatedAt"
+      ],
+      "json": [
+        "criteria"
+      ],
+      "enums": {},
+      "relations": {
+        "organization": {
+          "target": "Organization",
+          "many": false,
+          "localFields": [
+            "organizationId"
+          ],
+          "targetFields": [
+            "id"
+          ],
+          "relationName": null,
+          "reverse": false
+        },
+        "person": {
+          "target": "Person",
+          "many": false,
+          "localFields": [
+            "personId"
+          ],
+          "targetFields": [
+            "id"
+          ],
+          "relationName": null,
+          "reverse": false
+        }
+      }
+    },
+    "Application": {
+      "table": "Application",
+      "scalars": [
+        "id",
+        "organizationId",
+        "listingId",
+        "status",
+        "isInternalTransfer",
+        "desiredMoveInDate",
+        "currentHousing",
+        "currentLandlord",
+        "employment",
+        "employer",
+        "employmentType",
+        "monthlyIncome",
+        "otherIncome",
+        "references",
+        "pets",
+        "vehicles",
+        "specialNeeds",
+        "message",
+        "consentGivenAt",
+        "submittedAt",
+        "closedAt",
+        "createdAt",
+        "updatedAt"
+      ],
+      "dates": [
+        "desiredMoveInDate",
+        "consentGivenAt",
+        "submittedAt",
+        "closedAt",
+        "createdAt",
+        "updatedAt"
+      ],
+      "json": [],
+      "enums": {
+        "status": "ApplicationStatus"
+      },
+      "relations": {
+        "organization": {
+          "target": "Organization",
+          "many": false,
+          "localFields": [
+            "organizationId"
+          ],
+          "targetFields": [
+            "id"
+          ],
+          "relationName": null,
+          "reverse": false
+        },
+        "listing": {
+          "target": "Listing",
+          "many": false,
+          "localFields": [
+            "listingId"
+          ],
+          "targetFields": [
+            "id"
+          ],
+          "relationName": null,
+          "reverse": false
+        },
+        "members": {
+          "target": "ApplicationMember",
+          "many": true,
+          "localFields": [
+            "id"
+          ],
+          "targetFields": [
+            "applicationId"
+          ],
+          "relationName": null,
+          "reverse": true,
+          "oppositeField": "application"
+        },
+        "statusHistory": {
+          "target": "ApplicationStatusEvent",
+          "many": true,
+          "localFields": [
+            "id"
+          ],
+          "targetFields": [
+            "applicationId"
+          ],
+          "relationName": null,
+          "reverse": true,
+          "oppositeField": "application"
+        },
+        "offers": {
+          "target": "Offer",
+          "many": true,
+          "localFields": [
+            "id"
+          ],
+          "targetFields": [
+            "applicationId"
+          ],
+          "relationName": null,
+          "reverse": true,
+          "oppositeField": "application"
+        },
+        "documents": {
+          "target": "Document",
+          "many": true,
+          "localFields": [
+            "id"
+          ],
+          "targetFields": [
+            "applicationId"
+          ],
+          "relationName": null,
+          "reverse": true,
+          "oppositeField": "application"
+        },
+        "viewingAttendees": {
+          "target": "ViewingAttendee",
+          "many": true,
+          "localFields": [
+            "id"
+          ],
+          "targetFields": [
+            "applicationId"
+          ],
+          "relationName": null,
+          "reverse": true,
+          "oppositeField": "application"
+        }
+      }
+    },
+    "ApplicationMember": {
+      "table": "ApplicationMember",
+      "scalars": [
+        "id",
+        "applicationId",
+        "personId",
+        "role",
+        "createdAt"
+      ],
+      "dates": [
+        "createdAt"
+      ],
+      "json": [],
+      "enums": {
+        "role": "ApplicationMemberRole"
+      },
+      "relations": {
+        "application": {
+          "target": "Application",
+          "many": false,
+          "localFields": [
+            "applicationId"
+          ],
+          "targetFields": [
+            "id"
+          ],
+          "relationName": null,
+          "reverse": false
+        },
+        "person": {
+          "target": "Person",
+          "many": false,
+          "localFields": [
+            "personId"
+          ],
+          "targetFields": [
+            "id"
+          ],
+          "relationName": null,
+          "reverse": false
+        }
+      }
+    },
+    "ApplicationStatusEvent": {
+      "table": "ApplicationStatusEvent",
+      "scalars": [
+        "id",
+        "applicationId",
+        "fromStatus",
+        "toStatus",
+        "comment",
+        "changedByUserId",
+        "createdAt"
+      ],
+      "dates": [
+        "createdAt"
+      ],
+      "json": [],
+      "enums": {
+        "fromStatus": "ApplicationStatus",
+        "toStatus": "ApplicationStatus"
+      },
+      "relations": {
+        "application": {
+          "target": "Application",
+          "many": false,
+          "localFields": [
+            "applicationId"
+          ],
+          "targetFields": [
+            "id"
+          ],
+          "relationName": null,
+          "reverse": false
+        }
+      }
+    },
+    "Viewing": {
+      "table": "Viewing",
+      "scalars": [
+        "id",
+        "organizationId",
+        "listingId",
+        "kind",
+        "startsAt",
+        "endsAt",
+        "maxAttendees",
+        "location",
+        "notes",
+        "createdAt",
+        "updatedAt"
+      ],
+      "dates": [
+        "startsAt",
+        "endsAt",
+        "createdAt",
+        "updatedAt"
+      ],
+      "json": [],
+      "enums": {
+        "kind": "ViewingKind"
+      },
+      "relations": {
+        "organization": {
+          "target": "Organization",
+          "many": false,
+          "localFields": [
+            "organizationId"
+          ],
+          "targetFields": [
+            "id"
+          ],
+          "relationName": null,
+          "reverse": false
+        },
+        "listing": {
+          "target": "Listing",
+          "many": false,
+          "localFields": [
+            "listingId"
+          ],
+          "targetFields": [
+            "id"
+          ],
+          "relationName": null,
+          "reverse": false
+        },
+        "attendees": {
+          "target": "ViewingAttendee",
+          "many": true,
+          "localFields": [
+            "id"
+          ],
+          "targetFields": [
+            "viewingId"
+          ],
+          "relationName": null,
+          "reverse": true,
+          "oppositeField": "viewing"
+        }
+      }
+    },
+    "ViewingAttendee": {
+      "table": "ViewingAttendee",
+      "scalars": [
+        "id",
+        "viewingId",
+        "personId",
+        "applicationId",
+        "status",
+        "createdAt",
+        "updatedAt"
+      ],
+      "dates": [
+        "createdAt",
+        "updatedAt"
+      ],
+      "json": [],
+      "enums": {
+        "status": "ViewingAttendeeStatus"
+      },
+      "relations": {
+        "viewing": {
+          "target": "Viewing",
+          "many": false,
+          "localFields": [
+            "viewingId"
+          ],
+          "targetFields": [
+            "id"
+          ],
+          "relationName": null,
+          "reverse": false
+        },
+        "person": {
+          "target": "Person",
+          "many": false,
+          "localFields": [
+            "personId"
+          ],
+          "targetFields": [
+            "id"
+          ],
+          "relationName": null,
+          "reverse": false
+        },
+        "application": {
+          "target": "Application",
+          "many": false,
+          "localFields": [
+            "applicationId"
+          ],
+          "targetFields": [
+            "id"
+          ],
+          "relationName": null,
+          "reverse": false
+        }
+      }
+    },
+    "Offer": {
+      "table": "Offer",
+      "scalars": [
+        "id",
+        "organizationId",
+        "listingId",
+        "applicationId",
+        "personId",
+        "status",
+        "expiresAt",
+        "respondedAt",
+        "decisionNote",
+        "isInternalTransfer",
+        "contractId",
+        "createdAt",
+        "updatedAt"
+      ],
+      "dates": [
+        "expiresAt",
+        "respondedAt",
+        "createdAt",
+        "updatedAt"
+      ],
+      "json": [],
+      "enums": {
+        "status": "OfferStatus"
+      },
+      "relations": {
+        "organization": {
+          "target": "Organization",
+          "many": false,
+          "localFields": [
+            "organizationId"
+          ],
+          "targetFields": [
+            "id"
+          ],
+          "relationName": null,
+          "reverse": false
+        },
+        "listing": {
+          "target": "Listing",
+          "many": false,
+          "localFields": [
+            "listingId"
+          ],
+          "targetFields": [
+            "id"
+          ],
+          "relationName": null,
+          "reverse": false
+        },
+        "application": {
+          "target": "Application",
+          "many": false,
+          "localFields": [
+            "applicationId"
+          ],
+          "targetFields": [
+            "id"
+          ],
+          "relationName": null,
+          "reverse": false
+        },
+        "person": {
+          "target": "Person",
+          "many": false,
+          "localFields": [
+            "personId"
+          ],
+          "targetFields": [
+            "id"
+          ],
+          "relationName": null,
+          "reverse": false
+        }
+      }
+    },
+    "Contract": {
+      "table": "Contract",
+      "scalars": [
+        "id",
+        "organizationId",
+        "unitId",
+        "contractNumber",
+        "type",
+        "status",
+        "startDate",
+        "endDate",
+        "noticePeriodMonths",
+        "rent",
+        "rentAddons",
+        "deposit",
+        "invoiceReference",
+        "isImported",
+        "replacesContractId",
+        "terminatedAt",
+        "terminationEffectiveDate",
+        "activatedAt",
+        "createdAt",
+        "updatedAt"
+      ],
+      "dates": [
+        "startDate",
+        "endDate",
+        "terminatedAt",
+        "terminationEffectiveDate",
+        "activatedAt",
+        "createdAt",
+        "updatedAt"
+      ],
+      "json": [
+        "rentAddons"
+      ],
+      "enums": {
+        "type": "ContractType",
+        "status": "ContractStatus"
+      },
+      "relations": {
+        "organization": {
+          "target": "Organization",
+          "many": false,
+          "localFields": [
+            "organizationId"
+          ],
+          "targetFields": [
+            "id"
+          ],
+          "relationName": null,
+          "reverse": false
+        },
+        "unit": {
+          "target": "Unit",
+          "many": false,
+          "localFields": [
+            "unitId"
+          ],
+          "targetFields": [
+            "id"
+          ],
+          "relationName": null,
+          "reverse": false
+        },
+        "parties": {
+          "target": "ContractParty",
+          "many": true,
+          "localFields": [
+            "id"
+          ],
+          "targetFields": [
+            "contractId"
+          ],
+          "relationName": null,
+          "reverse": true,
+          "oppositeField": "contract"
+        },
+        "versions": {
+          "target": "ContractVersion",
+          "many": true,
+          "localFields": [
+            "id"
+          ],
+          "targetFields": [
+            "contractId"
+          ],
+          "relationName": null,
+          "reverse": true,
+          "oppositeField": "contract"
+        },
+        "documents": {
+          "target": "Document",
+          "many": true,
+          "localFields": [
+            "id"
+          ],
+          "targetFields": [
+            "contractId"
+          ],
+          "relationName": null,
+          "reverse": true,
+          "oppositeField": "contract"
+        },
+        "invoices": {
+          "target": "Invoice",
+          "many": true,
+          "localFields": [
+            "id"
+          ],
+          "targetFields": [
+            "contractId"
+          ],
+          "relationName": null,
+          "reverse": true,
+          "oppositeField": "contract"
+        },
+        "statusHistory": {
+          "target": "ContractStatusEvent",
+          "many": true,
+          "localFields": [
+            "id"
+          ],
+          "targetFields": [
+            "contractId"
+          ],
+          "relationName": null,
+          "reverse": true,
+          "oppositeField": "contract"
+        },
+        "externalReferences": {
+          "target": "ExternalReference",
+          "many": true,
+          "localFields": [
+            "id"
+          ],
+          "targetFields": [
+            "contractId"
+          ],
+          "relationName": null,
+          "reverse": true,
+          "oppositeField": "contract"
+        },
+        "terminations": {
+          "target": "Termination",
+          "many": true,
+          "localFields": [
+            "id"
+          ],
+          "targetFields": [
+            "contractId"
+          ],
+          "relationName": null,
+          "reverse": true,
+          "oppositeField": "contract"
+        }
+      }
+    },
+    "ContractParty": {
+      "table": "ContractParty",
+      "scalars": [
+        "id",
+        "contractId",
+        "personId",
+        "role",
+        "signedAt",
+        "signatureMethod",
+        "createdAt"
+      ],
+      "dates": [
+        "signedAt",
+        "createdAt"
+      ],
+      "json": [],
+      "enums": {
+        "role": "ContractPartyRole"
+      },
+      "relations": {
+        "contract": {
+          "target": "Contract",
+          "many": false,
+          "localFields": [
+            "contractId"
+          ],
+          "targetFields": [
+            "id"
+          ],
+          "relationName": null,
+          "reverse": false
+        },
+        "person": {
+          "target": "Person",
+          "many": false,
+          "localFields": [
+            "personId"
+          ],
+          "targetFields": [
+            "id"
+          ],
+          "relationName": null,
+          "reverse": false
+        }
+      }
+    },
+    "ContractVersion": {
+      "table": "ContractVersion",
+      "scalars": [
+        "id",
+        "contractId",
+        "versionNumber",
+        "content",
+        "documentHash",
+        "createdByUserId",
+        "createdAt"
+      ],
+      "dates": [
+        "createdAt"
+      ],
+      "json": [
+        "content"
+      ],
+      "enums": {},
+      "relations": {
+        "contract": {
+          "target": "Contract",
+          "many": false,
+          "localFields": [
+            "contractId"
+          ],
+          "targetFields": [
+            "id"
+          ],
+          "relationName": null,
+          "reverse": false
+        }
+      }
+    },
+    "ContractStatusEvent": {
+      "table": "ContractStatusEvent",
+      "scalars": [
+        "id",
+        "contractId",
+        "fromStatus",
+        "toStatus",
+        "comment",
+        "changedByUserId",
+        "createdAt"
+      ],
+      "dates": [
+        "createdAt"
+      ],
+      "json": [],
+      "enums": {
+        "fromStatus": "ContractStatus",
+        "toStatus": "ContractStatus"
+      },
+      "relations": {
+        "contract": {
+          "target": "Contract",
+          "many": false,
+          "localFields": [
+            "contractId"
+          ],
+          "targetFields": [
+            "id"
+          ],
+          "relationName": null,
+          "reverse": false
+        }
+      }
+    },
+    "Termination": {
+      "table": "Termination",
+      "scalars": [
+        "id",
+        "organizationId",
+        "contractId",
+        "requestedByPersonId",
+        "requestedAt",
+        "desiredMoveOutDate",
+        "earliestEndDate",
+        "effectiveEndDate",
+        "status",
+        "reason",
+        "isInternalTransfer",
+        "newContractId",
+        "createdAt",
+        "updatedAt"
+      ],
+      "dates": [
+        "requestedAt",
+        "desiredMoveOutDate",
+        "earliestEndDate",
+        "effectiveEndDate",
+        "createdAt",
+        "updatedAt"
+      ],
+      "json": [],
+      "enums": {
+        "status": "TerminationStatus"
+      },
+      "relations": {
+        "organization": {
+          "target": "Organization",
+          "many": false,
+          "localFields": [
+            "organizationId"
+          ],
+          "targetFields": [
+            "id"
+          ],
+          "relationName": null,
+          "reverse": false
+        },
+        "contract": {
+          "target": "Contract",
+          "many": false,
+          "localFields": [
+            "contractId"
+          ],
+          "targetFields": [
+            "id"
+          ],
+          "relationName": null,
+          "reverse": false
+        },
+        "requestedBy": {
+          "target": "Person",
+          "many": false,
+          "localFields": [
+            "requestedByPersonId"
+          ],
+          "targetFields": [
+            "id"
+          ],
+          "relationName": null,
+          "reverse": false
+        }
+      }
+    },
+    "Inspection": {
+      "table": "Inspection",
+      "scalars": [
+        "id",
+        "organizationId",
+        "unitId",
+        "type",
+        "scheduledAt",
+        "completedAt",
+        "inspectorName",
+        "result",
+        "notes",
+        "createdAt",
+        "updatedAt"
+      ],
+      "dates": [
+        "scheduledAt",
+        "completedAt",
+        "createdAt",
+        "updatedAt"
+      ],
+      "json": [],
+      "enums": {
+        "type": "InspectionType"
+      },
+      "relations": {
+        "organization": {
+          "target": "Organization",
+          "many": false,
+          "localFields": [
+            "organizationId"
+          ],
+          "targetFields": [
+            "id"
+          ],
+          "relationName": null,
+          "reverse": false
+        },
+        "unit": {
+          "target": "Unit",
+          "many": false,
+          "localFields": [
+            "unitId"
+          ],
+          "targetFields": [
+            "id"
+          ],
+          "relationName": null,
+          "reverse": false
+        }
+      }
+    },
+    "Invoice": {
+      "table": "Invoice",
+      "scalars": [
+        "id",
+        "organizationId",
+        "personId",
+        "contractId",
+        "unitId",
+        "invoiceNumber",
+        "status",
+        "invoiceDate",
+        "dueDate",
+        "periodStart",
+        "periodEnd",
+        "totalAmount",
+        "vatAmount",
+        "paidAmount",
+        "currency",
+        "ocr",
+        "bankgiro",
+        "reference",
+        "pdfUrl",
+        "reminderCount",
+        "isCreditNote",
+        "creditsInvoiceId",
+        "createdAt",
+        "updatedAt"
+      ],
+      "dates": [
+        "invoiceDate",
+        "dueDate",
+        "periodStart",
+        "periodEnd",
+        "createdAt",
+        "updatedAt"
+      ],
+      "json": [],
+      "enums": {
+        "status": "InvoiceStatus"
+      },
+      "relations": {
+        "organization": {
+          "target": "Organization",
+          "many": false,
+          "localFields": [
+            "organizationId"
+          ],
+          "targetFields": [
+            "id"
+          ],
+          "relationName": null,
+          "reverse": false
+        },
+        "person": {
+          "target": "Person",
+          "many": false,
+          "localFields": [
+            "personId"
+          ],
+          "targetFields": [
+            "id"
+          ],
+          "relationName": null,
+          "reverse": false
+        },
+        "contract": {
+          "target": "Contract",
+          "many": false,
+          "localFields": [
+            "contractId"
+          ],
+          "targetFields": [
+            "id"
+          ],
+          "relationName": null,
+          "reverse": false
+        },
+        "unit": {
+          "target": "Unit",
+          "many": false,
+          "localFields": [
+            "unitId"
+          ],
+          "targetFields": [
+            "id"
+          ],
+          "relationName": null,
+          "reverse": false
+        },
+        "creditsInvoice": {
+          "target": "Invoice",
+          "many": false,
+          "localFields": [
+            "creditsInvoiceId"
+          ],
+          "targetFields": [
+            "id"
+          ],
+          "relationName": "CreditNotes",
+          "reverse": false
+        },
+        "creditNotes": {
+          "target": "Invoice",
+          "many": true,
+          "localFields": [
+            "id"
+          ],
+          "targetFields": [
+            "creditsInvoiceId"
+          ],
+          "relationName": "CreditNotes",
+          "reverse": true,
+          "oppositeField": "creditsInvoice"
+        },
+        "lines": {
+          "target": "InvoiceLine",
+          "many": true,
+          "localFields": [
+            "id"
+          ],
+          "targetFields": [
+            "invoiceId"
+          ],
+          "relationName": null,
+          "reverse": true,
+          "oppositeField": "invoice"
+        },
+        "paymentAllocations": {
+          "target": "PaymentAllocation",
+          "many": true,
+          "localFields": [
+            "id"
+          ],
+          "targetFields": [
+            "invoiceId"
+          ],
+          "relationName": null,
+          "reverse": true,
+          "oppositeField": "invoice"
+        },
+        "externalReferences": {
+          "target": "ExternalReference",
+          "many": true,
+          "localFields": [
+            "id"
+          ],
+          "targetFields": [
+            "invoiceId"
+          ],
+          "relationName": null,
+          "reverse": true,
+          "oppositeField": "invoice"
+        },
+        "statusHistory": {
+          "target": "InvoiceStatusEvent",
+          "many": true,
+          "localFields": [
+            "id"
+          ],
+          "targetFields": [
+            "invoiceId"
+          ],
+          "relationName": null,
+          "reverse": true,
+          "oppositeField": "invoice"
+        }
+      }
+    },
+    "InvoiceLine": {
+      "table": "InvoiceLine",
+      "scalars": [
+        "id",
+        "invoiceId",
+        "description",
+        "quantity",
+        "unitPrice",
+        "vatRate",
+        "amount",
+        "sortOrder"
+      ],
+      "dates": [],
+      "json": [],
+      "enums": {},
+      "relations": {
+        "invoice": {
+          "target": "Invoice",
+          "many": false,
+          "localFields": [
+            "invoiceId"
+          ],
+          "targetFields": [
+            "id"
+          ],
+          "relationName": null,
+          "reverse": false
+        }
+      }
+    },
+    "InvoiceStatusEvent": {
+      "table": "InvoiceStatusEvent",
+      "scalars": [
+        "id",
+        "invoiceId",
+        "fromStatus",
+        "toStatus",
+        "source",
+        "comment",
+        "changedByUserId",
+        "createdAt"
+      ],
+      "dates": [
+        "createdAt"
+      ],
+      "json": [],
+      "enums": {
+        "fromStatus": "InvoiceStatus",
+        "toStatus": "InvoiceStatus"
+      },
+      "relations": {
+        "invoice": {
+          "target": "Invoice",
+          "many": false,
+          "localFields": [
+            "invoiceId"
+          ],
+          "targetFields": [
+            "id"
+          ],
+          "relationName": null,
+          "reverse": false
+        }
+      }
+    },
+    "Payment": {
+      "table": "Payment",
+      "scalars": [
+        "id",
+        "organizationId",
+        "amount",
+        "currency",
+        "paidAt",
+        "method",
+        "reference",
+        "createdAt"
+      ],
+      "dates": [
+        "paidAt",
+        "createdAt"
+      ],
+      "json": [],
+      "enums": {},
+      "relations": {
+        "organization": {
+          "target": "Organization",
+          "many": false,
+          "localFields": [
+            "organizationId"
+          ],
+          "targetFields": [
+            "id"
+          ],
+          "relationName": null,
+          "reverse": false
+        },
+        "allocations": {
+          "target": "PaymentAllocation",
+          "many": true,
+          "localFields": [
+            "id"
+          ],
+          "targetFields": [
+            "paymentId"
+          ],
+          "relationName": null,
+          "reverse": true,
+          "oppositeField": "payment"
+        },
+        "externalReferences": {
+          "target": "ExternalReference",
+          "many": true,
+          "localFields": [
+            "id"
+          ],
+          "targetFields": [
+            "paymentId"
+          ],
+          "relationName": null,
+          "reverse": true,
+          "oppositeField": "payment"
+        }
+      }
+    },
+    "PaymentAllocation": {
+      "table": "PaymentAllocation",
+      "scalars": [
+        "id",
+        "paymentId",
+        "invoiceId",
+        "amount",
+        "createdAt"
+      ],
+      "dates": [
+        "createdAt"
+      ],
+      "json": [],
+      "enums": {},
+      "relations": {
+        "payment": {
+          "target": "Payment",
+          "many": false,
+          "localFields": [
+            "paymentId"
+          ],
+          "targetFields": [
+            "id"
+          ],
+          "relationName": null,
+          "reverse": false
+        },
+        "invoice": {
+          "target": "Invoice",
+          "many": false,
+          "localFields": [
+            "invoiceId"
+          ],
+          "targetFields": [
+            "id"
+          ],
+          "relationName": null,
+          "reverse": false
+        }
+      }
+    },
+    "ExternalReference": {
+      "table": "ExternalReference",
+      "scalars": [
+        "id",
+        "organizationId",
+        "externalSystem",
+        "entityType",
+        "externalId",
+        "personId",
+        "invoiceId",
+        "paymentId",
+        "contractId",
+        "unitId",
+        "syncStatus",
+        "lastSyncedAt",
+        "sourceVersion",
+        "sourceUpdatedAt",
+        "metadata",
+        "createdAt",
+        "updatedAt"
+      ],
+      "dates": [
+        "lastSyncedAt",
+        "sourceUpdatedAt",
+        "createdAt",
+        "updatedAt"
+      ],
+      "json": [
+        "metadata"
+      ],
+      "enums": {},
+      "relations": {
+        "organization": {
+          "target": "Organization",
+          "many": false,
+          "localFields": [
+            "organizationId"
+          ],
+          "targetFields": [
+            "id"
+          ],
+          "relationName": null,
+          "reverse": false
+        },
+        "person": {
+          "target": "Person",
+          "many": false,
+          "localFields": [
+            "personId"
+          ],
+          "targetFields": [
+            "id"
+          ],
+          "relationName": null,
+          "reverse": false
+        },
+        "invoice": {
+          "target": "Invoice",
+          "many": false,
+          "localFields": [
+            "invoiceId"
+          ],
+          "targetFields": [
+            "id"
+          ],
+          "relationName": null,
+          "reverse": false
+        },
+        "payment": {
+          "target": "Payment",
+          "many": false,
+          "localFields": [
+            "paymentId"
+          ],
+          "targetFields": [
+            "id"
+          ],
+          "relationName": null,
+          "reverse": false
+        },
+        "contract": {
+          "target": "Contract",
+          "many": false,
+          "localFields": [
+            "contractId"
+          ],
+          "targetFields": [
+            "id"
+          ],
+          "relationName": null,
+          "reverse": false
+        },
+        "unit": {
+          "target": "Unit",
+          "many": false,
+          "localFields": [
+            "unitId"
+          ],
+          "targetFields": [
+            "id"
+          ],
+          "relationName": null,
+          "reverse": false
+        }
+      }
+    },
+    "IntegrationConnection": {
+      "table": "IntegrationConnection",
+      "scalars": [
+        "id",
+        "organizationId",
+        "provider",
+        "name",
+        "isActive",
+        "credentialsEncrypted",
+        "settings",
+        "webhookSecret",
+        "lastSyncAt",
+        "createdAt",
+        "updatedAt"
+      ],
+      "dates": [
+        "lastSyncAt",
+        "createdAt",
+        "updatedAt"
+      ],
+      "json": [
+        "settings"
+      ],
+      "enums": {},
+      "relations": {
+        "organization": {
+          "target": "Organization",
+          "many": false,
+          "localFields": [
+            "organizationId"
+          ],
+          "targetFields": [
+            "id"
+          ],
+          "relationName": null,
+          "reverse": false
+        },
+        "syncJobs": {
+          "target": "IntegrationSyncJob",
+          "many": true,
+          "localFields": [
+            "id"
+          ],
+          "targetFields": [
+            "connectionId"
+          ],
+          "relationName": null,
+          "reverse": true,
+          "oppositeField": "connection"
+        }
+      }
+    },
+    "IntegrationSyncJob": {
+      "table": "IntegrationSyncJob",
+      "scalars": [
+        "id",
+        "organizationId",
+        "connectionId",
+        "jobType",
+        "status",
+        "startedAt",
+        "finishedAt",
+        "itemsProcessed",
+        "itemsCreated",
+        "itemsUpdated",
+        "itemsSkipped",
+        "itemsFailed",
+        "log",
+        "error",
+        "correlationId",
+        "createdAt"
+      ],
+      "dates": [
+        "startedAt",
+        "finishedAt",
+        "createdAt"
+      ],
+      "json": [
+        "log"
+      ],
+      "enums": {
+        "status": "SyncJobStatus"
+      },
+      "relations": {
+        "organization": {
+          "target": "Organization",
+          "many": false,
+          "localFields": [
+            "organizationId"
+          ],
+          "targetFields": [
+            "id"
+          ],
+          "relationName": null,
+          "reverse": false
+        },
+        "connection": {
+          "target": "IntegrationConnection",
+          "many": false,
+          "localFields": [
+            "connectionId"
+          ],
+          "targetFields": [
+            "id"
+          ],
+          "relationName": null,
+          "reverse": false
+        },
+        "reviewItems": {
+          "target": "SyncReviewItem",
+          "many": true,
+          "localFields": [
+            "id"
+          ],
+          "targetFields": [
+            "syncJobId"
+          ],
+          "relationName": null,
+          "reverse": true,
+          "oppositeField": "syncJob"
+        }
+      }
+    },
+    "SyncReviewItem": {
+      "table": "SyncReviewItem",
+      "scalars": [
+        "id",
+        "organizationId",
+        "syncJobId",
+        "entityType",
+        "externalSystem",
+        "externalId",
+        "payload",
+        "reason",
+        "status",
+        "resolvedByUserId",
+        "resolvedAt",
+        "resolutionNote",
+        "createdAt",
+        "updatedAt"
+      ],
+      "dates": [
+        "resolvedAt",
+        "createdAt",
+        "updatedAt"
+      ],
+      "json": [
+        "payload"
+      ],
+      "enums": {
+        "status": "ReviewItemStatus"
+      },
+      "relations": {
+        "organization": {
+          "target": "Organization",
+          "many": false,
+          "localFields": [
+            "organizationId"
+          ],
+          "targetFields": [
+            "id"
+          ],
+          "relationName": null,
+          "reverse": false
+        },
+        "syncJob": {
+          "target": "IntegrationSyncJob",
+          "many": false,
+          "localFields": [
+            "syncJobId"
+          ],
+          "targetFields": [
+            "id"
+          ],
+          "relationName": null,
+          "reverse": false
+        }
+      }
+    },
+    "MaintenanceRequest": {
+      "table": "MaintenanceRequest",
+      "scalars": [
+        "id",
+        "organizationId",
+        "requestNumber",
+        "propertyId",
+        "unitId",
+        "personId",
+        "status",
+        "priority",
+        "category",
+        "subcategory",
+        "room",
+        "title",
+        "description",
+        "discoveredAt",
+        "contactPhone",
+        "preferredTime",
+        "masterKeyAllowed",
+        "petsInHome",
+        "isEmergency",
+        "rating",
+        "closedAt",
+        "createdAt",
+        "updatedAt"
+      ],
+      "dates": [
+        "discoveredAt",
+        "closedAt",
+        "createdAt",
+        "updatedAt"
+      ],
+      "json": [],
+      "enums": {
+        "status": "MaintenanceStatus",
+        "priority": "MaintenancePriority"
+      },
+      "relations": {
+        "organization": {
+          "target": "Organization",
+          "many": false,
+          "localFields": [
+            "organizationId"
+          ],
+          "targetFields": [
+            "id"
+          ],
+          "relationName": null,
+          "reverse": false
+        },
+        "property": {
+          "target": "Property",
+          "many": false,
+          "localFields": [
+            "propertyId"
+          ],
+          "targetFields": [
+            "id"
+          ],
+          "relationName": null,
+          "reverse": false
+        },
+        "unit": {
+          "target": "Unit",
+          "many": false,
+          "localFields": [
+            "unitId"
+          ],
+          "targetFields": [
+            "id"
+          ],
+          "relationName": null,
+          "reverse": false
+        },
+        "person": {
+          "target": "Person",
+          "many": false,
+          "localFields": [
+            "personId"
+          ],
+          "targetFields": [
+            "id"
+          ],
+          "relationName": null,
+          "reverse": false
+        },
+        "comments": {
+          "target": "MaintenanceComment",
+          "many": true,
+          "localFields": [
+            "id"
+          ],
+          "targetFields": [
+            "requestId"
+          ],
+          "relationName": null,
+          "reverse": true,
+          "oppositeField": "request"
+        },
+        "statusHistory": {
+          "target": "MaintenanceStatusEvent",
+          "many": true,
+          "localFields": [
+            "id"
+          ],
+          "targetFields": [
+            "requestId"
+          ],
+          "relationName": null,
+          "reverse": true,
+          "oppositeField": "request"
+        },
+        "workOrders": {
+          "target": "WorkOrder",
+          "many": true,
+          "localFields": [
+            "id"
+          ],
+          "targetFields": [
+            "requestId"
+          ],
+          "relationName": null,
+          "reverse": true,
+          "oppositeField": "request"
+        },
+        "documents": {
+          "target": "Document",
+          "many": true,
+          "localFields": [
+            "id"
+          ],
+          "targetFields": [
+            "maintenanceRequestId"
+          ],
+          "relationName": null,
+          "reverse": true,
+          "oppositeField": "maintenanceRequest"
+        }
+      }
+    },
+    "MaintenanceComment": {
+      "table": "MaintenanceComment",
+      "scalars": [
+        "id",
+        "requestId",
+        "authorUserId",
+        "authorName",
+        "body",
+        "isInternal",
+        "createdAt"
+      ],
+      "dates": [
+        "createdAt"
+      ],
+      "json": [],
+      "enums": {},
+      "relations": {
+        "request": {
+          "target": "MaintenanceRequest",
+          "many": false,
+          "localFields": [
+            "requestId"
+          ],
+          "targetFields": [
+            "id"
+          ],
+          "relationName": null,
+          "reverse": false
+        }
+      }
+    },
+    "MaintenanceStatusEvent": {
+      "table": "MaintenanceStatusEvent",
+      "scalars": [
+        "id",
+        "requestId",
+        "fromStatus",
+        "toStatus",
+        "comment",
+        "changedByUserId",
+        "createdAt"
+      ],
+      "dates": [
+        "createdAt"
+      ],
+      "json": [],
+      "enums": {
+        "fromStatus": "MaintenanceStatus",
+        "toStatus": "MaintenanceStatus"
+      },
+      "relations": {
+        "request": {
+          "target": "MaintenanceRequest",
+          "many": false,
+          "localFields": [
+            "requestId"
+          ],
+          "targetFields": [
+            "id"
+          ],
+          "relationName": null,
+          "reverse": false
+        }
+      }
+    },
+    "WorkOrder": {
+      "table": "WorkOrder",
+      "scalars": [
+        "id",
+        "organizationId",
+        "requestId",
+        "supplierId",
+        "assigneeUserId",
+        "orderNumber",
+        "status",
+        "priority",
+        "title",
+        "description",
+        "accessInfo",
+        "scheduledAt",
+        "completedAt",
+        "timeReported",
+        "materialsUsed",
+        "cost",
+        "invoiceReference",
+        "checklist",
+        "notes",
+        "approvedByUserId",
+        "approvedAt",
+        "createdAt",
+        "updatedAt"
+      ],
+      "dates": [
+        "scheduledAt",
+        "completedAt",
+        "approvedAt",
+        "createdAt",
+        "updatedAt"
+      ],
+      "json": [
+        "checklist"
+      ],
+      "enums": {
+        "status": "WorkOrderStatus",
+        "priority": "MaintenancePriority"
+      },
+      "relations": {
+        "organization": {
+          "target": "Organization",
+          "many": false,
+          "localFields": [
+            "organizationId"
+          ],
+          "targetFields": [
+            "id"
+          ],
+          "relationName": null,
+          "reverse": false
+        },
+        "request": {
+          "target": "MaintenanceRequest",
+          "many": false,
+          "localFields": [
+            "requestId"
+          ],
+          "targetFields": [
+            "id"
+          ],
+          "relationName": null,
+          "reverse": false
+        },
+        "supplier": {
+          "target": "Supplier",
+          "many": false,
+          "localFields": [
+            "supplierId"
+          ],
+          "targetFields": [
+            "id"
+          ],
+          "relationName": null,
+          "reverse": false
+        },
+        "assignee": {
+          "target": "User",
+          "many": false,
+          "localFields": [
+            "assigneeUserId"
+          ],
+          "targetFields": [
+            "id"
+          ],
+          "relationName": "WorkOrderAssignee",
+          "reverse": false
+        },
+        "documents": {
+          "target": "Document",
+          "many": true,
+          "localFields": [
+            "id"
+          ],
+          "targetFields": [
+            "workOrderId"
+          ],
+          "relationName": null,
+          "reverse": true,
+          "oppositeField": "workOrder"
+        }
+      }
+    },
+    "Supplier": {
+      "table": "Supplier",
+      "scalars": [
+        "id",
+        "organizationId",
+        "name",
+        "orgNumber",
+        "email",
+        "phone",
+        "specialty",
+        "isActive",
+        "createdAt",
+        "updatedAt"
+      ],
+      "dates": [
+        "createdAt",
+        "updatedAt"
+      ],
+      "json": [],
+      "enums": {},
+      "relations": {
+        "organization": {
+          "target": "Organization",
+          "many": false,
+          "localFields": [
+            "organizationId"
+          ],
+          "targetFields": [
+            "id"
+          ],
+          "relationName": null,
+          "reverse": false
+        },
+        "workOrders": {
+          "target": "WorkOrder",
+          "many": true,
+          "localFields": [
+            "id"
+          ],
+          "targetFields": [
+            "supplierId"
+          ],
+          "relationName": null,
+          "reverse": true,
+          "oppositeField": "supplier"
+        },
+        "users": {
+          "target": "User",
+          "many": true,
+          "localFields": [
+            "id"
+          ],
+          "targetFields": [
+            "supplierId"
+          ],
+          "relationName": null,
+          "reverse": true,
+          "oppositeField": "supplier"
+        }
+      }
+    },
+    "Document": {
+      "table": "Document",
+      "scalars": [
+        "id",
+        "organizationId",
+        "type",
+        "title",
+        "fileName",
+        "mimeType",
+        "sizeBytes",
+        "storageKey",
+        "sha256",
+        "version",
+        "personId",
+        "unitId",
+        "propertyId",
+        "contractId",
+        "applicationId",
+        "maintenanceRequestId",
+        "workOrderId",
+        "signStatus",
+        "uploadedByUserId",
+        "retentionUntil",
+        "archivedAt",
+        "createdAt",
+        "updatedAt"
+      ],
+      "dates": [
+        "retentionUntil",
+        "archivedAt",
+        "createdAt",
+        "updatedAt"
+      ],
+      "json": [],
+      "enums": {
+        "type": "DocumentType"
+      },
+      "relations": {
+        "organization": {
+          "target": "Organization",
+          "many": false,
+          "localFields": [
+            "organizationId"
+          ],
+          "targetFields": [
+            "id"
+          ],
+          "relationName": null,
+          "reverse": false
+        },
+        "person": {
+          "target": "Person",
+          "many": false,
+          "localFields": [
+            "personId"
+          ],
+          "targetFields": [
+            "id"
+          ],
+          "relationName": null,
+          "reverse": false
+        },
+        "unit": {
+          "target": "Unit",
+          "many": false,
+          "localFields": [
+            "unitId"
+          ],
+          "targetFields": [
+            "id"
+          ],
+          "relationName": null,
+          "reverse": false
+        },
+        "property": {
+          "target": "Property",
+          "many": false,
+          "localFields": [
+            "propertyId"
+          ],
+          "targetFields": [
+            "id"
+          ],
+          "relationName": null,
+          "reverse": false
+        },
+        "contract": {
+          "target": "Contract",
+          "many": false,
+          "localFields": [
+            "contractId"
+          ],
+          "targetFields": [
+            "id"
+          ],
+          "relationName": null,
+          "reverse": false
+        },
+        "application": {
+          "target": "Application",
+          "many": false,
+          "localFields": [
+            "applicationId"
+          ],
+          "targetFields": [
+            "id"
+          ],
+          "relationName": null,
+          "reverse": false
+        },
+        "maintenanceRequest": {
+          "target": "MaintenanceRequest",
+          "many": false,
+          "localFields": [
+            "maintenanceRequestId"
+          ],
+          "targetFields": [
+            "id"
+          ],
+          "relationName": null,
+          "reverse": false
+        },
+        "workOrder": {
+          "target": "WorkOrder",
+          "many": false,
+          "localFields": [
+            "workOrderId"
+          ],
+          "targetFields": [
+            "id"
+          ],
+          "relationName": null,
+          "reverse": false
+        }
+      }
+    },
+    "Message": {
+      "table": "Message",
+      "scalars": [
+        "id",
+        "organizationId",
+        "senderPersonId",
+        "recipientPersonId",
+        "subject",
+        "body",
+        "readAt",
+        "createdAt"
+      ],
+      "dates": [
+        "readAt",
+        "createdAt"
+      ],
+      "json": [],
+      "enums": {},
+      "relations": {
+        "organization": {
+          "target": "Organization",
+          "many": false,
+          "localFields": [
+            "organizationId"
+          ],
+          "targetFields": [
+            "id"
+          ],
+          "relationName": null,
+          "reverse": false
+        },
+        "sender": {
+          "target": "Person",
+          "many": false,
+          "localFields": [
+            "senderPersonId"
+          ],
+          "targetFields": [
+            "id"
+          ],
+          "relationName": "MessageSender",
+          "reverse": false
+        },
+        "recipient": {
+          "target": "Person",
+          "many": false,
+          "localFields": [
+            "recipientPersonId"
+          ],
+          "targetFields": [
+            "id"
+          ],
+          "relationName": "MessageRecipient",
+          "reverse": false
+        }
+      }
+    },
+    "Notification": {
+      "table": "Notification",
+      "scalars": [
+        "id",
+        "organizationId",
+        "personId",
+        "channel",
+        "eventType",
+        "title",
+        "body",
+        "sentAt",
+        "readAt",
+        "error",
+        "createdAt"
+      ],
+      "dates": [
+        "sentAt",
+        "readAt",
+        "createdAt"
+      ],
+      "json": [],
+      "enums": {
+        "channel": "NotificationChannel"
+      },
+      "relations": {
+        "organization": {
+          "target": "Organization",
+          "many": false,
+          "localFields": [
+            "organizationId"
+          ],
+          "targetFields": [
+            "id"
+          ],
+          "relationName": null,
+          "reverse": false
+        },
+        "person": {
+          "target": "Person",
+          "many": false,
+          "localFields": [
+            "personId"
+          ],
+          "targetFields": [
+            "id"
+          ],
+          "relationName": null,
+          "reverse": false
+        }
+      }
+    },
+    "ApiKey": {
+      "table": "ApiKey",
+      "scalars": [
+        "id",
+        "organizationId",
+        "name",
+        "keyPrefix",
+        "keyHash",
+        "scopes",
+        "allowedIps",
+        "isActive",
+        "lastUsedAt",
+        "expiresAt",
+        "revokedAt",
+        "createdAt",
+        "updatedAt"
+      ],
+      "dates": [
+        "lastUsedAt",
+        "expiresAt",
+        "revokedAt",
+        "createdAt",
+        "updatedAt"
+      ],
+      "json": [],
+      "enums": {},
+      "relations": {
+        "organization": {
+          "target": "Organization",
+          "many": false,
+          "localFields": [
+            "organizationId"
+          ],
+          "targetFields": [
+            "id"
+          ],
+          "relationName": null,
+          "reverse": false
+        },
+        "idempotencyRecords": {
+          "target": "IdempotencyRecord",
+          "many": true,
+          "localFields": [
+            "id"
+          ],
+          "targetFields": [
+            "apiKeyId"
+          ],
+          "relationName": null,
+          "reverse": true,
+          "oppositeField": "apiKey"
+        }
+      }
+    },
+    "IdempotencyRecord": {
+      "table": "IdempotencyRecord",
+      "scalars": [
+        "id",
+        "apiKeyId",
+        "idempotencyKey",
+        "requestHash",
+        "responseStatus",
+        "responseBody",
+        "createdAt",
+        "expiresAt"
+      ],
+      "dates": [
+        "createdAt",
+        "expiresAt"
+      ],
+      "json": [
+        "responseBody"
+      ],
+      "enums": {},
+      "relations": {
+        "apiKey": {
+          "target": "ApiKey",
+          "many": false,
+          "localFields": [
+            "apiKeyId"
+          ],
+          "targetFields": [
+            "id"
+          ],
+          "relationName": null,
+          "reverse": false
+        }
+      }
+    },
+    "WebhookSubscription": {
+      "table": "WebhookSubscription",
+      "scalars": [
+        "id",
+        "organizationId",
+        "url",
+        "secret",
+        "events",
+        "isActive",
+        "disabledAt",
+        "disabledReason",
+        "consecutiveFailures",
+        "createdAt",
+        "updatedAt"
+      ],
+      "dates": [
+        "disabledAt",
+        "createdAt",
+        "updatedAt"
+      ],
+      "json": [],
+      "enums": {},
+      "relations": {
+        "organization": {
+          "target": "Organization",
+          "many": false,
+          "localFields": [
+            "organizationId"
+          ],
+          "targetFields": [
+            "id"
+          ],
+          "relationName": null,
+          "reverse": false
+        },
+        "deliveries": {
+          "target": "WebhookDelivery",
+          "many": true,
+          "localFields": [
+            "id"
+          ],
+          "targetFields": [
+            "subscriptionId"
+          ],
+          "relationName": null,
+          "reverse": true,
+          "oppositeField": "subscription"
+        }
+      }
+    },
+    "WebhookDelivery": {
+      "table": "WebhookDelivery",
+      "scalars": [
+        "id",
+        "organizationId",
+        "subscriptionId",
+        "eventId",
+        "eventType",
+        "payload",
+        "status",
+        "attempts",
+        "lastAttemptAt",
+        "nextAttemptAt",
+        "lastStatusCode",
+        "lastError",
+        "deliveredAt",
+        "createdAt",
+        "updatedAt"
+      ],
+      "dates": [
+        "lastAttemptAt",
+        "nextAttemptAt",
+        "deliveredAt",
+        "createdAt",
+        "updatedAt"
+      ],
+      "json": [
+        "payload"
+      ],
+      "enums": {
+        "status": "WebhookDeliveryStatus"
+      },
+      "relations": {
+        "organization": {
+          "target": "Organization",
+          "many": false,
+          "localFields": [
+            "organizationId"
+          ],
+          "targetFields": [
+            "id"
+          ],
+          "relationName": null,
+          "reverse": false
+        },
+        "subscription": {
+          "target": "WebhookSubscription",
+          "many": false,
+          "localFields": [
+            "subscriptionId"
+          ],
+          "targetFields": [
+            "id"
+          ],
+          "relationName": null,
+          "reverse": false
+        }
+      }
+    },
+    "InboundWebhookEvent": {
+      "table": "InboundWebhookEvent",
+      "scalars": [
+        "id",
+        "organizationId",
+        "provider",
+        "eventId",
+        "eventType",
+        "payload",
+        "signatureValid",
+        "processedAt",
+        "processingError",
+        "createdAt"
+      ],
+      "dates": [
+        "processedAt",
+        "createdAt"
+      ],
+      "json": [
+        "payload"
+      ],
+      "enums": {},
+      "relations": {
+        "organization": {
+          "target": "Organization",
+          "many": false,
+          "localFields": [
+            "organizationId"
+          ],
+          "targetFields": [
+            "id"
+          ],
+          "relationName": null,
+          "reverse": false
+        }
+      }
+    },
+    "ImportJob": {
+      "table": "ImportJob",
+      "scalars": [
+        "id",
+        "organizationId",
+        "importType",
+        "fileName",
+        "status",
+        "totalRows",
+        "successRows",
+        "errorRows",
+        "skippedRows",
+        "rowResults",
+        "createdByUserId",
+        "startedAt",
+        "finishedAt",
+        "createdAt"
+      ],
+      "dates": [
+        "startedAt",
+        "finishedAt",
+        "createdAt"
+      ],
+      "json": [
+        "rowResults"
+      ],
+      "enums": {
+        "status": "ImportJobStatus"
+      },
+      "relations": {
+        "organization": {
+          "target": "Organization",
+          "many": false,
+          "localFields": [
+            "organizationId"
+          ],
+          "targetFields": [
+            "id"
+          ],
+          "relationName": null,
+          "reverse": false
+        }
+      }
+    },
+    "AuditEvent": {
+      "table": "AuditEvent",
+      "scalars": [
+        "id",
+        "organizationId",
+        "userId",
+        "actorType",
+        "actorId",
+        "action",
+        "entityType",
+        "entityId",
+        "before",
+        "after",
+        "ip",
+        "correlationId",
+        "createdAt"
+      ],
+      "dates": [
+        "createdAt"
+      ],
+      "json": [
+        "before",
+        "after"
+      ],
+      "enums": {},
+      "relations": {
+        "organization": {
+          "target": "Organization",
+          "many": false,
+          "localFields": [
+            "organizationId"
+          ],
+          "targetFields": [
+            "id"
+          ],
+          "relationName": null,
+          "reverse": false
+        },
+        "user": {
+          "target": "User",
+          "many": false,
+          "localFields": [
+            "userId"
+          ],
+          "targetFields": [
+            "id"
+          ],
+          "relationName": null,
+          "reverse": false
+        }
+      }
+    },
+    "Counter": {
+      "table": "Counter",
+      "scalars": [
+        "id",
+        "organizationId",
+        "key",
+        "value"
+      ],
+      "dates": [],
+      "json": [],
+      "enums": {},
+      "relations": {}
+    }
+  },
+  "enums": {
+    "MasterDataDomain": [
+      "CUSTOMERS",
+      "INVOICES",
+      "PAYMENTS",
+      "CREDIT_NOTES",
+      "REMINDERS",
+      "LEDGER",
+      "CONTRACTS"
+    ],
+    "PersonRoleType": [
+      "APPLICANT",
+      "TENANT",
+      "CO_APPLICANT",
+      "GUARANTOR",
+      "BUYER",
+      "CONTACT",
+      "HOUSEHOLD_MEMBER"
+    ],
+    "PropertyStatus": [
+      "ACTIVE",
+      "UNDER_RENOVATION",
+      "SOLD",
+      "ARCHIVED"
+    ],
+    "UnitType": [
+      "APARTMENT",
+      "APARTMENT_SALE",
+      "COMMERCIAL",
+      "OFFICE",
+      "RETAIL",
+      "WAREHOUSE",
+      "GARAGE",
+      "PARKING",
+      "STORAGE",
+      "STUDENT",
+      "SHORT_TERM",
+      "LAND",
+      "PROPERTY_SALE"
+    ],
+    "UnitStatus": [
+      "DRAFT",
+      "NOT_PUBLISHED",
+      "UPCOMING",
+      "PUBLISHED",
+      "APPLICATION_OPEN",
+      "VIEWING",
+      "OFFER_SENT",
+      "RESERVED",
+      "CONTRACT_SENT",
+      "RENTED",
+      "FOR_SALE",
+      "BIDDING",
+      "SOLD",
+      "RENOVATING",
+      "BLOCKED",
+      "NOT_RENTABLE",
+      "ARCHIVED"
+    ],
+    "MediaKind": [
+      "IMAGE",
+      "VIDEO",
+      "FLOORPLAN",
+      "DOCUMENT"
+    ],
+    "ListingCategory": [
+      "RENTAL",
+      "SALE",
+      "COMMERCIAL",
+      "PARKING"
+    ],
+    "ListingStatus": [
+      "DRAFT",
+      "SCHEDULED",
+      "PUBLISHED",
+      "PAUSED",
+      "UNPUBLISHED",
+      "COMPLETED"
+    ],
+    "ApplicationStatus": [
+      "DRAFT",
+      "SUBMITTED",
+      "RECEIVED",
+      "UNDER_REVIEW",
+      "NEEDS_SUPPLEMENT",
+      "QUALIFIED",
+      "NOT_QUALIFIED",
+      "VIEWING_OFFERED",
+      "VIEWING_BOOKED",
+      "OFFER_SENT",
+      "ACCEPTED",
+      "DECLINED",
+      "CONTRACT_SENT",
+      "CONTRACT_SIGNED",
+      "CLOSED",
+      "WITHDRAWN"
+    ],
+    "ApplicationMemberRole": [
+      "MAIN_APPLICANT",
+      "CO_APPLICANT",
+      "HOUSEHOLD_MEMBER",
+      "CHILD",
+      "GUARANTOR"
+    ],
+    "ViewingKind": [
+      "INDIVIDUAL",
+      "GROUP",
+      "DIGITAL",
+      "SELF_SERVICE"
+    ],
+    "ViewingAttendeeStatus": [
+      "INVITED",
+      "BOOKED",
+      "WAITLISTED",
+      "CHECKED_IN",
+      "ATTENDED",
+      "NO_SHOW",
+      "CANCELLED"
+    ],
+    "OfferStatus": [
+      "SENT",
+      "ACCEPTED",
+      "DECLINED",
+      "EXPIRED",
+      "WITHDRAWN"
+    ],
+    "ContractType": [
+      "RESIDENTIAL",
+      "COMMERCIAL",
+      "PARKING",
+      "GARAGE",
+      "STORAGE",
+      "SHORT_TERM",
+      "SUBLEASE",
+      "ADDENDUM",
+      "GUARANTEE"
+    ],
+    "ContractStatus": [
+      "DRAFT",
+      "INTERNAL_REVIEW",
+      "APPROVED",
+      "SENT_FOR_SIGNING",
+      "PARTIALLY_SIGNED",
+      "SIGNED",
+      "ACTIVE",
+      "TERMINATED",
+      "ENDED",
+      "RESCINDED",
+      "ARCHIVED"
+    ],
+    "ContractPartyRole": [
+      "LANDLORD",
+      "TENANT",
+      "CO_TENANT",
+      "GUARANTOR"
+    ],
+    "TerminationStatus": [
+      "REQUESTED",
+      "CONFIRMED",
+      "INSPECTION_BOOKED",
+      "COMPLETED",
+      "CANCELLED"
+    ],
+    "InspectionType": [
+      "PRE_MOVE_OUT",
+      "FINAL",
+      "MOVE_IN"
+    ],
+    "InvoiceStatus": [
+      "DRAFT",
+      "SENT",
+      "PARTIALLY_PAID",
+      "PAID",
+      "OVERDUE",
+      "REMINDED",
+      "COLLECTION",
+      "CREDITED",
+      "CANCELLED",
+      "DISPUTED"
+    ],
+    "SyncJobStatus": [
+      "PENDING",
+      "RUNNING",
+      "COMPLETED",
+      "COMPLETED_WITH_ERRORS",
+      "FAILED"
+    ],
+    "ReviewItemStatus": [
+      "PENDING",
+      "RESOLVED",
+      "REJECTED"
+    ],
+    "MaintenanceStatus": [
+      "RECEIVED",
+      "CONFIRMED",
+      "ASSESSING",
+      "NEEDS_INFO",
+      "ASSIGNED",
+      "BOOKED",
+      "IN_PROGRESS",
+      "WAITING_TENANT",
+      "WAITING_CONTRACTOR",
+      "WAITING_MATERIAL",
+      "DONE",
+      "QUALITY_CHECK",
+      "CLOSED",
+      "REJECTED",
+      "REOPENED"
+    ],
+    "MaintenancePriority": [
+      "LOW",
+      "NORMAL",
+      "HIGH",
+      "URGENT"
+    ],
+    "WorkOrderStatus": [
+      "CREATED",
+      "OFFERED",
+      "ACCEPTED",
+      "REJECTED",
+      "BOOKED",
+      "IN_PROGRESS",
+      "DONE",
+      "APPROVED",
+      "INVOICED",
+      "CANCELLED"
+    ],
+    "DocumentType": [
+      "CONTRACT",
+      "TERMINATION",
+      "INSPECTION_PROTOCOL",
+      "KEY_RECEIPT",
+      "INFO_LETTER",
+      "INVOICE",
+      "CREDIT_NOTE",
+      "PAYMENT_PLAN",
+      "POWER_OF_ATTORNEY",
+      "SUBLEASE",
+      "TRANSFER",
+      "GUARANTEE",
+      "SALE_DOCUMENT",
+      "ENERGY_DECLARATION",
+      "FLOORPLAN",
+      "OTHER"
+    ],
+    "NotificationChannel": [
+      "EMAIL",
+      "SMS",
+      "IN_APP",
+      "PUSH"
+    ],
+    "WebhookDeliveryStatus": [
+      "PENDING",
+      "DELIVERED",
+      "FAILED",
+      "DEAD_LETTER"
+    ],
+    "ImportJobStatus": [
+      "PREVIEW",
+      "RUNNING",
+      "COMPLETED",
+      "COMPLETED_WITH_ERRORS",
+      "FAILED",
+      "ROLLED_BACK"
+    ]
+  }
+}

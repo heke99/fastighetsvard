@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { prisma } from "@/lib/db";
+import { db } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth";
 import { ListingCard, type ListingWithUnit } from "@/components/ListingCard";
 
@@ -10,7 +10,7 @@ export default async function FavoritesPage() {
   const user = await getCurrentUser();
   if (!user?.personId) redirect("/logga-in");
 
-  const favorites = await prisma.favorite.findMany({
+  const favorites = await db.favorite.findMany({
     where: { personId: user.personId },
     include: {
       listing: {

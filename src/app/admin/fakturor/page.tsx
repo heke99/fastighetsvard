@@ -1,10 +1,10 @@
 import { redirect } from "next/navigation";
-import { prisma } from "@/lib/db";
+import { db } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth";
 import { hasPermission } from "@/lib/permissions";
 import { InvoiceStatusBadge } from "@/components/StatusBadges";
 import { formatSek } from "@/components/ListingCard";
-import type { InvoiceStatus } from "@prisma/client";
+import type { InvoiceStatus } from "@/lib/database-types";
 
 export const metadata = { title: "Admin – Fakturor" };
 
@@ -19,7 +19,7 @@ export default async function AdminInvoicesPage({
   }
   const { status } = await searchParams;
 
-  const invoices = await prisma.invoice.findMany({
+  const invoices = await db.invoice.findMany({
     where: {
       organizationId: user.organizationId,
       ...(status ? { status: status as InvoiceStatus } : {}),

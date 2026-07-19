@@ -1,8 +1,8 @@
 import { NextRequest } from "next/server";
-import { prisma } from "@/lib/db";
+import { db } from "@/lib/db";
 import { sha256 } from "@/lib/crypto";
 import { hasApiScope, type ApiScope } from "@/lib/permissions";
-import type { ApiKey } from "@prisma/client";
+import type { ApiKey } from "@/lib/database-types";
 
 export class ApiError extends Error {
   constructor(
@@ -36,7 +36,7 @@ export async function authenticateApiRequest(
     throw new ApiError(401, "unauthenticated", "Authorization: Bearer <api-key> krävs.");
   }
   const key = header.slice(7).trim();
-  const apiKey = await prisma.apiKey.findUnique({ where: { keyHash: sha256(key) } });
+  const apiKey = await db.apiKey.findUnique({ where: { keyHash: sha256(key) } });
   if (!apiKey || !apiKey.isActive || apiKey.revokedAt) {
     throw new ApiError(401, "invalid_api_key", "Ogiltig eller revokerad API-nyckel.");
   }
@@ -53,7 +53,7 @@ export async function authenticateApiRequest(
     throw new ApiError(403, "insufficient_scope", `Nyckeln saknar behörighet: ${requiredScope}.`);
   }
 
-  await prisma.apiKey.update({
+  await db.apiKey.update({
     where: { id: apiKey.id },
     data: { lastUsedAt: new Date() },
   });

@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
-import { prisma } from "@/lib/db";
+import { db } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth";
 import { hasPermission } from "@/lib/permissions";
 import { formatSek } from "@/components/ListingCard";
@@ -17,27 +17,27 @@ export default async function AdminReportsPage() {
     unitsByStatus, applicationsByStatus, invoiceAgg, overdueAgg,
     maintenanceByStatus, workOrderCosts, moveIns, moveOuts, listingStats,
   ] = await Promise.all([
-    prisma.unit.groupBy({ by: ["status"], where: { organizationId }, _count: true }),
-    prisma.application.groupBy({ by: ["status"], where: { organizationId }, _count: true }),
-    prisma.invoice.aggregate({
+    db.unit.groupBy({ by: ["status"], where: { organizationId }, _count: true }),
+    db.application.groupBy({ by: ["status"], where: { organizationId }, _count: true }),
+    db.invoice.aggregate({
       where: { organizationId, isCreditNote: false },
       _sum: { totalAmount: true, paidAmount: true },
       _count: true,
     }),
-    prisma.invoice.aggregate({
+    db.invoice.aggregate({
       where: { organizationId, status: { in: ["OVERDUE", "REMINDED", "COLLECTION"] } },
       _sum: { totalAmount: true, paidAmount: true },
       _count: true,
     }),
-    prisma.maintenanceRequest.groupBy({ by: ["status"], where: { organizationId }, _count: true }),
-    prisma.workOrder.aggregate({ where: { organizationId }, _sum: { cost: true }, _count: true }),
-    prisma.contract.count({
+    db.maintenanceRequest.groupBy({ by: ["status"], where: { organizationId }, _count: true }),
+    db.workOrder.aggregate({ where: { organizationId }, _sum: { cost: true }, _count: true }),
+    db.contract.count({
       where: { organizationId, status: { in: ["SIGNED", "ACTIVE"] }, startDate: { gte: new Date(Date.now() - 90 * 24 * 3600 * 1000) } },
     }),
-    prisma.termination.count({
+    db.termination.count({
       where: { organizationId, requestedAt: { gte: new Date(Date.now() - 90 * 24 * 3600 * 1000) } },
     }),
-    prisma.listing.aggregate({ where: { organizationId }, _count: true }),
+    db.listing.aggregate({ where: { organizationId }, _count: true }),
   ]);
 
   const totalUnits = unitsByStatus.reduce((s, u) => s + u._count, 0);

@@ -1,5 +1,5 @@
-import { prisma } from "./db";
-import type { Prisma } from "@prisma/client";
+import { db } from "./db";
+import type { Database } from "@/lib/database-types";
 
 export interface AuditInput {
   organizationId?: string | null;
@@ -33,8 +33,8 @@ export function redact(value: unknown): unknown {
   return value;
 }
 
-export async function audit(input: AuditInput, tx?: Prisma.TransactionClient) {
-  const client = tx ?? prisma;
+export async function audit(input: AuditInput, tx?: Database.TransactionClient) {
+  const client = tx ?? db;
   await client.auditEvent.create({
     data: {
       organizationId: input.organizationId ?? null,
@@ -44,8 +44,8 @@ export async function audit(input: AuditInput, tx?: Prisma.TransactionClient) {
       action: input.action,
       entityType: input.entityType,
       entityId: input.entityId ?? null,
-      before: input.before === undefined ? undefined : (redact(input.before) as Prisma.InputJsonValue),
-      after: input.after === undefined ? undefined : (redact(input.after) as Prisma.InputJsonValue),
+      before: input.before === undefined ? undefined : (redact(input.before) as Database.InputJsonValue),
+      after: input.after === undefined ? undefined : (redact(input.after) as Database.InputJsonValue),
       ip: input.ip ?? null,
       correlationId: input.correlationId ?? null,
     },

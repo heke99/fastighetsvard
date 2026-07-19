@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { prisma } from "@/lib/db";
+import { db } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth";
 import { ApplicationStatusBadge } from "@/components/StatusBadges";
 import { OfferResponseForm } from "./OfferResponseForm";
@@ -16,7 +16,7 @@ export default async function MyApplicationsPage({
   if (!user?.personId) redirect("/logga-in");
   const { skickad } = await searchParams;
 
-  const applications = await prisma.application.findMany({
+  const applications = await db.application.findMany({
     where: { members: { some: { personId: user.personId } } },
     include: {
       listing: { include: { unit: { select: { address: true, city: true } } } },

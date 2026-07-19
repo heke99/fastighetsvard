@@ -2,7 +2,7 @@
 
 import { useActionState } from "react";
 import { contractorWorkOrderAction, type ContractorFormState } from "./actions";
-import type { WorkOrderStatus } from "@prisma/client";
+import type { WorkOrderStatus } from "@/lib/database-types";
 
 const initialState: ContractorFormState = { status: "idle" };
 

@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
-import { prisma } from "@/lib/db";
+import { db } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth";
 import { MaintenanceStatusBadge } from "@/components/StatusBadges";
 
@@ -16,7 +16,7 @@ export default async function MaintenanceDetailPage({
   const { id } = await params;
 
   // Tenant-isolering: endast egna ärenden.
-  const request = await prisma.maintenanceRequest.findFirst({
+  const request = await db.maintenanceRequest.findFirst({
     where: { id, personId: user.personId },
     include: {
       unit: { select: { address: true, city: true } },

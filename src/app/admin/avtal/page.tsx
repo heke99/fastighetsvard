@@ -1,12 +1,12 @@
 import { redirect } from "next/navigation";
-import { prisma } from "@/lib/db";
+import { db } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth";
 import { hasPermission } from "@/lib/permissions";
 import { ContractStatusBadge } from "@/components/StatusBadges";
 import { changeContractStatusAction } from "../actions";
 import { contractTransitions } from "@/lib/state-machines";
 import { formatSek } from "@/components/ListingCard";
-import type { ContractStatus } from "@prisma/client";
+import type { ContractStatus } from "@/lib/database-types";
 
 export const metadata = { title: "Admin – Avtal" };
 
@@ -21,7 +21,7 @@ export default async function AdminContractsPage({
   }
   const { status } = await searchParams;
 
-  const contracts = await prisma.contract.findMany({
+  const contracts = await db.contract.findMany({
     where: {
       organizationId: user.organizationId,
       ...(status ? { status: status as ContractStatus } : {}),

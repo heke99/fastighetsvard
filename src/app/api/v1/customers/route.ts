@@ -1,6 +1,6 @@
 import { NextRequest } from "next/server";
 import { z } from "zod";
-import { prisma } from "@/lib/db";
+import { db } from "@/lib/db";
 import {
   withApiAuth,
   parsePagination,
@@ -9,7 +9,7 @@ import {
 } from "@/lib/api/helpers";
 import { serializePerson } from "@/lib/api/serializers";
 import { audit } from "@/lib/audit";
-import type { Prisma } from "@prisma/client";
+import type { Database } from "@/lib/database-types";
 
 /**
  * GET /api/v1/customers – lista kunder (personer) med filtrering och sortering.
@@ -25,7 +25,7 @@ export const GET = withApiAuth("customers:read", async (req, ctx) => {
   const updatedSince = url.searchParams.get("updated_since");
   const sort = url.searchParams.get("sort") ?? "-created_at";
 
-  const where: Prisma.PersonWhereInput = {
+  const where: Database.PersonWhereInput = {
     organizationId: ctx.organizationId,
     ...(email ? { email: email.toLowerCase() } : {}),
     ...(search
@@ -43,21 +43,21 @@ export const GET = withApiAuth("customers:read", async (req, ctx) => {
     ...(updatedSince ? { updatedAt: { gte: new Date(updatedSince) } } : {}),
   };
 
-  const orderBy: Prisma.PersonOrderByWithRelationInput =
+  const orderBy: Database.PersonOrderByWithRelationInput =
     sort === "created_at" ? { createdAt: "asc" }
     : sort === "-created_at" ? { createdAt: "desc" }
     : sort === "last_name" ? { lastName: "asc" }
     : { createdAt: "desc" };
 
   const [items, total] = await Promise.all([
-    prisma.person.findMany({
+    db.person.findMany({
       where,
       include: { externalReferences: { where: { entityType: "customer" } } },
       orderBy,
       skip: pagination.skip,
       take: pagination.take,
     }),
-    prisma.person.count({ where }),
+    db.person.count({ where }),
   ]);
 
   return paginatedResponse(items.map(serializePerson), total, pagination, ctx);
@@ -84,7 +84,7 @@ export const POST = withApiAuth("customers:write", async (req, ctx) => {
 
     // Dubblettskydd: samma externa referens eller e-post återanvänder person.
     if (input.external_system && input.external_customer_id) {
-      const existingRef = await prisma.externalReference.findUnique({
+      const existingRef = await db.externalReference.findUnique({
         where: {
           organizationId_externalSystem_entityType_externalId: {
             organizationId: ctx.organizationId,
@@ -100,13 +100,13 @@ export const POST = withApiAuth("customers:write", async (req, ctx) => {
       }
     }
     if (input.email) {
-      const existing = await prisma.person.findFirst({
+      const existing = await db.person.findFirst({
         where: { organizationId: ctx.organizationId, email: input.email.toLowerCase() },
         include: { externalReferences: true },
       });
       if (existing) {
         if (input.external_system && input.external_customer_id) {
-          await prisma.externalReference.upsert({
+          await db.externalReference.upsert({
             where: {
               organizationId_externalSystem_entityType_externalId: {
                 organizationId: ctx.organizationId,
@@ -129,7 +129,7 @@ export const POST = withApiAuth("customers:write", async (req, ctx) => {
       }
     }
 
-    const person = await prisma.person.create({
+    const person = await db.person.create({
       data: {
         organizationId: ctx.organizationId,
         firstName: input.first_name,

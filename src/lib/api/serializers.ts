@@ -12,7 +12,7 @@ import type {
   WebhookSubscription,
   ExternalReference,
   Payment,
-} from "@prisma/client";
+} from "@/lib/database-types";
 
 /** API-representationer – frikopplade från interna modeller och UI. */
 

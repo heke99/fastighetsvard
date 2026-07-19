@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
-import { prisma } from "@/lib/db";
+import { db } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth";
 
 export const metadata = { title: "Meddelanden" };
@@ -9,13 +9,13 @@ export default async function MessagesPage() {
   if (!user?.personId) redirect("/logga-in");
 
   const [messages, notifications] = await Promise.all([
-    prisma.message.findMany({
+    db.message.findMany({
       where: { recipientPersonId: user.personId },
       include: { sender: { select: { firstName: true, lastName: true } } },
       orderBy: { createdAt: "desc" },
       take: 50,
     }),
-    prisma.notification.findMany({
+    db.notification.findMany({
       where: { personId: user.personId },
       orderBy: { createdAt: "desc" },
       take: 50,
@@ -24,11 +24,11 @@ export default async function MessagesPage() {
 
   // Markera som lästa när sidan öppnas.
   await Promise.all([
-    prisma.message.updateMany({
+    db.message.updateMany({
       where: { recipientPersonId: user.personId, readAt: null },
       data: { readAt: new Date() },
     }),
-    prisma.notification.updateMany({
+    db.notification.updateMany({
       where: { personId: user.personId, readAt: null },
       data: { readAt: new Date() },
     }),

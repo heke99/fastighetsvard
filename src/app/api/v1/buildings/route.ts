@@ -1,4 +1,4 @@
-import { prisma } from "@/lib/db";
+import { db } from "@/lib/db";
 import { withApiAuth, parsePagination, paginatedResponse } from "@/lib/api/helpers";
 import { serializeBuilding } from "@/lib/api/serializers";
 
@@ -11,13 +11,13 @@ export const GET = withApiAuth("buildings:read", async (req, ctx) => {
     ...(propertyId ? { propertyId } : {}),
   };
   const [items, total] = await Promise.all([
-    prisma.building.findMany({
+    db.building.findMany({
       where,
       orderBy: { name: "asc" },
       skip: pagination.skip,
       take: pagination.take,
     }),
-    prisma.building.count({ where }),
+    db.building.count({ where }),
   ]);
   return paginatedResponse(items.map(serializeBuilding), total, pagination, ctx);
 });

@@ -1,10 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { ZodError, type ZodSchema } from "zod";
-import { prisma } from "@/lib/db";
+import { db } from "@/lib/db";
 import { sha256 } from "@/lib/crypto";
 import { ApiError, type ApiContext, authenticateApiRequest, checkRateLimit } from "./auth";
 import type { ApiScope } from "@/lib/permissions";
-import type { Prisma } from "@prisma/client";
+import type { Database } from "@/lib/database-types";
 
 export interface Pagination {
   page: number;
@@ -135,7 +135,7 @@ export async function withIdempotency(
     return apiJson(result.body, result.status, ctx);
   }
   const requestHash = sha256(bodyText);
-  const existing = await prisma.idempotencyRecord.findUnique({
+  const existing = await db.idempotencyRecord.findUnique({
     where: { apiKeyId_idempotencyKey: { apiKeyId: ctx.apiKey.id, idempotencyKey: key } },
   });
   if (existing) {
@@ -149,13 +149,13 @@ export async function withIdempotency(
     return apiJson(existing.responseBody, existing.responseStatus, ctx);
   }
   const result = await execute();
-  await prisma.idempotencyRecord.create({
+  await db.idempotencyRecord.create({
     data: {
       apiKeyId: ctx.apiKey.id,
       idempotencyKey: key,
       requestHash,
       responseStatus: result.status,
-      responseBody: result.body as Prisma.InputJsonValue,
+      responseBody: result.body as Database.InputJsonValue,
       expiresAt: new Date(Date.now() + IDEMPOTENCY_TTL_MS),
     },
   });

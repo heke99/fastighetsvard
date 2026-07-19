@@ -1,12 +1,12 @@
 import { z } from "zod";
-import { prisma } from "@/lib/db";
+import { db } from "@/lib/db";
 import { withApiAuth, apiJson, parseBody } from "@/lib/api/helpers";
 import { ApiError } from "@/lib/api/auth";
 import { serializePerson } from "@/lib/api/serializers";
 import { audit } from "@/lib/audit";
 
 export const GET = withApiAuth("customers:read", async (_req, ctx, params) => {
-  const person = await prisma.person.findFirst({
+  const person = await db.person.findFirst({
     where: { id: params.id, organizationId: ctx.organizationId },
     include: { externalReferences: { where: { entityType: "customer" } } },
   });
@@ -26,12 +26,12 @@ const patchSchema = z.object({
 
 export const PATCH = withApiAuth("customers:write", async (req, ctx, params) => {
   const input = await parseBody(req, patchSchema);
-  const person = await prisma.person.findFirst({
+  const person = await db.person.findFirst({
     where: { id: params.id, organizationId: ctx.organizationId },
   });
   if (!person) throw new ApiError(404, "not_found", "Kunden hittades inte.");
 
-  const updated = await prisma.person.update({
+  const updated = await db.person.update({
     where: { id: person.id },
     data: {
       firstName: input.first_name ?? undefined,

@@ -1,4 +1,4 @@
-import { prisma } from "@/lib/db";
+import { db } from "@/lib/db";
 import { audit } from "@/lib/audit";
 import { decryptSecret } from "@/lib/crypto";
 import {
@@ -9,7 +9,7 @@ import {
   type ExternalPayment,
 } from "./provider";
 import "./mock-provider";
-import type { InvoiceStatus, Prisma } from "@prisma/client";
+import type { InvoiceStatus, Database } from "@/lib/database-types";
 import { canTransition, invoiceTransitions } from "@/lib/state-machines";
 
 /**
@@ -41,7 +41,7 @@ export async function getProviderForConnection(connectionId: string): Promise<{
   provider: AccountingProvider;
   connection: { id: string; organizationId: string; provider: string };
 }> {
-  const connection = await prisma.integrationConnection.findUnique({
+  const connection = await db.integrationConnection.findUnique({
     where: { id: connectionId },
   });
   if (!connection || !connection.isActive) {
@@ -76,7 +76,7 @@ export async function matchCustomer(
   externalSystem: string,
   customer: ExternalCustomer
 ): Promise<{ personId: string | null; certain: boolean; reason?: string }> {
-  const existingRef = await prisma.externalReference.findUnique({
+  const existingRef = await db.externalReference.findUnique({
     where: {
       organizationId_externalSystem_entityType_externalId: {
         organizationId,
@@ -90,7 +90,7 @@ export async function matchCustomer(
 
   if (customer.personalNumber) {
     const normalized = customer.personalNumber.replace(/[^0-9]/g, "");
-    const matches = await prisma.person.findMany({
+    const matches = await db.person.findMany({
       where: { organizationId, personalNumber: normalized },
       take: 2,
     });
@@ -100,14 +100,14 @@ export async function matchCustomer(
     }
   }
   if (customer.orgNumber) {
-    const matches = await prisma.person.findMany({
+    const matches = await db.person.findMany({
       where: { organizationId, orgNumber: customer.orgNumber },
       take: 2,
     });
     if (matches.length === 1) return { personId: matches[0].id, certain: true };
   }
   if (customer.email) {
-    const matches = await prisma.person.findMany({
+    const matches = await db.person.findMany({
       where: { organizationId, email: customer.email.toLowerCase().trim() },
       take: 2,
     });
@@ -133,18 +133,18 @@ async function queueForReview(
   reason: string
 ) {
   // Unik per (org, system, typ, externt id, status=PENDING) – ingen dubbelkö.
-  const existing = await prisma.syncReviewItem.findFirst({
+  const existing = await db.syncReviewItem.findFirst({
     where: { organizationId, externalSystem, entityType, externalId, status: "PENDING" },
   });
   if (existing) return existing;
-  return prisma.syncReviewItem.create({
+  return db.syncReviewItem.create({
     data: {
       organizationId,
       syncJobId,
       entityType,
       externalSystem,
       externalId,
-      payload: payload as Prisma.InputJsonValue,
+      payload: payload as Database.InputJsonValue,
       reason,
     },
   });
@@ -182,7 +182,7 @@ export async function syncCustomers(
         counters.skipped++;
         continue;
       }
-      await prisma.externalReference.upsert({
+      await db.externalReference.upsert({
         where: {
           organizationId_externalSystem_entityType_externalId: {
             organizationId,
@@ -260,7 +260,7 @@ export async function upsertExternalInvoice(
   opts: { syncJobId?: string } = {}
 ): Promise<"created" | "updated" | "review"> {
   // Finns fakturan redan (via externt ID)?
-  const existingRef = await prisma.externalReference.findUnique({
+  const existingRef = await db.externalReference.findUnique({
     where: {
       organizationId_externalSystem_entityType_externalId: {
         organizationId,
@@ -275,12 +275,12 @@ export async function upsertExternalInvoice(
 
   if (existingRef?.invoiceId) {
     // Uppdatera befintlig – aldrig dubblett.
-    const current = await prisma.invoice.findUnique({ where: { id: existingRef.invoiceId } });
+    const current = await db.invoice.findUnique({ where: { id: existingRef.invoiceId } });
     if (!current) throw new Error("Referens pekar på borttagen faktura.");
     // Statusövergång enligt statusmaskin; källsystemets status vinner men
     // ologiska hopp loggas i stället för att tyst skrivas över.
     const statusOk = current.status === newStatus || canTransition(invoiceTransitions, current.status, newStatus);
-    await prisma.invoice.update({
+    await db.invoice.update({
       where: { id: current.id },
       data: {
         status: statusOk ? newStatus : current.status,
@@ -291,7 +291,7 @@ export async function upsertExternalInvoice(
       },
     });
     if (current.status !== newStatus && statusOk) {
-      await prisma.invoiceStatusEvent.create({
+      await db.invoiceStatusEvent.create({
         data: {
           invoiceId: current.id,
           fromStatus: current.status,
@@ -310,7 +310,7 @@ export async function upsertExternalInvoice(
         after: { internal: current.status, external: newStatus, externalSystem },
       });
     }
-    await prisma.externalReference.update({
+    await db.externalReference.update({
       where: { id: existingRef.id },
       data: {
         lastSyncedAt: new Date(),
@@ -323,7 +323,7 @@ export async function upsertExternalInvoice(
   }
 
   // Ny faktura: hitta person via extern kundreferens.
-  const customerRef = await prisma.externalReference.findUnique({
+  const customerRef = await db.externalReference.findUnique({
     where: {
       organizationId_externalSystem_entityType_externalId: {
         organizationId,
@@ -351,7 +351,7 @@ export async function upsertExternalInvoice(
   let contractId: string | null = null;
   let unitId: string | null = null;
   if (inv.externalContractId) {
-    const contractRef = await prisma.externalReference.findUnique({
+    const contractRef = await db.externalReference.findUnique({
       where: {
         organizationId_externalSystem_entityType_externalId: {
           organizationId,
@@ -364,7 +364,7 @@ export async function upsertExternalInvoice(
     contractId = contractRef?.contractId ?? null;
   }
   if (!contractId && inv.reference) {
-    const byNumber = await prisma.contract.findFirst({
+    const byNumber = await db.contract.findFirst({
       where: {
         organizationId,
         OR: [{ contractNumber: inv.reference }, { invoiceReference: inv.reference }],
@@ -374,7 +374,7 @@ export async function upsertExternalInvoice(
   }
   if (!contractId) {
     // Fallback: personens enda aktiva avtal.
-    const active = await prisma.contract.findMany({
+    const active = await db.contract.findMany({
       where: {
         organizationId,
         status: "ACTIVE",
@@ -385,12 +385,12 @@ export async function upsertExternalInvoice(
     if (active.length === 1) contractId = active[0].id;
   }
   if (contractId) {
-    const c = await prisma.contract.findUnique({ where: { id: contractId } });
+    const c = await db.contract.findUnique({ where: { id: contractId } });
     unitId = c?.unitId ?? null;
   }
 
   // Unikhet på fakturanummer inom organisationen skyddar också mot dubbletter.
-  const dupNumber = await prisma.invoice.findFirst({
+  const dupNumber = await db.invoice.findFirst({
     where: { organizationId, invoiceNumber: inv.invoiceNumber },
   });
   if (dupNumber) {
@@ -409,7 +409,7 @@ export async function upsertExternalInvoice(
 
   let creditsInvoiceId: string | null = null;
   if (inv.isCreditNote && inv.creditsExternalInvoiceId) {
-    const origRef = await prisma.externalReference.findUnique({
+    const origRef = await db.externalReference.findUnique({
       where: {
         organizationId_externalSystem_entityType_externalId: {
           organizationId,
@@ -422,7 +422,7 @@ export async function upsertExternalInvoice(
     creditsInvoiceId = origRef?.invoiceId ?? null;
   }
 
-  const created = await prisma.invoice.create({
+  const created = await db.invoice.create({
     data: {
       organizationId,
       personId: customerRef.personId,
@@ -459,7 +459,7 @@ export async function upsertExternalInvoice(
     },
   });
 
-  await prisma.externalReference.create({
+  await db.externalReference.create({
     data: {
       organizationId,
       externalSystem,
@@ -506,7 +506,7 @@ export async function upsertExternalPayment(
   p: ExternalPayment,
   opts: { syncJobId?: string } = {}
 ): Promise<"created" | "updated" | "skipped" | "review"> {
-  const existingRef = await prisma.externalReference.findUnique({
+  const existingRef = await db.externalReference.findUnique({
     where: {
       organizationId_externalSystem_entityType_externalId: {
         organizationId,
@@ -518,7 +518,7 @@ export async function upsertExternalPayment(
   });
   if (existingRef) return "skipped"; // redan importerad – idempotent
 
-  const invoiceRef = await prisma.externalReference.findUnique({
+  const invoiceRef = await db.externalReference.findUnique({
     where: {
       organizationId_externalSystem_entityType_externalId: {
         organizationId,
@@ -541,7 +541,7 @@ export async function upsertExternalPayment(
     return "review";
   }
 
-  await prisma.$transaction(async (tx) => {
+  await db.$transaction(async (tx) => {
     const payment = await tx.payment.create({
       data: {
         organizationId,
@@ -599,7 +599,7 @@ export async function runSyncJob(
   jobType: "customers" | "invoices" | "payments" | "full",
   actorUserId?: string
 ) {
-  const job = await prisma.integrationSyncJob.create({
+  const job = await db.integrationSyncJob.create({
     data: {
       organizationId,
       connectionId,
@@ -634,7 +634,7 @@ export async function runSyncJob(
     error = e instanceof Error ? e.message : "Okänt fel";
   }
 
-  const finished = await prisma.integrationSyncJob.update({
+  const finished = await db.integrationSyncJob.update({
     where: { id: job.id },
     data: {
       status: error ? "FAILED" : totals.failed > 0 ? "COMPLETED_WITH_ERRORS" : "COMPLETED",
@@ -644,12 +644,12 @@ export async function runSyncJob(
       itemsUpdated: totals.updated,
       itemsSkipped: totals.skipped,
       itemsFailed: totals.failed,
-      log: log as unknown as Prisma.InputJsonValue,
+      log: log as unknown as Database.InputJsonValue,
       error,
     },
   });
 
-  await prisma.integrationConnection.update({
+  await db.integrationConnection.update({
     where: { id: connectionId },
     data: { lastSyncAt: new Date() },
   });
@@ -681,13 +681,13 @@ export async function resolveReviewItem(
   reviewItemId: string,
   resolution: { personId?: string; actorUserId: string; note?: string; reject?: boolean }
 ) {
-  const item = await prisma.syncReviewItem.findFirst({
+  const item = await db.syncReviewItem.findFirst({
     where: { id: reviewItemId, organizationId, status: "PENDING" },
   });
   if (!item) throw new Error("Granskningsposten hittades inte.");
 
   if (resolution.reject) {
-    return prisma.syncReviewItem.update({
+    return db.syncReviewItem.update({
       where: { id: item.id },
       data: {
         status: "REJECTED",
@@ -699,7 +699,7 @@ export async function resolveReviewItem(
   }
 
   if (item.entityType === "customer" && resolution.personId) {
-    await prisma.externalReference.upsert({
+    await db.externalReference.upsert({
       where: {
         organizationId_externalSystem_entityType_externalId: {
           organizationId,
@@ -722,7 +722,7 @@ export async function resolveReviewItem(
   } else if (item.entityType === "invoice") {
     if (resolution.personId) {
       const payload = item.payload as unknown as ExternalInvoice;
-      await prisma.externalReference.upsert({
+      await db.externalReference.upsert({
         where: {
           organizationId_externalSystem_entityType_externalId: {
             organizationId,
@@ -749,7 +749,7 @@ export async function resolveReviewItem(
     await upsertExternalPayment(organizationId, item.externalSystem, payload);
   }
 
-  const resolved = await prisma.syncReviewItem.update({
+  const resolved = await db.syncReviewItem.update({
     where: { id: item.id },
     data: {
       status: "RESOLVED",

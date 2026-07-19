@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
-import { prisma } from "@/lib/db";
+import { db } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth";
 import { WorkOrderStatusBadge } from "@/components/StatusBadges";
 import { ContractorWorkOrderActions } from "./ContractorActions";
@@ -11,7 +11,7 @@ export default async function ContractorPage() {
   if (!user?.supplierId) redirect("/logga-in");
 
   // Entreprenören ser ENDAST arbetsorder tilldelade den egna leverantören.
-  const workOrders = await prisma.workOrder.findMany({
+  const workOrders = await db.workOrder.findMany({
     where: { supplierId: user.supplierId },
     include: {
       request: {

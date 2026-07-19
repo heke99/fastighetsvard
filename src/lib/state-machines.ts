@@ -5,7 +5,7 @@ import type {
   InvoiceStatus,
   MaintenanceStatus,
   WorkOrderStatus,
-} from "@prisma/client";
+} from "@/lib/database-types";
 
 /**
  * Kontrollerade statusövergångar. Ogiltiga övergångar blockeras i backend

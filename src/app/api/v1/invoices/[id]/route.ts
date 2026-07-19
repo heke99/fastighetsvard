@@ -1,10 +1,10 @@
-import { prisma } from "@/lib/db";
+import { db } from "@/lib/db";
 import { withApiAuth, apiJson } from "@/lib/api/helpers";
 import { ApiError } from "@/lib/api/auth";
 import { serializeInvoice } from "@/lib/api/serializers";
 
 export const GET = withApiAuth("invoices:read", async (_req, ctx, params) => {
-  const invoice = await prisma.invoice.findFirst({
+  const invoice = await db.invoice.findFirst({
     where: { id: params.id, organizationId: ctx.organizationId },
     include: { lines: true, externalReferences: true },
   });

@@ -4,7 +4,7 @@ import type {
   InvoiceStatus,
   MaintenanceStatus,
   WorkOrderStatus,
-} from "@prisma/client";
+} from "@/lib/database-types";
 
 const contractLabels: Record<ContractStatus, [string, string]> = {
   DRAFT: ["Utkast", "bg-stone-100 text-stone-700"],

@@ -2,8 +2,8 @@ import Link from "next/link";
 import { searchListings, type ListingSearchParams } from "@/lib/services/listings";
 import { ListingCard, type ListingWithUnit } from "@/components/ListingCard";
 import { getCurrentUser } from "@/lib/auth";
-import { prisma } from "@/lib/db";
-import type { ListingCategory } from "@prisma/client";
+import { db } from "@/lib/db";
+import type { ListingCategory } from "@/lib/database-types";
 import { SaveSearchButton } from "./SaveSearchButton";
 
 export interface SearchPageProps {
@@ -68,13 +68,13 @@ export async function ListingSearchPage({
 
   const [result, cities, favorites] = await Promise.all([
     searchListings(params),
-    prisma.unit.findMany({
+    db.unit.findMany({
       where: { listings: { some: { status: "PUBLISHED" } } },
       select: { city: true },
       distinct: ["city"],
     }),
     user?.personId
-      ? prisma.favorite.findMany({ where: { personId: user.personId }, select: { listingId: true } })
+      ? db.favorite.findMany({ where: { personId: user.personId }, select: { listingId: true } })
       : Promise.resolve([]),
   ]);
   const favoriteIds = new Set(favorites.map((f) => f.listingId));

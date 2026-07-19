@@ -2,7 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth";
 import { hasPermission } from "@/lib/permissions";
-import { prisma } from "@/lib/db";
+import { db } from "@/lib/db";
 import { ImportWizard } from "./ImportWizard";
 
 export const metadata = { title: "Admin – Import av hyresgäster" };
@@ -13,7 +13,7 @@ export default async function ImportPage() {
     redirect("/admin");
   }
 
-  const recentJobs = await prisma.importJob.findMany({
+  const recentJobs = await db.importJob.findMany({
     where: { organizationId: user.organizationId, importType: "tenants" },
     orderBy: { createdAt: "desc" },
     take: 10,

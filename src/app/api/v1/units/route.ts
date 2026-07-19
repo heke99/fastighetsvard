@@ -1,7 +1,7 @@
-import { prisma } from "@/lib/db";
+import { db } from "@/lib/db";
 import { withApiAuth, parsePagination, paginatedResponse } from "@/lib/api/helpers";
 import { serializeUnit } from "@/lib/api/serializers";
-import type { Prisma, UnitStatus, UnitType } from "@prisma/client";
+import type { Database, UnitStatus, UnitType } from "@/lib/database-types";
 
 export const GET = withApiAuth("units:read", async (req, ctx) => {
   const url = new URL(req.url);
@@ -11,7 +11,7 @@ export const GET = withApiAuth("units:read", async (req, ctx) => {
   const city = url.searchParams.get("city");
   const propertyId = url.searchParams.get("property_id");
 
-  const where: Prisma.UnitWhereInput = {
+  const where: Database.UnitWhereInput = {
     organizationId: ctx.organizationId,
     ...(status ? { status: status.toUpperCase() as UnitStatus } : {}),
     ...(type ? { type: type.toUpperCase() as UnitType } : {}),
@@ -20,13 +20,13 @@ export const GET = withApiAuth("units:read", async (req, ctx) => {
   };
 
   const [items, total] = await Promise.all([
-    prisma.unit.findMany({
+    db.unit.findMany({
       where,
       orderBy: { unitNumber: "asc" },
       skip: pagination.skip,
       take: pagination.take,
     }),
-    prisma.unit.count({ where }),
+    db.unit.count({ where }),
   ]);
 
   return paginatedResponse(items.map(serializeUnit), total, pagination, ctx);

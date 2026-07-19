@@ -1,10 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
-import { prisma } from "@/lib/db";
+import { db } from "@/lib/db";
 import { verifyWebhookSignature } from "@/lib/crypto";
 import { upsertExternalInvoice, upsertExternalPayment } from "@/lib/integrations/sync";
 import { audit } from "@/lib/audit";
 import type { ExternalInvoice, ExternalPayment } from "@/lib/integrations/provider";
-import type { Prisma } from "@prisma/client";
+import type { Database } from "@/lib/database-types";
 
 /**
  * POST /api/webhooks/accounting/{provider}
@@ -48,7 +48,7 @@ export async function POST(
   }
 
   // Hitta anslutningen (per provider). Hemligheten ligger på anslutningen.
-  const connection = await prisma.integrationConnection.findFirst({
+  const connection = await db.integrationConnection.findFirst({
     where: {
       provider,
       isActive: true,
@@ -78,7 +78,7 @@ export async function POST(
   }
 
   // Idempotens: har vi redan sett detta event?
-  const existing = await prisma.inboundWebhookEvent.findUnique({
+  const existing = await db.inboundWebhookEvent.findUnique({
     where: {
       organizationId_provider_eventId: {
         organizationId: connection.organizationId,
@@ -91,13 +91,13 @@ export async function POST(
     return NextResponse.json({ received: true, duplicate: true }, { status: 200 });
   }
 
-  const event = await prisma.inboundWebhookEvent.create({
+  const event = await db.inboundWebhookEvent.create({
     data: {
       organizationId: connection.organizationId,
       provider,
       eventId: envelope.id,
       eventType: envelope.type,
-      payload: envelope as unknown as Prisma.InputJsonValue,
+      payload: envelope as unknown as Database.InputJsonValue,
       signatureValid: true,
     },
   });
@@ -109,7 +109,7 @@ export async function POST(
     processingError = e instanceof Error ? e.message : "Okänt fel";
   }
 
-  await prisma.inboundWebhookEvent.update({
+  await db.inboundWebhookEvent.update({
     where: { id: event.id },
     data: { processedAt: new Date(), processingError },
   });
@@ -150,7 +150,7 @@ async function processInboundEvent(
     // Kunduppdatering: uppdatera endast om säker mappning finns.
     const externalId = String((data as { externalId?: string }).externalId ?? "");
     if (!externalId) throw new Error("customer-event saknar externalId.");
-    const ref = await prisma.externalReference.findUnique({
+    const ref = await db.externalReference.findUnique({
       where: {
         organizationId_externalSystem_entityType_externalId: {
           organizationId,
@@ -162,20 +162,20 @@ async function processInboundEvent(
     });
     if (ref?.personId) {
       const d = data as { email?: string; phone?: string; address?: string };
-      await prisma.person.update({
+      await db.person.update({
         where: { id: ref.personId },
         data: {
           phone: d.phone ?? undefined,
           address: d.address ?? undefined,
         },
       });
-      await prisma.externalReference.update({
+      await db.externalReference.update({
         where: { id: ref.id },
         data: { lastSyncedAt: new Date() },
       });
     } else {
       // Okänd kund → granskningskö (skapa aldrig okontrollerade kopior).
-      const existing = await prisma.syncReviewItem.findFirst({
+      const existing = await db.syncReviewItem.findFirst({
         where: {
           organizationId,
           externalSystem: provider,
@@ -185,13 +185,13 @@ async function processInboundEvent(
         },
       });
       if (!existing) {
-        await prisma.syncReviewItem.create({
+        await db.syncReviewItem.create({
           data: {
             organizationId,
             entityType: "customer",
             externalSystem: provider,
             externalId,
-            payload: data as Prisma.InputJsonValue,
+            payload: data as Database.InputJsonValue,
             reason: "Webhook för okänd kund – kräver manuell matchning.",
           },
         });
@@ -200,11 +200,11 @@ async function processInboundEvent(
   } else if (type.startsWith("contract_reference.")) {
     const d = data as { externalContractId?: string; contractNumber?: string };
     if (d.externalContractId && d.contractNumber) {
-      const contract = await prisma.contract.findFirst({
+      const contract = await db.contract.findFirst({
         where: { organizationId, contractNumber: d.contractNumber },
       });
       if (contract) {
-        await prisma.externalReference.upsert({
+        await db.externalReference.upsert({
           where: {
             organizationId_externalSystem_entityType_externalId: {
               organizationId,

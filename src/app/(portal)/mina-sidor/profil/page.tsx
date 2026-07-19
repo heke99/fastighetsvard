@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
-import { prisma } from "@/lib/db";
+import { db } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth";
 import { ProfileForm, DataExportButton } from "./forms";
 
@@ -10,7 +10,7 @@ export default async function ProfilePage() {
   if (!user) redirect("/logga-in");
 
   const person = user.personId
-    ? await prisma.person.findUnique({ where: { id: user.personId } })
+    ? await db.person.findUnique({ where: { id: user.personId } })
     : null;
 
   return (

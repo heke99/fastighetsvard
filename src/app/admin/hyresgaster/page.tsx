@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { prisma } from "@/lib/db";
+import { db } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth";
 import { hasPermission } from "@/lib/permissions";
 import { sendInvitationAction } from "../actions";
@@ -18,7 +18,7 @@ export default async function AdminTenantsPage({
   }
   const { q } = await searchParams;
 
-  const persons = await prisma.person.findMany({
+  const persons = await db.person.findMany({
     where: {
       organizationId: user.organizationId,
       ...(q

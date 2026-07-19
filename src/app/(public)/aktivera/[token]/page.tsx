@@ -1,4 +1,4 @@
-import { prisma } from "@/lib/db";
+import { db } from "@/lib/db";
 import { sha256 } from "@/lib/crypto";
 import { ActivateForm } from "./ActivateForm";
 
@@ -11,7 +11,7 @@ export default async function ActivatePage({
   params: Promise<{ token: string }>;
 }) {
   const { token } = await params;
-  const invitation = await prisma.invitation.findUnique({
+  const invitation = await db.invitation.findUnique({
     where: { tokenHash: sha256(token) },
     include: { person: { select: { firstName: true } } },
   });

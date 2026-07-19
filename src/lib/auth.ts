@@ -1,23 +1,9 @@
-import { cookies, headers } from "next/headers";
+import { headers } from "next/headers";
 import { cache } from "react";
-import bcrypt from "bcryptjs";
-import { prisma } from "./db";
-import { sha256, generateToken } from "./crypto";
+import { db } from "./db";
 import { hasPermission, type Resource, type Action } from "./permissions";
 import { audit } from "./audit";
-
-const SESSION_COOKIE = "oet_session";
-const SESSION_TTL_MS = 1000 * 60 * 60 * 24 * 7; // 7 dagar
-const MAX_FAILED_ATTEMPTS = 5;
-const LOCKOUT_MINUTES = 15;
-
-export async function hashPassword(password: string): Promise<string> {
-  return bcrypt.hash(password, 12);
-}
-
-export async function verifyPassword(password: string, hash: string): Promise<boolean> {
-  return bcrypt.compare(password, hash);
-}
+import { createServerSupabaseClient } from "./supabase/server";
 
 export class AuthError extends Error {
   constructor(message: string, public code: string) {
@@ -26,91 +12,43 @@ export class AuthError extends Error {
   }
 }
 
-export async function createSession(userId: string, ip?: string, userAgent?: string) {
-  const token = generateToken(32);
-  const session = await prisma.session.create({
-    data: {
-      userId,
-      tokenHash: sha256(token),
-      expiresAt: new Date(Date.now() + SESSION_TTL_MS),
-      ip,
-      userAgent,
-    },
-  });
-  return { token, session };
-}
-
-export async function setSessionCookie(token: string) {
-  const store = await cookies();
-  store.set(SESSION_COOKIE, token, {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
-    sameSite: "lax",
-    path: "/",
-    maxAge: SESSION_TTL_MS / 1000,
-  });
-}
-
-export async function clearSessionCookie() {
-  const store = await cookies();
-  store.delete(SESSION_COOKIE);
-}
-
-/**
- * Inloggning med brute force-skydd: kontot låses i 15 minuter efter
- * 5 misslyckade försök. Revisionsloggas.
- */
 export async function login(email: string, password: string, ip?: string) {
-  const user = await prisma.user.findUnique({
-    where: { email: email.toLowerCase().trim() },
+  const supabase = await createServerSupabaseClient();
+  const { data, error } = await supabase.auth.signInWithPassword({
+    email: email.toLowerCase().trim(),
+    password,
   });
-  if (!user || !user.isActive) {
-    throw new AuthError("Fel e-post eller lösenord.", "invalid_credentials");
-  }
-  if (user.lockedUntil && user.lockedUntil > new Date()) {
-    throw new AuthError(
-      "Kontot är tillfälligt låst efter för många misslyckade försök. Försök igen senare.",
-      "locked"
-    );
-  }
-  const valid = await verifyPassword(password, user.passwordHash);
-  if (!valid) {
-    const attempts = user.failedLoginAttempts + 1;
-    await prisma.user.update({
-      where: { id: user.id },
-      data: {
-        failedLoginAttempts: attempts,
-        lockedUntil:
-          attempts >= MAX_FAILED_ATTEMPTS
-            ? new Date(Date.now() + LOCKOUT_MINUTES * 60_000)
-            : null,
-      },
-    });
-    await audit({
-      organizationId: user.organizationId,
-      userId: user.id,
-      action: "login_failed",
-      entityType: "user",
-      entityId: user.id,
-      ip,
-    });
+  if (error || !data.user) {
     throw new AuthError("Fel e-post eller lösenord.", "invalid_credentials");
   }
 
-  await prisma.user.update({
-    where: { id: user.id },
-    data: { failedLoginAttempts: 0, lockedUntil: null, lastLoginAt: new Date() },
+  const profile = await db.user.findUnique({ where: { authUserId: data.user.id } });
+  if (!profile || !profile.isActive) {
+    await supabase.auth.signOut();
+    throw new AuthError("Kontot är inaktiverat.", "inactive");
+  }
+
+  await db.user.update({
+    where: { authUserId: data.user.id },
+    data: { lastLoginAt: new Date() },
   });
-  const { token } = await createSession(user.id, ip);
   await audit({
-    organizationId: user.organizationId,
-    userId: user.id,
+    organizationId: profile.organizationId,
+    userId: profile.id,
     action: "login",
     entityType: "user",
-    entityId: user.id,
+    entityId: profile.id,
     ip,
   });
-  return { user, token };
+  return { user: profile, session: data.session };
+}
+
+/** Supabase SSR skriver auth-cookies direkt vid signIn/signUp. */
+export async function setSessionCookie(_token?: string) {}
+
+export async function clearSessionCookie() {
+  const supabase = await createServerSupabaseClient();
+  await supabase.auth.signOut();
 }
 
 export interface CurrentUser {
@@ -129,75 +67,61 @@ export interface CurrentUser {
   } | null;
 }
 
-/** Hämtar inloggad användare från sessionscookien. Cachas per request. */
+/** Hämtar och verifierar Supabase Auth-användaren, därefter appens profil/RBAC. */
 export const getCurrentUser = cache(async (): Promise<CurrentUser | null> => {
-  const store = await cookies();
-  const token = store.get(SESSION_COOKIE)?.value;
-  if (!token) return null;
+  const supabase = await createServerSupabaseClient();
+  const { data, error } = await supabase.auth.getUser();
+  if (error || !data.user) return null;
 
-  const session = await prisma.session.findUnique({
-    where: { tokenHash: sha256(token) },
+  const profile = await db.user.findUnique({
+    where: { authUserId: data.user.id },
     include: {
-      user: {
-        include: {
-          person: { include: { roles: true } },
-          userRoles: { include: { role: { include: { permissions: true } } } },
-        },
-      },
+      person: { include: { roles: true } },
+      userRoles: { include: { role: { include: { permissions: true } } } },
     },
   });
-  if (!session || session.revokedAt || session.expiresAt < new Date()) return null;
-  if (!session.user.isActive) return null;
+  if (!profile || !profile.isActive) return null;
 
   const permissions = new Set<string>();
   const roleSlugs: string[] = [];
-  for (const ur of session.user.userRoles) {
-    roleSlugs.push(ur.role.slug);
-    for (const p of ur.role.permissions) permissions.add(p.permission);
+  for (const userRole of profile.userRoles ?? []) {
+    roleSlugs.push(userRole.role.slug);
+    for (const permission of userRole.role.permissions ?? []) {
+      permissions.add(permission.permission);
+    }
   }
 
   return {
-    id: session.user.id,
-    email: session.user.email,
-    organizationId: session.user.organizationId,
-    personId: session.user.personId,
-    supplierId: session.user.supplierId,
+    id: profile.id,
+    email: profile.email,
+    organizationId: profile.organizationId ?? null,
+    personId: profile.personId ?? null,
+    supplierId: profile.supplierId ?? null,
     permissions: [...permissions],
     roleSlugs,
-    person: session.user.person
+    person: profile.person
       ? {
-          id: session.user.person.id,
-          firstName: session.user.person.firstName,
-          lastName: session.user.person.lastName,
-          roles: session.user.person.roles.map((r) => r.role),
+          id: profile.person.id,
+          firstName: profile.person.firstName,
+          lastName: profile.person.lastName,
+          roles: (profile.person.roles ?? []).map((role: any) => role.role),
         }
       : null,
   };
 });
 
 export async function logout() {
-  const store = await cookies();
-  const token = store.get(SESSION_COOKIE)?.value;
-  if (token) {
-    await prisma.session.updateMany({
-      where: { tokenHash: sha256(token) },
-      data: { revokedAt: new Date() },
-    });
-  }
-  store.delete(SESSION_COOKIE);
+  const supabase = await createServerSupabaseClient();
+  await supabase.auth.signOut();
 }
 
-/** Server-side authorization – UI-behörighet räcker aldrig. */
 export async function requireUser(): Promise<CurrentUser> {
   const user = await getCurrentUser();
   if (!user) throw new AuthError("Inloggning krävs.", "unauthenticated");
   return user;
 }
 
-export async function requirePermission(
-  resource: Resource,
-  action: Action
-): Promise<CurrentUser> {
+export async function requirePermission(resource: Resource, action: Action): Promise<CurrentUser> {
   const user = await requireUser();
   if (!hasPermission(user.permissions, resource, action)) {
     throw new AuthError("Behörighet saknas.", "forbidden");
@@ -212,17 +136,14 @@ export async function requireStaff(): Promise<CurrentUser> {
     "caretaker", "leasing-agent", "sales-manager", "finance",
     "customer-service", "facility-worker", "inspector", "report-viewer",
   ];
-  if (!user.roleSlugs.some((r) => staffRoles.includes(r))) {
+  if (!user.roleSlugs.some((role) => staffRoles.includes(role))) {
     throw new AuthError("Behörighet saknas.", "forbidden");
   }
   return user;
 }
 
 export async function getClientIp(): Promise<string | undefined> {
-  const h = await headers();
-  return (
-    h.get("x-forwarded-for")?.split(",")[0]?.trim() ??
-    h.get("x-real-ip") ??
-    undefined
-  );
+  const requestHeaders = await headers();
+  return requestHeaders.get("x-forwarded-for")?.split(",")[0]?.trim() ??
+    requestHeaders.get("x-real-ip") ?? undefined;
 }

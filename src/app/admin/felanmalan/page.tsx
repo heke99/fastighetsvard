@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
-import { prisma } from "@/lib/db";
+import { db } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth";
 import { hasPermission } from "@/lib/permissions";
 import { MaintenanceStatusBadge } from "@/components/StatusBadges";
@@ -16,7 +16,7 @@ export default async function AdminMaintenancePage() {
   }
 
   const [requests, suppliers] = await Promise.all([
-    prisma.maintenanceRequest.findMany({
+    db.maintenanceRequest.findMany({
       where: { organizationId: user.organizationId },
       include: {
         unit: { select: { address: true, unitNumber: true } },
@@ -26,7 +26,7 @@ export default async function AdminMaintenancePage() {
       orderBy: [{ isEmergency: "desc" }, { createdAt: "desc" }],
       take: 100,
     }),
-    prisma.supplier.findMany({
+    db.supplier.findMany({
       where: { organizationId: user.organizationId, isActive: true },
       orderBy: { name: "asc" },
     }),

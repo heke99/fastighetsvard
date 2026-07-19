@@ -1,102 +1,89 @@
 # Östgöta El Teknik – Fastighetsplattform
 
-Komplett webbplattform för fastighetsvärden **Östgöta El Teknik**: publik
-annonsplattform (uthyrning, försäljning, lokaler, parkering), Mina sidor för
-hyresgäster och bostadssökande, administrativt gränssnitt, entreprenörsportal,
-REST API v1, webhooks samt providerbaserad integration mot externa
-bokföringssystem.
+Fastighetsplattform för uthyrning, försäljning, Mina sidor, felanmälan,
+arbetsorder, avtal, fakturavisning, bokföringsintegrationer, REST API och
+webhooks.
 
-## Teknikstack
+## Teknik
 
-| Del | Teknik |
-| --- | --- |
-| Ramverk | Next.js 15 (App Router, React 19, Server Components + Server Actions) |
-| Språk | TypeScript (strict) |
-| Databas | PostgreSQL via Prisma ORM |
-| Styling | Tailwind CSS |
-| Tester | Vitest (64 tester: idempotens, dubblettskydd, tenant-isolering, statusmaskiner m.m.) |
-| Autentisering | Egen sessionshantering (httpOnly-cookies, bcrypt, kontolåsning) |
+- Next.js 15, React 19 och TypeScript
+- Supabase Auth för inloggning, återställning och sessionscookies
+- Supabase Postgres via Data API
+- Supabase SQL-migrationer och Row Level Security
+- Supabase Storage för media och dokument
+- Resend för transaktionsmejl
+- Vercel för webb, API-routes och cron
 
-## Kom igång
+Projektet har ingen Prisma-runtime, inget Prisma-schema och kräver varken
+`DATABASE_URL` eller `DIRECT_URL`.
+
+## Lokal start
 
 ```bash
-# 1. Installera beroenden
-npm install
-
-# 2. Konfigurera miljön
-cp .env.example .env       # fyll i DATABASE_URL m.m.
-
-# 3. Skapa databas och kör migrationer
-npx prisma migrate deploy   # (eller: npm run db:migrate)
-
-# 4. Seeda systemroller, organisation och demodata
-npm run db:seed
-
-# 5. Starta
-npm run dev                 # utveckling, http://localhost:3000
-npm run build && npm start  # produktion
+npm ci
+cp .env.example .env.local
+# fyll i Supabase URL, publishable key och secret key
+npm run typecheck
+npm test
+npm run dev
 ```
 
-### Demokonton (från seed)
+## Databas
 
-| Roll | E-post | Lösenord |
-| --- | --- | --- |
-| Superadmin | `admin@ostgotaelteknik.se` | `Admin123!Demo` |
-| Befintlig hyresgäst | `greta.hyresgast@example.com` | `Hyresgast123!` |
-
-### Test
+Länka Supabase CLI och applicera SQL-migrationerna:
 
 ```bash
-npm test          # kräver testdatabasen fastighet_test (se docs/INSTALL.md)
+npx supabase login
+npm run supabase:link -- --project-ref DIN_PROJECT_REF
+npm run db:push
+```
+
+Migrationerna finns i `supabase/migrations/` och grunddata i
+`supabase/seed.sql`.
+
+Skapa första superadmin efter att migration och seed är applicerade:
+
+```bash
+cp .env.example .env.local
+# fyll i BOOTSTRAP_ADMIN_EMAIL och BOOTSTRAP_ADMIN_PASSWORD
+npm run bootstrap:admin
+```
+
+Ta därefter bort bootstrap-lösenordet ur `.env.local`.
+
+## Verifiering
+
+```bash
 npm run typecheck
+npm test
+npm run build
 ```
 
 ## Struktur
 
-```
-prisma/schema.prisma        Normaliserad datamodell (~45 entiteter)
-prisma/seed.ts              Roller, organisation, demodata
-src/lib/                    Domänlager
-  state-machines.ts         Kontrollerade statusövergångar (blockeras i backend)
-  permissions.ts            RBAC: roller, permissions, API-scopes
-  auth.ts                   Sessioner, inloggning, brute force-skydd
-  audit.ts                  Revisionslogg med maskering av känsliga fält
-  crypto.ts                 HMAC-webhooksignaturer, AES-256-GCM, API-nycklar
-  services/                 Affärslogik (hyresgäster, avtal, ansökningar, annonser,
-                            felanmälan/arbetsorder, webhooks, konton)
-  integrations/             Providerbaserat bokföringslager + synk & matchning
-  api/                      API-autentisering, pagination, idempotency, serializers
-src/app/(public)/           Publik webb: startsida, sök, annonser, konto
-src/app/(portal)/mina-sidor Hyresgäst-/sökandeportal
-src/app/admin/              Administrativt gränssnitt
-src/app/entreprenor/        Entreprenörsportal (ser endast egna arbetsorder)
-src/app/api/v1/             REST API v1 (OpenAPI på /api/v1/openapi)
-src/app/api/webhooks/       Inkommande webhooks från bokföringssystem
-tests/                      Vitest-sviter
-docs/                       API-, webhook-, arkitektur- och driftdokumentation
+```text
+supabase/migrations/        Databasschema, constraints, RLS och Storage
+supabase/seed.sql           Organisation och systemroller, inga demokonton
+scripts/bootstrap-admin.mjs Säker engångsskapning av superadmin
+src/lib/supabase/           Browser-, server-, middleware- och admin-klienter
+src/lib/db.ts               Supabase Data API-gateway för domänlagret
+src/lib/auth.ts             Supabase Auth + applikationens RBAC-profil
+src/lib/services/           Affärslogik
+src/app/(public)/           Publik webb
+src/app/(portal)/           Mina sidor
+src/app/admin/              Administration
+src/app/entreprenor/        Entreprenörsportal
+src/app/api/                REST API, integrationer, webhooks och cron
 ```
 
-## Central dokumentation
+## Säkerhetsprinciper
 
-- [docs/INSTALL.md](docs/INSTALL.md) – installation, migration, build, test, deploy
-- [docs/API.md](docs/API.md) – REST API v1 med exempelanrop
-- [docs/WEBHOOKS.md](docs/WEBHOOKS.md) – in-/utgående webhooks, signering, retries
-- [docs/ARKITEKTUR.md](docs/ARKITEKTUR.md) – datamodell, statusmaskiner, säkerhet, integrationer
+- Supabase secret key används endast i serverkod.
+- Supabase Auth-användaren länkas 1:1 till tabellen `User`.
+- RBAC kontrolleras i server actions och API-routes.
+- RLS är aktiverat på samtliga applikationstabeller.
+- Offentlig direktåtkomst begränsas till publicerad katalogdata.
+- Juridiska och ekonomiska förändringar revisionsloggas.
+- API-nycklar och integrationsuppgifter lagras hashade eller krypterade.
 
-## Kärnprinciper
-
-- **En person är en person** – sökande, hyresgäst, medsökande, borgensman och
-  köpare är roller på samma `Person`, aldrig separata register.
-- **Annons ≠ objekt** – ett objekt (`Unit`) kan ha många annonser (`Listing`) över tid.
-- **Bokföringssystemet är master** för kunder/fakturor/betalningar
-  (konfigurerbart per domän i `MasterDataConfig`). Plattformen skapar aldrig
-  dubbletter: allt mappas via `ExternalReference` med unika externa ID:n.
-- **Statusmaskiner i backend** – ogiltiga övergångar blockeras serverside.
-- **Server-side authorization** – RBAC valideras i varje server action/route;
-  UI-behörighet räcker aldrig. Tenant-isolering i alla queries.
-- **Spårbarhet** – alla ekonomiska/juridiska förändringar loggas i `AuditEvent`
-  med maskering av känsliga fält.
-
-## Supabase och Vercel
-
-Projektet är konfigurerat för Supabase PostgreSQL med Prisma och Vercel. Följ den kompletta instruktionen i [`SUPABASE_VERCEL_SETUP.md`](./SUPABASE_VERCEL_SETUP.md). Runtime använder poolad `DATABASE_URL` och Prisma Migrate använder separat `DIRECT_URL`.
+Se [SUPABASE_VERCEL_SETUP.md](./SUPABASE_VERCEL_SETUP.md) för driftsättning.

@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
-import { prisma } from "@/lib/db";
+import { db } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth";
 import { hasPermission, API_SCOPES } from "@/lib/permissions";
 import { ActionForm } from "@/components/admin/ActionForm";
@@ -13,7 +13,7 @@ export default async function AdminApiKeysPage() {
     redirect("/admin");
   }
 
-  const keys = await prisma.apiKey.findMany({
+  const keys = await db.apiKey.findMany({
     where: { organizationId: user.organizationId },
     orderBy: { createdAt: "desc" },
   });

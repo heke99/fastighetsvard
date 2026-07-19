@@ -1,4 +1,4 @@
-import { prisma } from "@/lib/db";
+import { db } from "@/lib/db";
 import { audit } from "@/lib/audit";
 import {
   assertTransition,
@@ -6,7 +6,7 @@ import {
 } from "@/lib/state-machines";
 import { ensurePersonRole } from "@/lib/services/tenants";
 import { dispatchEvent } from "@/lib/services/webhooks";
-import type { ApplicationStatus, Prisma } from "@prisma/client";
+import type { ApplicationStatus, Database } from "@/lib/database-types";
 
 export interface ApplicationInput {
   listingId: string;
@@ -36,7 +36,7 @@ export interface ApplicationInput {
  * intern omflyttning så att handläggaren ser det.
  */
 export async function submitApplication(organizationId: string, input: ApplicationInput) {
-  const application = await prisma.$transaction(async (tx) => {
+  const application = await db.$transaction(async (tx) => {
     const listing = await tx.listing.findFirst({
       where: { id: input.listingId, organizationId },
     });
@@ -146,7 +146,7 @@ export async function changeApplicationStatus(
   toStatus: ApplicationStatus,
   opts: { comment?: string; actorUserId?: string } = {}
 ) {
-  return prisma.$transaction(async (tx) => {
+  return db.$transaction(async (tx) => {
     const app = await tx.application.findFirst({
       where: { id: applicationId, organizationId },
     });
@@ -198,7 +198,7 @@ export async function sendOffer(
   applicationId: string,
   opts: { expiresInDays?: number; actorUserId?: string } = {}
 ) {
-  return prisma.$transaction(async (tx) => {
+  return db.$transaction(async (tx) => {
     const app = await tx.application.findFirst({
       where: { id: applicationId, organizationId },
       include: { members: true, listing: true },
@@ -269,7 +269,7 @@ export async function respondToOffer(
   accept: boolean,
   opts: { startDate?: Date; actorUserId?: string } = {}
 ): Promise<{ offer: unknown; contractId?: string; terminationId?: string }> {
-  return prisma.$transaction(async (tx) => {
+  return db.$transaction(async (tx) => {
     const offer = await tx.offer.findFirst({
       where: { id: offerId, organizationId },
       include: { application: { include: { members: true } }, listing: { include: { unit: true } } },
@@ -435,7 +435,7 @@ export async function respondToOffer(
 }
 
 export async function listApplicationsForPerson(organizationId: string, personId: string) {
-  return prisma.application.findMany({
+  return db.application.findMany({
     where: {
       organizationId,
       members: { some: { personId } },
@@ -448,7 +448,7 @@ export async function listApplicationsForPerson(organizationId: string, personId
   });
 }
 
-export type ApplicationWithRelations = Prisma.ApplicationGetPayload<{
+export type ApplicationWithRelations = Database.ApplicationGetPayload<{
   include: {
     listing: { include: { unit: true } };
     members: { include: { person: true } };

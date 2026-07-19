@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
-import { prisma } from "@/lib/db";
+import { db } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth";
 import { hasPermission } from "@/lib/permissions";
 
@@ -16,7 +16,7 @@ export default async function AdminAuditPage({
   }
   const { entity } = await searchParams;
 
-  const events = await prisma.auditEvent.findMany({
+  const events = await db.auditEvent.findMany({
     where: {
       organizationId: user.organizationId,
       ...(entity ? { entityType: entity } : {}),

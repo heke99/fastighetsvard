@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
-import { prisma } from "@/lib/db";
+import { db } from "@/lib/db";
 import { requirePermission, AuthError } from "@/lib/auth";
 import { audit } from "@/lib/audit";
 import {
@@ -20,11 +20,11 @@ import { changeMaintenanceStatus, createWorkOrder, changeWorkOrderStatus } from 
 import { runSyncJob, resolveReviewItem } from "@/lib/integrations/sync";
 import { redeliver } from "@/lib/services/webhooks";
 import { generateApiKey, generateToken, encryptSecret } from "@/lib/crypto";
-import { hashPassword } from "@/lib/auth";
+import { createManagedAuthUser, deleteManagedAuthUser } from "@/lib/supabase/users";
 import type {
   ApplicationStatus, ContractStatus, ListingStatus,
   MaintenanceStatus, WorkOrderStatus, UnitType, ListingCategory,
-} from "@prisma/client";
+} from "@/lib/database-types";
 
 export interface AdminFormState {
   status: "idle" | "error" | "success";
@@ -60,7 +60,7 @@ export async function createPropertyAction(
   try {
     const user = await requirePermission("properties", "create");
     const data = propertySchema.parse(Object.fromEntries(formData.entries()));
-    const property = await prisma.property.create({
+    const property = await db.property.create({
       data: {
         organizationId: user.organizationId!,
         name: data.name,
@@ -115,18 +115,18 @@ export async function createUnitAction(
   try {
     const user = await requirePermission("units", "create");
     const data = unitSchema.parse(Object.fromEntries(formData.entries()));
-    const property = await prisma.property.findFirst({
+    const property = await db.property.findFirst({
       where: { id: data.propertyId, organizationId: user.organizationId! },
     });
     if (!property) return { status: "error", message: "Fastigheten hittades inte." };
 
-    const existing = await prisma.unit.findFirst({
+    const existing = await db.unit.findFirst({
       where: { organizationId: user.organizationId!, unitNumber: data.unitNumber },
     });
     if (existing) return { status: "error", message: `Objektsnummer ${data.unitNumber} finns redan.` };
 
     const features = (name: string) => formData.get(name) === "1";
-    const unit = await prisma.unit.create({
+    const unit = await db.unit.create({
       data: {
         organizationId: user.organizationId!,
         propertyId: property.id,
@@ -197,7 +197,7 @@ export async function createListingAction(
   try {
     const user = await requirePermission("listings", "create");
     const data = listingSchema.parse(Object.fromEntries(formData.entries()));
-    const unit = await prisma.unit.findFirst({
+    const unit = await db.unit.findFirst({
       where: { id: data.unitId, organizationId: user.organizationId! },
     });
     if (!unit) return { status: "error", message: "Objektet hittades inte." };
@@ -205,11 +205,11 @@ export async function createListingAction(
     const baseSlug = slugify(`${data.title}-${unit.unitNumber}`);
     let slug = baseSlug;
     let i = 1;
-    while (await prisma.listing.findFirst({ where: { organizationId: user.organizationId!, slug } })) {
+    while (await db.listing.findFirst({ where: { organizationId: user.organizationId!, slug } })) {
       slug = `${baseSlug}-${++i}`;
     }
 
-    const listing = await prisma.listing.create({
+    const listing = await db.listing.create({
       data: {
         organizationId: user.organizationId!,
         unitId: unit.id,
@@ -412,11 +412,11 @@ export async function changeContractStatusAction(formData: FormData): Promise<vo
   });
   // Automatisk avpublicering när objektet blir uthyrt.
   if (toStatus === "ACTIVE") {
-    const contract = await prisma.contract.findFirst({
+    const contract = await db.contract.findFirst({
       where: { id: contractId, organizationId: user.organizationId! },
     });
     if (contract) {
-      await prisma.unit.update({ where: { id: contract.unitId }, data: { status: "RENTED" } });
+      await db.unit.update({ where: { id: contract.unitId }, data: { status: "RENTED" } });
       await unpublishListingsForUnit(user.organizationId!, contract.unitId, "Objektet uthyrt");
     }
   }
@@ -468,7 +468,7 @@ export async function createWorkOrderAction(
       user.id
     );
     if (data.requestId) {
-      const request = await prisma.maintenanceRequest.findFirst({
+      const request = await db.maintenanceRequest.findFirst({
         where: { id: data.requestId, organizationId: user.organizationId! },
       });
       if (request && ["RECEIVED", "CONFIRMED", "ASSESSING"].includes(request.status)) {
@@ -513,7 +513,7 @@ export async function createSupplierAction(
   try {
     const user = await requirePermission("suppliers", "create");
     const data = supplierSchema.parse(Object.fromEntries(formData.entries()));
-    const supplier = await prisma.supplier.create({
+    const supplier = await db.supplier.create({
       data: {
         organizationId: user.organizationId!,
         name: data.name,
@@ -529,19 +529,31 @@ export async function createSupplierAction(
       if (data.contractorPassword.length < 10) {
         return { status: "error", message: "Entreprenörens lösenord måste vara minst 10 tecken." };
       }
-      const contractorRole = await prisma.role.findFirst({
+      const contractorRole = await db.role.findFirst({
         where: { slug: "contractor", organizationId: null },
       });
-      const contractorUser = await prisma.user.create({
-        data: {
-          organizationId: user.organizationId!,
-          email: data.contractorEmail.toLowerCase(),
-          passwordHash: await hashPassword(data.contractorPassword),
-          supplierId: supplier.id,
-        },
+      const authUser = await createManagedAuthUser({
+        email: data.contractorEmail,
+        password: data.contractorPassword,
       });
+      let contractorUser;
+      try {
+        contractorUser = await db.user.create({
+          data: {
+            authUserId: authUser.id,
+            organizationId: user.organizationId!,
+            email: data.contractorEmail.toLowerCase(),
+            supplierId: supplier.id,
+            emailVerifiedAt: new Date(),
+            isActive: true,
+          },
+        });
+      } catch (error) {
+        await deleteManagedAuthUser(authUser.id);
+        throw error;
+      }
       if (contractorRole) {
-        await prisma.userRole.create({
+        await db.userRole.create({
           data: { userId: contractorUser.id, roleId: contractorRole.id },
         });
       }
@@ -588,7 +600,7 @@ export async function createConnectionAction(
         return { status: "error", message: "Credentials måste vara giltig JSON." };
       }
     }
-    const connection = await prisma.integrationConnection.create({
+    const connection = await db.integrationConnection.create({
       data: {
         organizationId: user.organizationId!,
         provider: data.provider,
@@ -653,7 +665,7 @@ export async function redeliverWebhookAction(formData: FormData): Promise<void> 
   const user = await requirePermission("webhooks", "update");
   const deliveryId = String(formData.get("deliveryId"));
   // Ägarkontroll sker i redeliver via organizationId på leveransen.
-  const delivery = await prisma.webhookDelivery.findFirst({
+  const delivery = await db.webhookDelivery.findFirst({
     where: { id: deliveryId, organizationId: user.organizationId! },
   });
   if (delivery) await redeliver(deliveryId, user.id);
@@ -663,11 +675,11 @@ export async function redeliverWebhookAction(formData: FormData): Promise<void> 
 export async function toggleSubscriptionAction(formData: FormData): Promise<void> {
   const user = await requirePermission("webhooks", "update");
   const subscriptionId = String(formData.get("subscriptionId"));
-  const sub = await prisma.webhookSubscription.findFirst({
+  const sub = await db.webhookSubscription.findFirst({
     where: { id: subscriptionId, organizationId: user.organizationId! },
   });
   if (sub) {
-    await prisma.webhookSubscription.update({
+    await db.webhookSubscription.update({
       where: { id: sub.id },
       data: {
         isActive: !sub.isActive,
@@ -694,7 +706,7 @@ export async function createApiKeyAction(
     const user = await requirePermission("apikeys", "create");
     const data = apiKeySchema.parse(Object.fromEntries(formData.entries()));
     const { key, prefix, hash } = generateApiKey();
-    const apiKey = await prisma.apiKey.create({
+    const apiKey = await db.apiKey.create({
       data: {
         organizationId: user.organizationId!,
         name: data.name,
@@ -728,11 +740,11 @@ export async function createApiKeyAction(
 export async function revokeApiKeyAction(formData: FormData): Promise<void> {
   const user = await requirePermission("apikeys", "delete");
   const apiKeyId = String(formData.get("apiKeyId"));
-  const key = await prisma.apiKey.findFirst({
+  const key = await db.apiKey.findFirst({
     where: { id: apiKeyId, organizationId: user.organizationId! },
   });
   if (key) {
-    await prisma.apiKey.update({
+    await db.apiKey.update({
       where: { id: key.id },
       data: { isActive: false, revokedAt: new Date() },
     });
@@ -767,15 +779,15 @@ export async function createStaffUserAction(
     const user = await requirePermission("users", "create");
     const data = staffUserSchema.parse(Object.fromEntries(formData.entries()));
     const email = data.email.toLowerCase();
-    const exists = await prisma.user.findUnique({ where: { email } });
+    const exists = await db.user.findUnique({ where: { email } });
     if (exists) return { status: "error", message: "E-postadressen används redan." };
 
-    const role = await prisma.role.findFirst({
+    const role = await db.role.findFirst({
       where: { id: data.roleId, OR: [{ organizationId: user.organizationId! }, { organizationId: null }] },
     });
     if (!role) return { status: "error", message: "Rollen hittades inte." };
 
-    await prisma.$transaction(async (tx) => {
+    await db.$transaction(async (tx) => {
       const person = await tx.person.create({
         data: {
           organizationId: user.organizationId!,
@@ -784,14 +796,28 @@ export async function createStaffUserAction(
           email,
         },
       });
-      const created = await tx.user.create({
-        data: {
-          organizationId: user.organizationId!,
-          personId: person.id,
-          email,
-          passwordHash: await hashPassword(data.password),
-        },
+      const authUser = await createManagedAuthUser({
+        email,
+        password: data.password,
+        firstName: data.firstName,
+        lastName: data.lastName,
       });
+      let created;
+      try {
+        created = await tx.user.create({
+          data: {
+            authUserId: authUser.id,
+            organizationId: user.organizationId!,
+            personId: person.id,
+            email,
+            emailVerifiedAt: new Date(),
+            isActive: true,
+          },
+        });
+      } catch (error) {
+        await deleteManagedAuthUser(authUser.id);
+        throw error;
+      }
       await tx.userRole.create({ data: { userId: created.id, roleId: role.id } });
       await audit(
         {
@@ -825,11 +851,11 @@ export async function createRoleAction(
     const user = await requirePermission("roles", "create");
     const data = roleSchema.parse(Object.fromEntries(formData.entries()));
     const slug = slugify(data.name);
-    const exists = await prisma.role.findFirst({
+    const exists = await db.role.findFirst({
       where: { organizationId: user.organizationId!, slug },
     });
     if (exists) return { status: "error", message: "En roll med detta namn finns redan." };
-    const role = await prisma.role.create({
+    const role = await db.role.create({
       data: {
         organizationId: user.organizationId!,
         name: data.name,

@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { prisma } from "@/lib/db";
+import { db } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth";
 import { MaintenanceStatusBadge } from "@/components/StatusBadges";
 
@@ -10,7 +10,7 @@ export default async function MyMaintenancePage() {
   const user = await getCurrentUser();
   if (!user?.personId) redirect("/logga-in");
 
-  const requests = await prisma.maintenanceRequest.findMany({
+  const requests = await db.maintenanceRequest.findMany({
     where: { personId: user.personId },
     include: { unit: { select: { address: true } } },
     orderBy: { createdAt: "desc" },

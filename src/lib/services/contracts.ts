@@ -1,8 +1,8 @@
-import { prisma } from "@/lib/db";
+import { db } from "@/lib/db";
 import { audit } from "@/lib/audit";
 import { assertTransition, contractTransitions } from "@/lib/state-machines";
 import { dispatchEvent } from "@/lib/services/webhooks";
-import type { ContractStatus, Prisma } from "@prisma/client";
+import type { ContractStatus, Database } from "@/lib/database-types";
 
 /** Statusändring med statusmaskin, historik och revisionslogg. */
 export async function changeContractStatus(
@@ -11,7 +11,7 @@ export async function changeContractStatus(
   toStatus: ContractStatus,
   opts: { comment?: string; actorUserId?: string } = {}
 ) {
-  const result = await prisma.$transaction(async (tx) => {
+  const result = await db.$transaction(async (tx) => {
     const contract = await tx.contract.findFirst({
       where: { id: contractId, organizationId },
     });
@@ -76,7 +76,7 @@ export async function signContract(
   personId: string,
   method: string = "email_code"
 ) {
-  return prisma.$transaction(async (tx) => {
+  return db.$transaction(async (tx) => {
     const contract = await tx.contract.findFirst({
       where: { id: contractId, organizationId },
       include: { parties: true },
@@ -127,7 +127,7 @@ export async function createContractVersion(
   content: Record<string, unknown>,
   actorUserId?: string
 ) {
-  return prisma.$transaction(async (tx) => {
+  return db.$transaction(async (tx) => {
     const contract = await tx.contract.findFirst({
       where: { id: contractId, organizationId },
       include: { versions: { orderBy: { versionNumber: "desc" }, take: 1 } },
@@ -138,7 +138,7 @@ export async function createContractVersion(
       data: {
         contractId,
         versionNumber: nextVersion,
-        content: content as Prisma.InputJsonValue,
+        content: content as Database.InputJsonValue,
         createdByUserId: actorUserId ?? null,
       },
     });
@@ -162,7 +162,7 @@ export async function requestTermination(
   desiredMoveOutDate: Date,
   opts: { reason?: string; isInternalTransfer?: boolean; newContractId?: string; actorUserId?: string } = {}
 ) {
-  return prisma.$transaction(async (tx) => {
+  return db.$transaction(async (tx) => {
     const contract = await tx.contract.findFirst({
       where: { id: contractId, organizationId },
       include: { parties: true },

@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { prisma } from "@/lib/db";
+import { db } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth";
 import { hasPermission } from "@/lib/permissions";
 import { ActionForm } from "@/components/admin/ActionForm";
@@ -21,7 +21,7 @@ export default async function AdminListingsPage() {
   }
 
   const [listings, units] = await Promise.all([
-    prisma.listing.findMany({
+    db.listing.findMany({
       where: { organizationId: user.organizationId },
       include: {
         unit: { select: { unitNumber: true, address: true, city: true } },
@@ -30,7 +30,7 @@ export default async function AdminListingsPage() {
       orderBy: { createdAt: "desc" },
       take: 100,
     }),
-    prisma.unit.findMany({
+    db.unit.findMany({
       where: {
         organizationId: user.organizationId,
         status: { in: ["NOT_PUBLISHED", "UPCOMING", "DRAFT", "PUBLISHED"] },

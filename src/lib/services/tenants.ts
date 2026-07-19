@@ -1,8 +1,8 @@
-import { prisma } from "@/lib/db";
+import { db } from "@/lib/db";
 import { audit } from "@/lib/audit";
 import { nextNumber } from "@/lib/counters";
 import { generateToken, sha256 } from "@/lib/crypto";
-import type { Prisma, Person } from "@prisma/client";
+import type { Database, Person } from "@/lib/database-types";
 import { sendInvitationEmail } from "@/lib/email";
 import { getAppUrl } from "@/lib/app-url";
 
@@ -43,9 +43,9 @@ export interface PersonMatch {
 export async function findExistingPerson(
   organizationId: string,
   input: { email?: string | null; personalNumber?: string | null },
-  tx?: Prisma.TransactionClient
+  tx?: Database.TransactionClient
 ): Promise<PersonMatch | null> {
-  const client = tx ?? prisma;
+  const client = tx ?? db;
   if (input.email) {
     const byEmail = await client.person.findFirst({
       where: { organizationId, email: input.email.toLowerCase().trim() },
@@ -65,7 +65,7 @@ export async function findExistingPerson(
 }
 
 export async function findOrCreatePerson(
-  tx: Prisma.TransactionClient,
+  tx: Database.TransactionClient,
   organizationId: string,
   input: {
     firstName: string;
@@ -81,7 +81,7 @@ export async function findOrCreatePerson(
   const match = await findExistingPerson(organizationId, input, tx);
   if (match) {
     // Komplettera saknade fält – skriv aldrig över befintliga uppgifter tyst.
-    const updates: Prisma.PersonUpdateInput = {};
+    const updates: Database.PersonUpdateInput = {};
     if (!match.person.phone && input.phone) updates.phone = input.phone;
     if (!match.person.address && input.address) updates.address = input.address;
     if (!match.person.personalNumber && input.personalNumber) {
@@ -109,7 +109,7 @@ export async function findOrCreatePerson(
 }
 
 export async function ensurePersonRole(
-  tx: Prisma.TransactionClient,
+  tx: Database.TransactionClient,
   personId: string,
   role: "TENANT" | "APPLICANT" | "CO_APPLICANT" | "GUARANTOR" | "BUYER" | "CONTACT" | "HOUSEHOLD_MEMBER"
 ) {
@@ -130,7 +130,7 @@ export async function registerExistingTenant(
   input: ExistingTenantInput,
   actorUserId?: string
 ) {
-  return prisma.$transaction(async (tx) => {
+  return db.$transaction(async (tx) => {
     const unit = await tx.unit.findFirst({
       where: { id: input.unitId, organizationId },
     });
@@ -263,7 +263,7 @@ export async function createInvitation(
   personId: string,
   actorUserId?: string
 ) {
-  const person = await prisma.person.findFirst({
+  const person = await db.person.findFirst({
     where: { id: personId, organizationId },
     include: { user: true },
   });
@@ -272,7 +272,7 @@ export async function createInvitation(
   if (person.user) throw new Error("Personen har redan ett konto.");
 
   const token = generateToken(32);
-  const invitation = await prisma.invitation.create({
+  const invitation = await db.invitation.create({
     data: {
       organizationId,
       personId,
@@ -361,14 +361,14 @@ export async function previewTenantImport(
       results.push({ row: rowNo, status: "error", message: "Ogiltigt startdatum." });
       continue;
     }
-    const unit = await prisma.unit.findFirst({
+    const unit = await db.unit.findFirst({
       where: { organizationId, unitNumber: row.unitNumber },
     });
     if (!unit) {
       results.push({ row: rowNo, status: "error", message: `Objekt ${row.unitNumber} finns inte.` });
       continue;
     }
-    const active = await prisma.contract.findFirst({
+    const active = await db.contract.findFirst({
       where: { unitId: unit.id, status: { in: ["ACTIVE", "SIGNED"] } },
     });
     if (active) {
@@ -394,7 +394,7 @@ export async function runTenantImport(
   actorUserId?: string,
   fileName?: string
 ) {
-  const job = await prisma.importJob.create({
+  const job = await db.importJob.create({
     data: {
       organizationId,
       importType: "tenants",
@@ -413,7 +413,7 @@ export async function runTenantImport(
     const row = rows[i];
     const rowNo = i + 1;
     try {
-      const unit = await prisma.unit.findFirst({
+      const unit = await db.unit.findFirst({
         where: { organizationId, unitNumber: row.unitNumber },
       });
       if (!unit) {
@@ -428,7 +428,7 @@ export async function runTenantImport(
         errors++;
         continue;
       }
-      const active = await prisma.contract.findFirst({
+      const active = await db.contract.findFirst({
         where: { unitId: unit.id, status: { in: ["ACTIVE", "SIGNED"] } },
       });
       if (active) {
@@ -467,14 +467,14 @@ export async function runTenantImport(
     }
   }
 
-  const updated = await prisma.importJob.update({
+  const updated = await db.importJob.update({
     where: { id: job.id },
     data: {
       status: errors > 0 ? "COMPLETED_WITH_ERRORS" : "COMPLETED",
       successRows: success,
       errorRows: errors,
       skippedRows: skipped,
-      rowResults: results as unknown as Prisma.InputJsonValue,
+      rowResults: results as unknown as Database.InputJsonValue,
       finishedAt: new Date(),
     },
   });

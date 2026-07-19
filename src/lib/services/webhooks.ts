@@ -1,7 +1,7 @@
-import { prisma } from "@/lib/db";
+import { db } from "@/lib/db";
 import { signWebhookPayload, generateToken } from "@/lib/crypto";
 import { audit } from "@/lib/audit";
-import type { Prisma } from "@prisma/client";
+import type { Database } from "@/lib/database-types";
 
 /**
  * Utgående webhooks med HMAC-signatur, retries med exponentiell backoff
@@ -41,7 +41,7 @@ export async function dispatchEvent(
   eventType: string,
   payload: Record<string, unknown>
 ): Promise<number> {
-  const subscriptions = await prisma.webhookSubscription.findMany({
+  const subscriptions = await db.webhookSubscription.findMany({
     where: { organizationId, isActive: true, events: { has: eventType } },
   });
   if (subscriptions.length === 0) return 0;
@@ -49,7 +49,7 @@ export async function dispatchEvent(
   const eventId = `evt_${generateToken(16)}`;
   let created = 0;
   for (const sub of subscriptions) {
-    await prisma.webhookDelivery.upsert({
+    await db.webhookDelivery.upsert({
       where: { subscriptionId_eventId: { subscriptionId: sub.id, eventId } },
       create: {
         organizationId,
@@ -61,7 +61,7 @@ export async function dispatchEvent(
           type: eventType,
           createdAt: new Date().toISOString(),
           data: payload,
-        } as Prisma.InputJsonValue,
+        } as Database.InputJsonValue,
         status: "PENDING",
         nextAttemptAt: new Date(),
       },
@@ -74,7 +74,7 @@ export async function dispatchEvent(
 
 /** Försök leverera en enskild webhook. */
 export async function attemptDelivery(deliveryId: string): Promise<boolean> {
-  const delivery = await prisma.webhookDelivery.findUnique({
+  const delivery = await db.webhookDelivery.findUnique({
     where: { id: deliveryId },
     include: { subscription: true },
   });
@@ -111,7 +111,7 @@ export async function attemptDelivery(deliveryId: string): Promise<boolean> {
   }
 
   if (success) {
-    await prisma.webhookDelivery.update({
+    await db.webhookDelivery.update({
       where: { id: delivery.id },
       data: {
         status: "DELIVERED",
@@ -123,7 +123,7 @@ export async function attemptDelivery(deliveryId: string): Promise<boolean> {
         lastError: null,
       },
     });
-    await prisma.webhookSubscription.update({
+    await db.webhookSubscription.update({
       where: { id: delivery.subscriptionId },
       data: { consecutiveFailures: 0 },
     });
@@ -132,7 +132,7 @@ export async function attemptDelivery(deliveryId: string): Promise<boolean> {
 
   const isDeadLetter = attempt >= MAX_ATTEMPTS;
   const backoffMinutes = BACKOFF_MINUTES[Math.min(attempt - 1, BACKOFF_MINUTES.length - 1)];
-  await prisma.webhookDelivery.update({
+  await db.webhookDelivery.update({
     where: { id: delivery.id },
     data: {
       status: isDeadLetter ? "DEAD_LETTER" : "FAILED",
@@ -145,12 +145,12 @@ export async function attemptDelivery(deliveryId: string): Promise<boolean> {
   });
 
   // Stäng av trasiga mottagare automatiskt efter många fel i rad.
-  const sub = await prisma.webhookSubscription.update({
+  const sub = await db.webhookSubscription.update({
     where: { id: delivery.subscriptionId },
     data: { consecutiveFailures: { increment: 1 } },
   });
   if (sub.consecutiveFailures >= DISABLE_AFTER_CONSECUTIVE_FAILURES && sub.isActive) {
-    await prisma.webhookSubscription.update({
+    await db.webhookSubscription.update({
       where: { id: sub.id },
       data: {
         isActive: false,
@@ -171,7 +171,7 @@ export async function attemptDelivery(deliveryId: string): Promise<boolean> {
 
 /** Processa förfallna leveranser (körs av cron/queue-worker eller API-anrop). */
 export async function processPendingDeliveries(limit = 50): Promise<{ delivered: number; failed: number }> {
-  const due = await prisma.webhookDelivery.findMany({
+  const due = await db.webhookDelivery.findMany({
     where: {
       status: { in: ["PENDING", "FAILED"] },
       nextAttemptAt: { lte: new Date() },
@@ -190,9 +190,9 @@ export async function processPendingDeliveries(limit = 50): Promise<{ delivered:
 
 /** Manuell återleverans av dead-letter. */
 export async function redeliver(deliveryId: string, actorUserId?: string) {
-  const delivery = await prisma.webhookDelivery.findUnique({ where: { id: deliveryId } });
+  const delivery = await db.webhookDelivery.findUnique({ where: { id: deliveryId } });
   if (!delivery) throw new Error("Leveransen hittades inte.");
-  await prisma.webhookDelivery.update({
+  await db.webhookDelivery.update({
     where: { id: deliveryId },
     data: { status: "PENDING", nextAttemptAt: new Date(), attempts: 0 },
   });

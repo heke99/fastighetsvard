@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
-import { prisma } from "@/lib/db";
+import { db } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth";
 import { formatSek } from "@/components/ListingCard";
 import { InvoiceStatusBadge } from "@/components/StatusBadges";
@@ -17,7 +17,7 @@ export default async function InvoiceDetailPage({
   const { id } = await params;
 
   // Tenant-isolering i query: en användare kan aldrig öppna någon annans faktura.
-  const invoice = await prisma.invoice.findFirst({
+  const invoice = await db.invoice.findFirst({
     where: { id, personId: user.personId },
     include: {
       lines: { orderBy: { sortOrder: "asc" } },

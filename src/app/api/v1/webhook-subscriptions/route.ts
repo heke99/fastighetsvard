@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { prisma } from "@/lib/db";
+import { db } from "@/lib/db";
 import {
   withApiAuth,
   parsePagination,
@@ -15,13 +15,13 @@ export const GET = withApiAuth("webhook-subscriptions:read", async (req, ctx) =>
   const pagination = parsePagination(req);
   const where = { organizationId: ctx.organizationId };
   const [items, total] = await Promise.all([
-    prisma.webhookSubscription.findMany({
+    db.webhookSubscription.findMany({
       where,
       orderBy: { createdAt: "desc" },
       skip: pagination.skip,
       take: pagination.take,
     }),
-    prisma.webhookSubscription.count({ where }),
+    db.webhookSubscription.count({ where }),
   ]);
   return paginatedResponse(items.map(serializeWebhookSubscription), total, pagination, ctx);
 });
@@ -40,7 +40,7 @@ export const POST = withApiAuth("webhook-subscriptions:write", async (req, ctx) 
   return withIdempotency(req, ctx, bodyText, async () => {
     const input = createSchema.parse(JSON.parse(bodyText));
     const secret = `whsec_${generateToken(32)}`;
-    const subscription = await prisma.webhookSubscription.create({
+    const subscription = await db.webhookSubscription.create({
       data: {
         organizationId: ctx.organizationId,
         url: input.url,

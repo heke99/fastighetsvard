@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { prisma } from "@/lib/db";
+import { db } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth";
 import { formatSek } from "@/components/ListingCard";
 
@@ -21,39 +21,39 @@ export default async function AdminDashboardPage() {
     upcomingMoveIns, upcomingMoveOuts, failedWebhooks, pendingReviewItems,
     failedSyncJobs, invoiceSums,
   ] = await Promise.all([
-    prisma.unit.count({ where: { organizationId } }),
-    prisma.unit.count({ where: { organizationId, status: "RENTED" } }),
-    prisma.unit.count({ where: { organizationId, status: { in: ["PUBLISHED", "APPLICATION_OPEN"] } } }),
-    prisma.unit.count({ where: { organizationId, status: "UPCOMING" } }),
-    prisma.unit.count({ where: { organizationId, status: { in: ["FOR_SALE", "BIDDING"] } } }),
-    prisma.listing.count({ where: { organizationId, status: "PUBLISHED" } }),
-    prisma.application.count({
+    db.unit.count({ where: { organizationId } }),
+    db.unit.count({ where: { organizationId, status: "RENTED" } }),
+    db.unit.count({ where: { organizationId, status: { in: ["PUBLISHED", "APPLICATION_OPEN"] } } }),
+    db.unit.count({ where: { organizationId, status: "UPCOMING" } }),
+    db.unit.count({ where: { organizationId, status: { in: ["FOR_SALE", "BIDDING"] } } }),
+    db.listing.count({ where: { organizationId, status: "PUBLISHED" } }),
+    db.application.count({
       where: { organizationId, status: { notIn: ["CLOSED", "WITHDRAWN", "DECLINED"] } },
     }),
-    prisma.contract.count({
+    db.contract.count({
       where: { organizationId, status: { in: ["SENT_FOR_SIGNING", "PARTIALLY_SIGNED"] } },
     }),
-    prisma.invoice.count({
+    db.invoice.count({
       where: { organizationId, status: { in: ["OVERDUE", "REMINDED", "COLLECTION"] } },
     }),
-    prisma.maintenanceRequest.count({
+    db.maintenanceRequest.count({
       where: { organizationId, status: { notIn: ["CLOSED", "REJECTED"] } },
     }),
-    prisma.workOrder.count({
+    db.workOrder.count({
       where: { organizationId, priority: "URGENT", status: { notIn: ["DONE", "APPROVED", "INVOICED", "CANCELLED"] } },
     }),
-    prisma.contract.count({
+    db.contract.count({
       where: { organizationId, status: { in: ["SIGNED", "ACTIVE"] }, startDate: { gte: now, lte: in30Days } },
     }),
-    prisma.termination.count({
+    db.termination.count({
       where: { organizationId, effectiveEndDate: { gte: now, lte: in30Days }, status: { not: "CANCELLED" } },
     }),
-    prisma.webhookDelivery.count({
+    db.webhookDelivery.count({
       where: { organizationId, status: { in: ["FAILED", "DEAD_LETTER"] } },
     }),
-    prisma.syncReviewItem.count({ where: { organizationId, status: "PENDING" } }),
-    prisma.integrationSyncJob.count({ where: { organizationId, status: "FAILED" } }),
-    prisma.invoice.aggregate({
+    db.syncReviewItem.count({ where: { organizationId, status: "PENDING" } }),
+    db.integrationSyncJob.count({ where: { organizationId, status: "FAILED" } }),
+    db.invoice.aggregate({
       where: { organizationId, isCreditNote: false },
       _sum: { paidAmount: true },
     }),

@@ -1,8 +1,8 @@
-import { prisma } from "@/lib/db";
+import { db } from "@/lib/db";
 import { audit } from "@/lib/audit";
 import { assertTransition, listingTransitions } from "@/lib/state-machines";
 import { dispatchEvent } from "@/lib/services/webhooks";
-import type { ListingStatus, Prisma, ListingCategory, UnitType } from "@prisma/client";
+import type { ListingStatus, Database, ListingCategory, UnitType } from "@/lib/database-types";
 
 export interface ListingSearchParams {
   q?: string; // fritext: ort, område, adress
@@ -34,8 +34,8 @@ export interface ListingSearchParams {
   perPage?: number;
 }
 
-export function buildListingWhere(params: ListingSearchParams): Prisma.ListingWhereInput {
-  const unitWhere: Prisma.UnitWhereInput = {
+export function buildListingWhere(params: ListingSearchParams): Database.ListingWhereInput {
+  const unitWhere: Database.UnitWhereInput = {
     ...(params.type ? { type: params.type } : {}),
     ...(params.city ? { city: { equals: params.city, mode: "insensitive" } } : {}),
     ...(params.area ? { area: { contains: params.area, mode: "insensitive" } } : {}),
@@ -91,7 +91,7 @@ export function buildListingWhere(params: ListingSearchParams): Prisma.ListingWh
 
 export function buildListingOrderBy(
   sort?: ListingSearchParams["sort"]
-): Prisma.ListingOrderByWithRelationInput[] {
+): Database.ListingOrderByWithRelationInput[] {
   switch (sort) {
     case "rent_asc": return [{ rent: "asc" }, { publishedAt: "desc" }];
     case "rent_desc": return [{ rent: "desc" }, { publishedAt: "desc" }];
@@ -108,7 +108,7 @@ export async function searchListings(params: ListingSearchParams) {
   const perPage = Math.min(48, params.perPage ?? 12);
   const where = buildListingWhere(params);
   const [items, total] = await Promise.all([
-    prisma.listing.findMany({
+    db.listing.findMany({
       where,
       include: {
         unit: { include: { media: { where: { kind: "IMAGE" }, orderBy: { sortOrder: "asc" }, take: 1 } } },
@@ -117,7 +117,7 @@ export async function searchListings(params: ListingSearchParams) {
       skip: (page - 1) * perPage,
       take: perPage,
     }),
-    prisma.listing.count({ where }),
+    db.listing.count({ where }),
   ]);
   return { items, total, page, perPage, totalPages: Math.ceil(total / perPage) };
 }
@@ -129,7 +129,7 @@ export async function changeListingStatus(
   toStatus: ListingStatus,
   actorUserId?: string
 ) {
-  const result = await prisma.$transaction(async (tx) => {
+  const result = await db.$transaction(async (tx) => {
     const listing = await tx.listing.findFirst({ where: { id: listingId, organizationId } });
     if (!listing) throw new Error("Annonsen hittades inte.");
     assertTransition("listing", listingTransitions, listing.status, toStatus);
@@ -180,11 +180,11 @@ export async function unpublishListingsForUnit(
   unitId: string,
   reason: string
 ) {
-  const active = await prisma.listing.findMany({
+  const active = await db.listing.findMany({
     where: { organizationId, unitId, status: { in: ["PUBLISHED", "PAUSED", "SCHEDULED"] } },
   });
   for (const listing of active) {
-    await prisma.$transaction(async (tx) => {
+    await db.$transaction(async (tx) => {
       await tx.listing.update({
         where: { id: listing.id },
         data: { status: "COMPLETED", completedAt: new Date() },

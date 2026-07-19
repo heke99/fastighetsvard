@@ -1,11 +1,11 @@
 import { redirect } from "next/navigation";
-import { prisma } from "@/lib/db";
+import { db } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth";
 import { hasPermission } from "@/lib/permissions";
 import { formatSek } from "@/components/ListingCard";
 import { ActionForm } from "@/components/admin/ActionForm";
 import { createUnitAction } from "../actions";
-import type { UnitStatus } from "@prisma/client";
+import type { UnitStatus } from "@/lib/database-types";
 
 export const metadata = { title: "Admin – Objekt" };
 
@@ -29,7 +29,7 @@ export default async function AdminUnitsPage({
   const { status } = await searchParams;
 
   const [units, properties] = await Promise.all([
-    prisma.unit.findMany({
+    db.unit.findMany({
       where: {
         organizationId: user.organizationId,
         ...(status && status in statusLabels ? { status: status as UnitStatus } : {}),
@@ -41,7 +41,7 @@ export default async function AdminUnitsPage({
       orderBy: { unitNumber: "asc" },
       take: 200,
     }),
-    prisma.property.findMany({
+    db.property.findMany({
       where: { organizationId: user.organizationId },
       orderBy: { name: "asc" },
     }),

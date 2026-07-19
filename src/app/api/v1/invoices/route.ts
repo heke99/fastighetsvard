@@ -1,7 +1,7 @@
-import { prisma } from "@/lib/db";
+import { db } from "@/lib/db";
 import { withApiAuth, parsePagination, paginatedResponse } from "@/lib/api/helpers";
 import { serializeInvoice } from "@/lib/api/serializers";
-import type { Prisma, InvoiceStatus } from "@prisma/client";
+import type { Database, InvoiceStatus } from "@/lib/database-types";
 
 export const GET = withApiAuth("invoices:read", async (req, ctx) => {
   const url = new URL(req.url);
@@ -13,7 +13,7 @@ export const GET = withApiAuth("invoices:read", async (req, ctx) => {
   const dueTo = url.searchParams.get("due_to");
   const sort = url.searchParams.get("sort") ?? "-invoice_date";
 
-  const where: Prisma.InvoiceWhereInput = {
+  const where: Database.InvoiceWhereInput = {
     organizationId: ctx.organizationId,
     ...(status ? { status: status.toUpperCase() as InvoiceStatus } : {}),
     ...(personId ? { personId } : {}),
@@ -28,21 +28,21 @@ export const GET = withApiAuth("invoices:read", async (req, ctx) => {
       : {}),
   };
 
-  const orderBy: Prisma.InvoiceOrderByWithRelationInput =
+  const orderBy: Database.InvoiceOrderByWithRelationInput =
     sort === "due_date" ? { dueDate: "asc" }
     : sort === "-due_date" ? { dueDate: "desc" }
     : sort === "invoice_date" ? { invoiceDate: "asc" }
     : { invoiceDate: "desc" };
 
   const [items, total] = await Promise.all([
-    prisma.invoice.findMany({
+    db.invoice.findMany({
       where,
       include: { lines: true, externalReferences: true },
       orderBy,
       skip: pagination.skip,
       take: pagination.take,
     }),
-    prisma.invoice.count({ where }),
+    db.invoice.count({ where }),
   ]);
 
   return paginatedResponse(items.map(serializeInvoice), total, pagination, ctx);

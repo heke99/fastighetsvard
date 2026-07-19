@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
-import { prisma } from "@/lib/db";
+import { db } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth";
 import { audit } from "@/lib/audit";
 
@@ -32,8 +32,8 @@ export async function updateProfileAction(
     return { status: "error", message: "Kontrollera fälten." };
   }
 
-  const before = await prisma.person.findUnique({ where: { id: user.personId } });
-  await prisma.person.update({
+  const before = await db.person.findUnique({ where: { id: user.personId } });
+  await db.person.update({
     where: { id: user.personId },
     data: {
       firstName: parsed.data.firstName,

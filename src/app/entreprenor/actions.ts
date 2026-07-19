@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { getCurrentUser } from "@/lib/auth";
 import { changeWorkOrderStatus } from "@/lib/services/maintenance";
-import type { WorkOrderStatus } from "@prisma/client";
+import type { WorkOrderStatus } from "@/lib/database-types";
 
 export interface ContractorFormState {
   status: "idle" | "error" | "success";

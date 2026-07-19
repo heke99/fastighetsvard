@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
-import { prisma } from "@/lib/db";
+import { db } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth";
 import { ApplicationForm } from "./ApplicationForm";
 
@@ -17,13 +17,13 @@ export default async function ApplyPage({
   if (!user) redirect(`/logga-in?next=/annons/${slug}/ansok`);
   if (!user.personId) redirect("/mina-sidor/profil?komplettera=1");
 
-  const listing = await prisma.listing.findFirst({
+  const listing = await db.listing.findFirst({
     where: { slug, status: "PUBLISHED" },
     include: { unit: true },
   });
   if (!listing) notFound();
 
-  const activeContract = await prisma.contract.findFirst({
+  const activeContract = await db.contract.findFirst({
     where: {
       status: "ACTIVE",
       parties: { some: { personId: user.personId, role: { in: ["TENANT", "CO_TENANT"] } } },
@@ -31,7 +31,7 @@ export default async function ApplyPage({
     include: { unit: { select: { address: true, city: true } } },
   });
 
-  const existingApplication = await prisma.application.findFirst({
+  const existingApplication = await db.application.findFirst({
     where: {
       listingId: listing.id,
       members: { some: { personId: user.personId, role: "MAIN_APPLICANT" } },

@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
-import { prisma } from "@/lib/db";
+import { db } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth";
 import { MaintenanceForm } from "./MaintenanceForm";
 
@@ -15,14 +15,14 @@ export default async function NewMaintenancePage({
   const { unit: preselectedUnit } = await searchParams;
 
   // Objekt personen har aktiva avtal på.
-  const contracts = await prisma.contract.findMany({
+  const contracts = await db.contract.findMany({
     where: {
       status: { in: ["ACTIVE", "TERMINATED"] },
       parties: { some: { personId: user.personId, role: { in: ["TENANT", "CO_TENANT"] } } },
     },
     include: { unit: { select: { id: true, address: true, city: true, propertyId: true } } },
   });
-  const units = [...new Map(contracts.map((c) => [c.unit.id, c.unit])).values()];
+  const units = [...new Map<string, { id: string; address: string; city: string }>(contracts.map((c: any) => [c.unit.id, c.unit])).values()];
 
   return (
     <div className="space-y-6">

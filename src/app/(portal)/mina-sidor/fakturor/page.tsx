@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { prisma } from "@/lib/db";
+import { db } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth";
 import { formatSek } from "@/components/ListingCard";
 import { InvoiceStatusBadge } from "@/components/StatusBadges";
@@ -12,7 +12,7 @@ export default async function MyInvoicesPage() {
   if (!user?.personId) redirect("/logga-in");
 
   // Tenant-isolering: endast fakturor kopplade till min person.
-  const invoices = await prisma.invoice.findMany({
+  const invoices = await db.invoice.findMany({
     where: { personId: user.personId },
     orderBy: { invoiceDate: "desc" },
     take: 50,

@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
-import { prisma } from "@/lib/db";
+import { db } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth";
 import { hasPermission } from "@/lib/permissions";
 import { ActionForm } from "@/components/admin/ActionForm";
@@ -13,7 +13,7 @@ export default async function AdminSuppliersPage() {
     redirect("/admin");
   }
 
-  const suppliers = await prisma.supplier.findMany({
+  const suppliers = await db.supplier.findMany({
     where: { organizationId: user.organizationId },
     include: {
       users: { select: { email: true } },

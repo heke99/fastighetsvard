@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { prisma } from "@/lib/db";
+import { db } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth";
 import { formatSek } from "@/components/ListingCard";
 
@@ -13,14 +13,14 @@ export default async function PortalOverviewPage() {
 
   const [activeContracts, unpaidInvoices, activeRequests, applications, pendingOffers, unsignedContracts, unreadMessages, notifications, favoritesCount, savedSearchesCount, upcomingViewings] =
     await Promise.all([
-      prisma.contract.findMany({
+      db.contract.findMany({
         where: {
           status: "ACTIVE",
           parties: { some: { personId, role: { in: ["TENANT", "CO_TENANT"] } } },
         },
         include: { unit: true },
       }),
-      prisma.invoice.findMany({
+      db.invoice.findMany({
         where: {
           personId,
           status: { in: ["SENT", "PARTIALLY_PAID", "OVERDUE", "REMINDED"] },
@@ -28,12 +28,12 @@ export default async function PortalOverviewPage() {
         orderBy: { dueDate: "asc" },
         take: 5,
       }),
-      prisma.maintenanceRequest.findMany({
+      db.maintenanceRequest.findMany({
         where: { personId, status: { notIn: ["CLOSED", "REJECTED"] } },
         orderBy: { createdAt: "desc" },
         take: 5,
       }),
-      prisma.application.findMany({
+      db.application.findMany({
         where: {
           members: { some: { personId } },
           status: { notIn: ["CLOSED", "WITHDRAWN"] },
@@ -42,26 +42,26 @@ export default async function PortalOverviewPage() {
         orderBy: { createdAt: "desc" },
         take: 5,
       }),
-      prisma.offer.findMany({
+      db.offer.findMany({
         where: { personId, status: "SENT", expiresAt: { gte: new Date() } },
         include: { listing: true },
       }),
-      prisma.contract.findMany({
+      db.contract.findMany({
         where: {
           status: { in: ["SENT_FOR_SIGNING", "PARTIALLY_SIGNED"] },
           parties: { some: { personId, signedAt: null } },
         },
         include: { unit: true },
       }),
-      prisma.message.count({ where: { recipientPersonId: personId, readAt: null } }),
-      prisma.notification.findMany({
+      db.message.count({ where: { recipientPersonId: personId, readAt: null } }),
+      db.notification.findMany({
         where: { personId, readAt: null },
         orderBy: { createdAt: "desc" },
         take: 5,
       }),
-      prisma.favorite.count({ where: { personId } }),
-      prisma.savedSearch.count({ where: { personId } }),
-      prisma.viewingAttendee.findMany({
+      db.favorite.count({ where: { personId } }),
+      db.savedSearch.count({ where: { personId } }),
+      db.viewingAttendee.findMany({
         where: { personId, status: "BOOKED", viewing: { startsAt: { gte: new Date() } } },
         include: { viewing: { include: { listing: true } } },
         take: 3,

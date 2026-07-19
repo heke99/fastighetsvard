@@ -1,4 +1,4 @@
-import { prisma } from "@/lib/db";
+import { db } from "@/lib/db";
 import { audit } from "@/lib/audit";
 import { nextNumber } from "@/lib/counters";
 import {
@@ -7,7 +7,7 @@ import {
   workOrderTransitions,
 } from "@/lib/state-machines";
 import { dispatchEvent } from "@/lib/services/webhooks";
-import type { MaintenanceStatus, WorkOrderStatus, MaintenancePriority } from "@prisma/client";
+import type { MaintenanceStatus, WorkOrderStatus, MaintenancePriority } from "@/lib/database-types";
 
 export interface MaintenanceRequestInput {
   propertyId?: string;
@@ -32,7 +32,7 @@ export async function createMaintenanceRequest(
   input: MaintenanceRequestInput,
   actorUserId?: string
 ) {
-  const request = await prisma.$transaction(async (tx) => {
+  const request = await db.$transaction(async (tx) => {
     const requestNumber = await nextNumber(tx, organizationId, "maintenance");
     const created = await tx.maintenanceRequest.create({
       data: {
@@ -95,7 +95,7 @@ export async function changeMaintenanceStatus(
   toStatus: MaintenanceStatus,
   opts: { comment?: string; actorUserId?: string } = {}
 ) {
-  const updated = await prisma.$transaction(async (tx) => {
+  const updated = await db.$transaction(async (tx) => {
     const request = await tx.maintenanceRequest.findFirst({
       where: { id: requestId, organizationId },
     });
@@ -168,7 +168,7 @@ export async function createWorkOrder(
   input: WorkOrderInput,
   actorUserId?: string
 ) {
-  return prisma.$transaction(async (tx) => {
+  return db.$transaction(async (tx) => {
     if (input.requestId) {
       const request = await tx.maintenanceRequest.findFirst({
         where: { id: input.requestId, organizationId },
@@ -221,7 +221,7 @@ export async function changeWorkOrderStatus(
     scheduledAt?: Date;
   } = {}
 ) {
-  return prisma.$transaction(async (tx) => {
+  return db.$transaction(async (tx) => {
     const workOrder = await tx.workOrder.findFirst({
       where: {
         id: workOrderId,

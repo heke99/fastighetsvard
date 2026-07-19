@@ -1,5 +1,5 @@
 import Link from "next/link";
-import type { Listing, Unit, UnitMedia } from "@prisma/client";
+import type { Listing, Unit, UnitMedia } from "@/lib/database-types";
 import { FavoriteButton } from "./FavoriteButton";
 
 export type ListingWithUnit = Listing & {
