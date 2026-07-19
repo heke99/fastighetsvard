@@ -44,7 +44,7 @@ export function SiteFooter() {
                 </a>
               </li>
               <li className="pt-2 text-xs text-stone-400">
-                Akuta fel utanför kontorstid: <a className="underline hover:text-white" href="tel:+4613100001">013-10 00 01</a>
+                Akuta fel utanför kontorstid: <a className="underline hover:text-white" href="tel:+4613100001">013-00000</a>
               </li>
             </ul>
           </address>

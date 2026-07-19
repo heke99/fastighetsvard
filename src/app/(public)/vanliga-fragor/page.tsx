@@ -19,7 +19,7 @@ const faqs: { q: string; a: string }[] = [
   },
   {
     q: "Hur gör jag en felanmälan?",
-    a: "Via Mina sidor → Felanmälan. Vid akuta fel ska du alltid ringa vår jour på 013-10 00 01.",
+    a: "Via Mina sidor → Felanmälan. Vid akuta fel ska du alltid ringa vår jour på 013000000.",
   },
   {
     q: "Vad krävs för att bli godkänd som hyresgäst?",

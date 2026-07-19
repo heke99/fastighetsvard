@@ -6,7 +6,7 @@ export default function PrivacyPage() {
       <h1 className="text-2xl font-bold text-stone-900 sm:text-3xl">Integritetspolicy</h1>
       <div className="prose prose-stone mt-6 max-w-none text-stone-700">
         <p>
-          Östgöta El Teknik AB (org.nr 556000-0000) är personuppgiftsansvarig för
+          Östgöta El Teknik AB (org.nr 559350-5620) är personuppgiftsansvarig för
           behandlingen av personuppgifter på denna plattform.
         </p>
         <h2 className="mt-6 text-lg font-semibold text-stone-900">Vilka uppgifter behandlar vi?</h2>
