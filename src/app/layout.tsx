@@ -9,7 +9,7 @@ export const metadata: Metadata = {
     template: "%s | Östgöta El Teknik",
   },
   description:
-    "Östgöta El Teknik hyr ut och säljer lägenheter, lokaler och parkeringsplatser i Östergötland.",
+    "Östgöta El Teknik hyr ut och säljer lägenheter, lokaler i Östergötland.",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

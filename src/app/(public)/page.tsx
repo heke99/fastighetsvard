@@ -149,9 +149,6 @@ export default async function HomePage() {
             <Link href="/lokaler" className="rounded-full bg-white/10 px-4 py-1.5 font-medium hover:bg-white/20">
               Lokaler
             </Link>
-            <Link href="/parkering" className="rounded-full bg-white/10 px-4 py-1.5 font-medium hover:bg-white/20">
-              Parkering
-            </Link>
           </div>
         </div>
       </section>
@@ -221,14 +218,6 @@ export default async function HomePage() {
         listings={data.commercial as ListingWithUnit[]}
         favoriteIds={data.favoriteIds}
       />
-      <Section
-        id="parkering"
-        title="Lediga parkeringsplatser"
-        moreHref="/parkering"
-        moreLabel="Alla parkeringar"
-        listings={data.parking as ListingWithUnit[]}
-        favoriteIds={data.favoriteIds}
-      />
 
       {/* Kommande objekt */}
       {data.upcoming.length > 0 && (
@@ -282,8 +271,7 @@ export default async function HomePage() {
             </h2>
             <p className="mt-4 leading-relaxed text-stone-600">
               Östgöta El Teknik är ett familjeägt fastighetsbolag med rötterna i
-              elteknikbranschen. Vi äger och förvaltar bostäder, lokaler och
-              parkeringar i Linköping, Norrköping och Motala – alltid med fokus
+              elteknikbranschen. Vi äger och förvaltar bostäder, lokaler i Linköping, Norrköping och Motala – alltid med fokus
               på trygghet, energieffektivitet och personlig service.
             </p>
             <p className="mt-3 leading-relaxed text-stone-600">
