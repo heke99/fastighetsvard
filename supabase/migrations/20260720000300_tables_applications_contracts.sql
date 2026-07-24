@@ -1,12 +1,12 @@
 -- Östgöta El Teknik Fastighetsplattform
 -- Step: Applications, viewings, offers, contracts and inspections tables
--- Safe to run in filename order. This file is transactional.
+-- Canonical installation migration. It must run exactly once in filename order.
 
 BEGIN;
 SET LOCAL search_path = public, extensions;
 
 -- CreateTable
-CREATE TABLE IF NOT EXISTS public."Application" (
+CREATE TABLE public."Application" (
     "id" TEXT NOT NULL DEFAULT gen_random_uuid()::text,
     "organizationId" TEXT NOT NULL,
     "listingId" TEXT NOT NULL,
@@ -35,7 +35,7 @@ CREATE TABLE IF NOT EXISTS public."Application" (
 );
 
 -- CreateTable
-CREATE TABLE IF NOT EXISTS public."ApplicationMember" (
+CREATE TABLE public."ApplicationMember" (
     "id" TEXT NOT NULL DEFAULT gen_random_uuid()::text,
     "applicationId" TEXT NOT NULL,
     "personId" TEXT NOT NULL,
@@ -46,7 +46,7 @@ CREATE TABLE IF NOT EXISTS public."ApplicationMember" (
 );
 
 -- CreateTable
-CREATE TABLE IF NOT EXISTS public."ApplicationStatusEvent" (
+CREATE TABLE public."ApplicationStatusEvent" (
     "id" TEXT NOT NULL DEFAULT gen_random_uuid()::text,
     "applicationId" TEXT NOT NULL,
     "fromStatus" "ApplicationStatus",
@@ -59,7 +59,7 @@ CREATE TABLE IF NOT EXISTS public."ApplicationStatusEvent" (
 );
 
 -- CreateTable
-CREATE TABLE IF NOT EXISTS public."Viewing" (
+CREATE TABLE public."Viewing" (
     "id" TEXT NOT NULL DEFAULT gen_random_uuid()::text,
     "organizationId" TEXT NOT NULL,
     "listingId" TEXT NOT NULL,
@@ -76,7 +76,7 @@ CREATE TABLE IF NOT EXISTS public."Viewing" (
 );
 
 -- CreateTable
-CREATE TABLE IF NOT EXISTS public."ViewingAttendee" (
+CREATE TABLE public."ViewingAttendee" (
     "id" TEXT NOT NULL DEFAULT gen_random_uuid()::text,
     "viewingId" TEXT NOT NULL,
     "personId" TEXT NOT NULL,
@@ -89,7 +89,7 @@ CREATE TABLE IF NOT EXISTS public."ViewingAttendee" (
 );
 
 -- CreateTable
-CREATE TABLE IF NOT EXISTS public."Offer" (
+CREATE TABLE public."Offer" (
     "id" TEXT NOT NULL DEFAULT gen_random_uuid()::text,
     "organizationId" TEXT NOT NULL,
     "listingId" TEXT NOT NULL,
@@ -108,7 +108,7 @@ CREATE TABLE IF NOT EXISTS public."Offer" (
 );
 
 -- CreateTable
-CREATE TABLE IF NOT EXISTS public."Contract" (
+CREATE TABLE public."Contract" (
     "id" TEXT NOT NULL DEFAULT gen_random_uuid()::text,
     "organizationId" TEXT NOT NULL,
     "unitId" TEXT NOT NULL,
@@ -134,7 +134,7 @@ CREATE TABLE IF NOT EXISTS public."Contract" (
 );
 
 -- CreateTable
-CREATE TABLE IF NOT EXISTS public."ContractParty" (
+CREATE TABLE public."ContractParty" (
     "id" TEXT NOT NULL DEFAULT gen_random_uuid()::text,
     "contractId" TEXT NOT NULL,
     "personId" TEXT NOT NULL,
@@ -147,7 +147,7 @@ CREATE TABLE IF NOT EXISTS public."ContractParty" (
 );
 
 -- CreateTable
-CREATE TABLE IF NOT EXISTS public."ContractVersion" (
+CREATE TABLE public."ContractVersion" (
     "id" TEXT NOT NULL DEFAULT gen_random_uuid()::text,
     "contractId" TEXT NOT NULL,
     "versionNumber" INTEGER NOT NULL,
@@ -160,7 +160,7 @@ CREATE TABLE IF NOT EXISTS public."ContractVersion" (
 );
 
 -- CreateTable
-CREATE TABLE IF NOT EXISTS public."ContractStatusEvent" (
+CREATE TABLE public."ContractStatusEvent" (
     "id" TEXT NOT NULL DEFAULT gen_random_uuid()::text,
     "contractId" TEXT NOT NULL,
     "fromStatus" "ContractStatus",
@@ -173,7 +173,7 @@ CREATE TABLE IF NOT EXISTS public."ContractStatusEvent" (
 );
 
 -- CreateTable
-CREATE TABLE IF NOT EXISTS public."Termination" (
+CREATE TABLE public."Termination" (
     "id" TEXT NOT NULL DEFAULT gen_random_uuid()::text,
     "organizationId" TEXT NOT NULL,
     "contractId" TEXT NOT NULL,
@@ -193,7 +193,7 @@ CREATE TABLE IF NOT EXISTS public."Termination" (
 );
 
 -- CreateTable
-CREATE TABLE IF NOT EXISTS public."Inspection" (
+CREATE TABLE public."Inspection" (
     "id" TEXT NOT NULL DEFAULT gen_random_uuid()::text,
     "organizationId" TEXT NOT NULL,
     "unitId" TEXT NOT NULL,

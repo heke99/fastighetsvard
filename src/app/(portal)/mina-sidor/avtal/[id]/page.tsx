@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { db } from "@/lib/db";
@@ -162,6 +163,7 @@ export default async function ContractDetailPage({
           <TerminateContractForm
             contractId={contract.id}
             earliestEndDate={earliestEnd.toISOString().slice(0, 10)}
+            idempotencyKey={randomUUID()}
           />
         </section>
       )}

@@ -1,11 +1,11 @@
 import { db } from "@/lib/db";
 import { sha256 } from "@/lib/crypto";
-import { audit } from "@/lib/audit";
-import { ensurePersonRole } from "@/lib/services/tenants";
+import { getAppUrl } from "@/lib/app-url";
+import { claimInvitation } from "@/lib/repositories/rental-operations";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 
-/** Plattformen körs för en organisation: Östgöta El Teknik. */
+/** Plattformen körs för en organisation. Används av kontrollerade adminflöden. */
 export async function getDefaultOrganization() {
   const org = await db.organization.findFirst({ orderBy: { createdAt: "asc" } });
   if (!org) throw new Error("Ingen organisation är konfigurerad. Kör Supabase-seedningen.");
@@ -23,126 +23,78 @@ export interface RegisterInput {
 async function signIn(email: string, password: string) {
   const supabase = await createServerSupabaseClient();
   const { data, error } = await supabase.auth.signInWithPassword({ email, password });
-  if (error) throw new Error("Kontot skapades men automatisk inloggning misslyckades.");
+  if (error) throw new Error("Kontot aktiverades men automatisk inloggning misslyckades.");
   return data.session;
 }
 
-export async function registerAccount(input: RegisterInput, ip?: string) {
+/**
+ * Vanlig självregistrering går alltid genom Supabase verifieringsmejl.
+ * Appens User/Person skapas först av databastriggern när email_confirmed_at finns.
+ * Därmed kan självregistrering aldrig claima en importerad person via e-postmatchning.
+ */
+export async function registerAccount(input: RegisterInput) {
   const email = input.email.toLowerCase().trim();
-  if (await db.user.findUnique({ where: { email } })) {
-    throw new Error("Det finns redan ett konto med denna e-postadress.");
-  }
-  const org = await getDefaultOrganization();
-  const admin = createAdminClient();
-  const { data: authData, error: authError } = await admin.auth.admin.createUser({
+  const supabase = await createServerSupabaseClient();
+  const { data, error } = await supabase.auth.signUp({
     email,
     password: input.password,
-    email_confirm: true,
-    user_metadata: { first_name: input.firstName.trim(), last_name: input.lastName.trim() },
+    options: {
+      emailRedirectTo: `${getAppUrl()}/auth/callback?next=/mina-sidor`,
+      data: {
+        first_name: input.firstName.trim(),
+        last_name: input.lastName.trim(),
+        phone: input.phone?.trim() || null,
+        claim_mode: "self_signup",
+      },
+    },
   });
-  if (authError || !authData.user) throw new Error(authError?.message ?? "Kunde inte skapa konto.");
 
-  try {
-    let person = await db.person.findFirst({ where: { organizationId: org.id, email } });
-    if (person) {
-      if (await db.user.findFirst({ where: { personId: person.id } })) {
-        throw new Error("Det finns redan ett konto kopplat till denna person.");
-      }
-    } else {
-      person = await db.person.create({
-        data: {
-          organizationId: org.id,
-          firstName: input.firstName.trim(),
-          lastName: input.lastName.trim(),
-          email,
-          phone: input.phone ?? null,
-        },
-      });
-    }
-    await ensurePersonRole(db, person.id, "APPLICANT");
-
-    const user = await db.user.create({
-      data: {
-        authUserId: authData.user.id,
-        organizationId: org.id,
-        personId: person.id,
-        email,
-        emailVerifiedAt: new Date(),
-        isActive: true,
-      },
-    });
-    await db.notification.create({
-      data: {
-        organizationId: org.id,
-        personId: person.id,
-        eventType: "account_created",
-        title: "Välkommen till Östgöta El Teknik",
-        body: "Ditt konto är skapat. Här på Mina sidor ser du ansökningar, avtal, fakturor och felanmälningar.",
-      },
-    });
-    await audit({
-      organizationId: org.id,
-      userId: user.id,
-      action: "account_registered",
-      entityType: "user",
-      entityId: user.id,
-      ip,
-    });
-    const session = await signIn(email, input.password);
-    return { user, session };
-  } catch (error) {
-    await admin.auth.admin.deleteUser(authData.user.id).catch(() => undefined);
-    throw error;
+  if (error) throw new Error(error.message || "Kunde inte skapa konto.");
+  if (!data.user) throw new Error("Kunde inte skapa konto.");
+  if (data.session) {
+    // E-postverifiering ska vara aktiverad i Supabase. En oväntad direkt session
+    // får inte användas som appkonto innan databastriggern har verifierat användaren.
+    await supabase.auth.signOut();
+    throw new Error("E-postverifiering är inte aktiverad i Supabase-projektet. Registreringen stoppades.");
   }
+
+  return { authUserId: data.user.id, verificationPending: true as const };
 }
 
-/** Aktivera konto via inbjudan för en befintlig hyresgäst. */
-export async function activateInvitation(token: string, password: string, ip?: string) {
+/**
+ * Aktivera en importerad person via en person-, organisations- och e-postbunden
+ * engångsinbjudan. Den slutliga claimen sker atomiskt i PostgreSQL.
+ */
+export async function activateInvitation(token: string, password: string, _ip?: string) {
+  const tokenHash = sha256(token);
   const invitation = await db.invitation.findUnique({
-    where: { tokenHash: sha256(token) },
+    where: { tokenHash },
     include: { person: true },
   });
   if (!invitation || invitation.acceptedAt || invitation.expiresAt < new Date()) {
     throw new Error("Inbjudan är ogiltig eller har gått ut.");
-  }
-  if (await db.user.findUnique({ where: { email: invitation.email } })) {
-    throw new Error("Det finns redan ett konto med denna e-postadress.");
   }
 
   const admin = createAdminClient();
   const { data: authData, error: authError } = await admin.auth.admin.createUser({
     email: invitation.email,
     password,
+    // Detta är inte vanlig självregistrering. E-postinnehavet verifieras genom
+    // den single-use token som skickades till den bundna adressen.
     email_confirm: true,
     user_metadata: {
       first_name: invitation.person.firstName,
       last_name: invitation.person.lastName,
+      claim_mode: "invitation",
+      invitation_id: invitation.id,
     },
   });
   if (authError || !authData.user) throw new Error(authError?.message ?? "Kunde inte aktivera kontot.");
 
   try {
-    const user = await db.user.create({
-      data: {
-        authUserId: authData.user.id,
-        organizationId: invitation.organizationId,
-        personId: invitation.personId,
-        email: invitation.email,
-        emailVerifiedAt: new Date(),
-        isActive: true,
-      },
-    });
-    await db.invitation.update({ where: { id: invitation.id }, data: { acceptedAt: new Date() } });
-    await audit({
-      organizationId: invitation.organizationId,
-      userId: user.id,
-      action: "invitation_accepted",
-      entityType: "invitation",
-      entityId: invitation.id,
-      ip,
-    });
+    const claimed = await claimInvitation({ tokenHash, authUserId: authData.user.id });
     const session = await signIn(invitation.email, password);
-    return { user, session };
+    return { user: claimed, session };
   } catch (error) {
     await admin.auth.admin.deleteUser(authData.user.id).catch(() => undefined);
     throw error;

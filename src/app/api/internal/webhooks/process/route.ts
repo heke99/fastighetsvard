@@ -27,5 +27,4 @@ async function processWebhookQueue(req: NextRequest) {
   return NextResponse.json({ data: result });
 }
 
-export const GET = processWebhookQueue;
 export const POST = processWebhookQueue;

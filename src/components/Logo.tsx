@@ -1,11 +1,13 @@
 import Link from "next/link";
+import { getBranding } from "@/lib/branding";
 
 export function Logo({ variant = "dark" }: { variant?: "dark" | "light" }) {
+  const brand = getBranding();
   return (
     <Link
       href="/"
       className="flex items-center gap-2.5 shrink-0"
-      aria-label="Östgöta El Teknik – till startsidan"
+      aria-label={`${brand.companyName} – till startsidan`}
     >
       <span
         aria-hidden="true"
@@ -27,14 +29,14 @@ export function Logo({ variant = "dark" }: { variant?: "dark" | "light" }) {
             variant === "light" ? "text-white" : "text-stone-900"
           }`}
         >
-          Östgöta El Teknik
+          {brand.companyName}
         </span>
         <span
           className={`block text-[11px] font-medium uppercase tracking-widest ${
             variant === "light" ? "text-brand-200" : "text-brand-700"
           }`}
         >
-          Fastigheter
+          {brand.tagline}
         </span>
       </span>
     </Link>

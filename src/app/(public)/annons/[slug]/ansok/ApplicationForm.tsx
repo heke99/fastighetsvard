@@ -9,10 +9,12 @@ export function ApplicationForm({
   listingId,
   slug,
   hasActiveContract,
+  idempotencyKey,
 }: {
   listingId: string;
   slug: string;
   hasActiveContract: boolean;
+  idempotencyKey: string;
 }) {
   const [state, formAction, pending] = useActionState(submitApplicationAction, initialState);
 
@@ -20,6 +22,7 @@ export function ApplicationForm({
     <form action={formAction} className="card mt-6 space-y-6 p-6" noValidate>
       <input type="hidden" name="listingId" value={listingId} />
       <input type="hidden" name="slug" value={slug} />
+      <input type="hidden" name="idempotencyKey" value={idempotencyKey} />
 
       {state.status === "error" && (
         <div role="alert" className="rounded-lg bg-red-50 p-4 text-sm font-medium text-red-800">

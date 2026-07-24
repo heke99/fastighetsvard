@@ -1,11 +1,11 @@
 -- Östgöta El Teknik Fastighetsplattform
 -- Step: Maintenance, documents, messaging, API, webhook and audit tables
--- Safe to run in filename order. This file is transactional.
+-- Canonical installation migration. It must run exactly once in filename order.
 
 BEGIN;
 SET LOCAL search_path = public, extensions;
 
-CREATE TABLE IF NOT EXISTS public."MaintenanceRequest" (
+CREATE TABLE public."MaintenanceRequest" (
     "id" TEXT NOT NULL DEFAULT gen_random_uuid()::text,
     "organizationId" TEXT NOT NULL,
     "requestNumber" INTEGER NOT NULL,
@@ -34,7 +34,7 @@ CREATE TABLE IF NOT EXISTS public."MaintenanceRequest" (
 );
 
 -- CreateTable
-CREATE TABLE IF NOT EXISTS public."MaintenanceComment" (
+CREATE TABLE public."MaintenanceComment" (
     "id" TEXT NOT NULL DEFAULT gen_random_uuid()::text,
     "requestId" TEXT NOT NULL,
     "authorUserId" TEXT,
@@ -47,7 +47,7 @@ CREATE TABLE IF NOT EXISTS public."MaintenanceComment" (
 );
 
 -- CreateTable
-CREATE TABLE IF NOT EXISTS public."MaintenanceStatusEvent" (
+CREATE TABLE public."MaintenanceStatusEvent" (
     "id" TEXT NOT NULL DEFAULT gen_random_uuid()::text,
     "requestId" TEXT NOT NULL,
     "fromStatus" "MaintenanceStatus",
@@ -60,7 +60,7 @@ CREATE TABLE IF NOT EXISTS public."MaintenanceStatusEvent" (
 );
 
 -- CreateTable
-CREATE TABLE IF NOT EXISTS public."WorkOrder" (
+CREATE TABLE public."WorkOrder" (
     "id" TEXT NOT NULL DEFAULT gen_random_uuid()::text,
     "organizationId" TEXT NOT NULL,
     "requestId" TEXT,
@@ -89,7 +89,7 @@ CREATE TABLE IF NOT EXISTS public."WorkOrder" (
 );
 
 -- CreateTable
-CREATE TABLE IF NOT EXISTS public."Supplier" (
+CREATE TABLE public."Supplier" (
     "id" TEXT NOT NULL DEFAULT gen_random_uuid()::text,
     "organizationId" TEXT NOT NULL,
     "name" TEXT NOT NULL,
@@ -105,7 +105,7 @@ CREATE TABLE IF NOT EXISTS public."Supplier" (
 );
 
 -- CreateTable
-CREATE TABLE IF NOT EXISTS public."Document" (
+CREATE TABLE public."Document" (
     "id" TEXT NOT NULL DEFAULT gen_random_uuid()::text,
     "organizationId" TEXT NOT NULL,
     "type" "DocumentType" NOT NULL,
@@ -134,7 +134,7 @@ CREATE TABLE IF NOT EXISTS public."Document" (
 );
 
 -- CreateTable
-CREATE TABLE IF NOT EXISTS public."Message" (
+CREATE TABLE public."Message" (
     "id" TEXT NOT NULL DEFAULT gen_random_uuid()::text,
     "organizationId" TEXT NOT NULL,
     "senderPersonId" TEXT,
@@ -148,7 +148,7 @@ CREATE TABLE IF NOT EXISTS public."Message" (
 );
 
 -- CreateTable
-CREATE TABLE IF NOT EXISTS public."Notification" (
+CREATE TABLE public."Notification" (
     "id" TEXT NOT NULL DEFAULT gen_random_uuid()::text,
     "organizationId" TEXT NOT NULL,
     "personId" TEXT NOT NULL,
@@ -165,7 +165,7 @@ CREATE TABLE IF NOT EXISTS public."Notification" (
 );
 
 -- CreateTable
-CREATE TABLE IF NOT EXISTS public."ApiKey" (
+CREATE TABLE public."ApiKey" (
     "id" TEXT NOT NULL DEFAULT gen_random_uuid()::text,
     "organizationId" TEXT NOT NULL,
     "name" TEXT NOT NULL,
@@ -184,7 +184,7 @@ CREATE TABLE IF NOT EXISTS public."ApiKey" (
 );
 
 -- CreateTable
-CREATE TABLE IF NOT EXISTS public."IdempotencyRecord" (
+CREATE TABLE public."IdempotencyRecord" (
     "id" TEXT NOT NULL DEFAULT gen_random_uuid()::text,
     "apiKeyId" TEXT NOT NULL,
     "idempotencyKey" TEXT NOT NULL,
@@ -198,7 +198,7 @@ CREATE TABLE IF NOT EXISTS public."IdempotencyRecord" (
 );
 
 -- CreateTable
-CREATE TABLE IF NOT EXISTS public."WebhookSubscription" (
+CREATE TABLE public."WebhookSubscription" (
     "id" TEXT NOT NULL DEFAULT gen_random_uuid()::text,
     "organizationId" TEXT NOT NULL,
     "url" TEXT NOT NULL,
@@ -215,7 +215,7 @@ CREATE TABLE IF NOT EXISTS public."WebhookSubscription" (
 );
 
 -- CreateTable
-CREATE TABLE IF NOT EXISTS public."WebhookDelivery" (
+CREATE TABLE public."WebhookDelivery" (
     "id" TEXT NOT NULL DEFAULT gen_random_uuid()::text,
     "organizationId" TEXT NOT NULL,
     "subscriptionId" TEXT NOT NULL,
@@ -236,7 +236,7 @@ CREATE TABLE IF NOT EXISTS public."WebhookDelivery" (
 );
 
 -- CreateTable
-CREATE TABLE IF NOT EXISTS public."InboundWebhookEvent" (
+CREATE TABLE public."InboundWebhookEvent" (
     "id" TEXT NOT NULL DEFAULT gen_random_uuid()::text,
     "organizationId" TEXT NOT NULL,
     "provider" TEXT NOT NULL,
@@ -252,7 +252,7 @@ CREATE TABLE IF NOT EXISTS public."InboundWebhookEvent" (
 );
 
 -- CreateTable
-CREATE TABLE IF NOT EXISTS public."ImportJob" (
+CREATE TABLE public."ImportJob" (
     "id" TEXT NOT NULL DEFAULT gen_random_uuid()::text,
     "organizationId" TEXT NOT NULL,
     "importType" TEXT NOT NULL,
@@ -272,7 +272,7 @@ CREATE TABLE IF NOT EXISTS public."ImportJob" (
 );
 
 -- CreateTable
-CREATE TABLE IF NOT EXISTS public."AuditEvent" (
+CREATE TABLE public."AuditEvent" (
     "id" TEXT NOT NULL DEFAULT gen_random_uuid()::text,
     "organizationId" TEXT,
     "userId" TEXT,
@@ -291,7 +291,7 @@ CREATE TABLE IF NOT EXISTS public."AuditEvent" (
 );
 
 -- CreateTable
-CREATE TABLE IF NOT EXISTS public."Counter" (
+CREATE TABLE public."Counter" (
     "id" TEXT NOT NULL DEFAULT gen_random_uuid()::text,
     "organizationId" TEXT NOT NULL,
     "key" TEXT NOT NULL,

@@ -1,15 +1,16 @@
 import type { Metadata } from "next";
+import { getBranding } from "@/lib/branding";
 import "./globals.css";
 
-export const dynamic = "force-dynamic";
+const brand = getBranding();
 
 export const metadata: Metadata = {
+  metadataBase: new URL(brand.appUrl),
   title: {
-    default: "Östgöta El Teknik – Bostäder & Lokaler",
-    template: "%s | Östgöta El Teknik",
+    default: `${brand.companyName} – Bostäder & lokaler`,
+    template: `%s | ${brand.companyName}`,
   },
-  description:
-    "Östgöta El Teknik hyr ut och säljer lägenheter, lokaler i Östergötland.",
+  description: brand.description,
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

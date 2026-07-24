@@ -14,6 +14,7 @@ export interface ApplicationFormState {
 const schema = z.object({
   listingId: z.string().min(1),
   slug: z.string().min(1),
+  idempotencyKey: z.string().uuid("Ogiltig idempotensnyckel."),
   desiredMoveInDate: z.string().optional(),
   isInternalTransfer: z.string().optional(),
   currentHousing: z.string().optional(),
@@ -63,6 +64,7 @@ export async function submitApplicationAction(
     await submitApplication(user.organizationId, {
       listingId: data.listingId,
       personId: user.personId,
+      idempotencyKey: data.idempotencyKey,
       desiredMoveInDate: data.desiredMoveInDate ? new Date(data.desiredMoveInDate) : undefined,
       isInternalTransfer: data.isInternalTransfer === "1" ? true : undefined,
       currentHousing: data.currentHousing || undefined,

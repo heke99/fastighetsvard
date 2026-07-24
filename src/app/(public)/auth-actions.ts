@@ -62,11 +62,11 @@ export async function registerAction(_prev: AuthFormState, formData: FormData): 
       email: parsed.data.email,
       phone: parsed.data.phone,
       password: parsed.data.password,
-    }, await getClientIp());
+    });
   } catch (error) {
     return { status: "error", message: error instanceof Error ? error.message : "Registreringen misslyckades." };
   }
-  redirect("/mina-sidor");
+  redirect("/logga-in?verifiering=skickad");
 }
 
 export async function activateAction(_prev: AuthFormState, formData: FormData): Promise<AuthFormState> {

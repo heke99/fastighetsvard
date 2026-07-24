@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { db } from "@/lib/db";
@@ -78,9 +79,9 @@ export default async function MyApplicationsPage({
                     <p className="mt-1 text-sm text-stone-600">
                       Svara senast {new Date(activeOffer.expiresAt).toLocaleDateString("sv-SE")}.
                       {app.isInternalTransfer &&
-                        " Om du accepterar sägs ditt nuvarande avtal upp automatiskt och datumen samordnas."}
+                        " Om du accepterar förblir ditt nuvarande avtal aktivt tills det nya avtalet är bindande och flytten kan samordnas säkert."}
                     </p>
-                    <OfferResponseForm offerId={activeOffer.id} />
+                    <OfferResponseForm offerId={activeOffer.id} idempotencyKey={randomUUID()} />
                   </div>
                 )}
               </li>

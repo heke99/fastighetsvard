@@ -1,3 +1,5 @@
+import { getBranding } from "@/lib/branding";
+
 interface SendEmailInput {
   to: string;
   subject: string;
@@ -40,11 +42,12 @@ export async function sendEmail(input: SendEmailInput): Promise<void> {
 }
 
 export async function sendInvitationEmail(to: string, url: string): Promise<void> {
+  const brand = getBranding();
   await sendEmail({
     to,
-    subject: "Aktivera Mina sidor hos Östgöta El Teknik",
+    subject: `Aktivera ${brand.portalName} hos ${brand.companyName}`,
     text: `Aktivera ditt konto: ${url}`,
-    html: `<p>Hej!</p><p>Du har blivit inbjuden till Mina sidor hos Östgöta El Teknik.</p><p><a href="${url}">Aktivera ditt konto</a></p><p>Länken gäller i 14 dagar.</p>`,
+    html: `<p>Hej!</p><p>Du har blivit inbjuden till ${brand.portalName} hos ${brand.companyName}.</p><p><a href="${url}">Aktivera ditt konto</a></p><p>Länken gäller i 14 dagar.</p>`,
   });
 }
 

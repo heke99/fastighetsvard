@@ -1,9 +1,7 @@
-# Ändrade och tillagda filer
+# Ändrade, tillagda och borttagna filer
 
-- Tar bort: `supabase/migrations/20260719192014_initial.sql`
-- Tar bort: `supabase/RESET_AND_INSTALL_CLEAN.sql`
-- Lägger till: 15 ordnade migrationsfiler i `supabase/migrations/`
-- Lägger till: `supabase/manual/000_RESET_PARTIAL_FASTIGHETSPLATTFORM.sql`
-- Lägger till: `supabase/manual/999_VERIFY_INSTALL.sql`
-- Ändrar: `tests/supabase-schema.test.ts`
-- Lägger till: `SPLIT_MIGRATIONS.md`
+Den fullständiga fillistan med syfte finns i [`DELIVERY_REPORT.md`](DELIVERY_REPORT.md).
+
+- Tillagda: 23
+- Ändrade: 40
+- Borttagna duplicerade migrationer: 5

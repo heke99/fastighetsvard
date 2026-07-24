@@ -1,12 +1,12 @@
 -- Östgöta El Teknik Fastighetsplattform
 -- Step: Identity, RBAC, properties and listings tables
--- Safe to run in filename order. This file is transactional.
+-- Canonical installation migration. It must run exactly once in filename order.
 
 BEGIN;
 SET LOCAL search_path = public, extensions;
 
 -- CreateTable
-CREATE TABLE IF NOT EXISTS public."Organization" (
+CREATE TABLE public."Organization" (
     "id" TEXT NOT NULL DEFAULT gen_random_uuid()::text,
     "name" TEXT NOT NULL,
     "orgNumber" TEXT,
@@ -20,7 +20,7 @@ CREATE TABLE IF NOT EXISTS public."Organization" (
 );
 
 -- CreateTable
-CREATE TABLE IF NOT EXISTS public."MasterDataConfig" (
+CREATE TABLE public."MasterDataConfig" (
     "id" TEXT NOT NULL DEFAULT gen_random_uuid()::text,
     "organizationId" TEXT NOT NULL,
     "domain" "MasterDataDomain" NOT NULL,
@@ -32,7 +32,7 @@ CREATE TABLE IF NOT EXISTS public."MasterDataConfig" (
 );
 
 -- CreateTable
-CREATE TABLE IF NOT EXISTS public."Person" (
+CREATE TABLE public."Person" (
     "id" TEXT NOT NULL DEFAULT gen_random_uuid()::text,
     "organizationId" TEXT NOT NULL,
     "firstName" TEXT NOT NULL,
@@ -57,7 +57,7 @@ CREATE TABLE IF NOT EXISTS public."Person" (
 );
 
 -- CreateTable
-CREATE TABLE IF NOT EXISTS public."PersonRole" (
+CREATE TABLE public."PersonRole" (
     "id" TEXT NOT NULL DEFAULT gen_random_uuid()::text,
     "personId" TEXT NOT NULL,
     "role" "PersonRoleType" NOT NULL,
@@ -67,7 +67,7 @@ CREATE TABLE IF NOT EXISTS public."PersonRole" (
 );
 
 -- CreateTable
-CREATE TABLE IF NOT EXISTS public."User" (
+CREATE TABLE public."User" (
     "id" TEXT NOT NULL DEFAULT gen_random_uuid()::text,
     "authUserId" UUID NOT NULL,
     "organizationId" TEXT,
@@ -85,7 +85,7 @@ CREATE TABLE IF NOT EXISTS public."User" (
 );
 
 -- CreateTable
-CREATE TABLE IF NOT EXISTS public."Invitation" (
+CREATE TABLE public."Invitation" (
     "id" TEXT NOT NULL DEFAULT gen_random_uuid()::text,
     "organizationId" TEXT NOT NULL,
     "personId" TEXT NOT NULL,
@@ -99,7 +99,7 @@ CREATE TABLE IF NOT EXISTS public."Invitation" (
 );
 
 -- CreateTable
-CREATE TABLE IF NOT EXISTS public."Role" (
+CREATE TABLE public."Role" (
     "id" TEXT NOT NULL DEFAULT gen_random_uuid()::text,
     "organizationId" TEXT,
     "name" TEXT NOT NULL,
@@ -113,7 +113,7 @@ CREATE TABLE IF NOT EXISTS public."Role" (
 );
 
 -- CreateTable
-CREATE TABLE IF NOT EXISTS public."RolePermission" (
+CREATE TABLE public."RolePermission" (
     "id" TEXT NOT NULL DEFAULT gen_random_uuid()::text,
     "roleId" TEXT NOT NULL,
     "permission" TEXT NOT NULL,
@@ -122,7 +122,7 @@ CREATE TABLE IF NOT EXISTS public."RolePermission" (
 );
 
 -- CreateTable
-CREATE TABLE IF NOT EXISTS public."UserRole" (
+CREATE TABLE public."UserRole" (
     "id" TEXT NOT NULL DEFAULT gen_random_uuid()::text,
     "userId" TEXT NOT NULL,
     "roleId" TEXT NOT NULL,
@@ -133,7 +133,7 @@ CREATE TABLE IF NOT EXISTS public."UserRole" (
 );
 
 -- CreateTable
-CREATE TABLE IF NOT EXISTS public."Property" (
+CREATE TABLE public."Property" (
     "id" TEXT NOT NULL DEFAULT gen_random_uuid()::text,
     "organizationId" TEXT NOT NULL,
     "name" TEXT NOT NULL,
@@ -160,7 +160,7 @@ CREATE TABLE IF NOT EXISTS public."Property" (
 );
 
 -- CreateTable
-CREATE TABLE IF NOT EXISTS public."Building" (
+CREATE TABLE public."Building" (
     "id" TEXT NOT NULL DEFAULT gen_random_uuid()::text,
     "organizationId" TEXT NOT NULL,
     "propertyId" TEXT NOT NULL,
@@ -175,7 +175,7 @@ CREATE TABLE IF NOT EXISTS public."Building" (
 );
 
 -- CreateTable
-CREATE TABLE IF NOT EXISTS public."Entrance" (
+CREATE TABLE public."Entrance" (
     "id" TEXT NOT NULL DEFAULT gen_random_uuid()::text,
     "buildingId" TEXT NOT NULL,
     "name" TEXT NOT NULL,
@@ -185,7 +185,7 @@ CREATE TABLE IF NOT EXISTS public."Entrance" (
 );
 
 -- CreateTable
-CREATE TABLE IF NOT EXISTS public."Floor" (
+CREATE TABLE public."Floor" (
     "id" TEXT NOT NULL DEFAULT gen_random_uuid()::text,
     "entranceId" TEXT NOT NULL,
     "level" INTEGER NOT NULL,
@@ -195,7 +195,7 @@ CREATE TABLE IF NOT EXISTS public."Floor" (
 );
 
 -- CreateTable
-CREATE TABLE IF NOT EXISTS public."Unit" (
+CREATE TABLE public."Unit" (
     "id" TEXT NOT NULL DEFAULT gen_random_uuid()::text,
     "organizationId" TEXT NOT NULL,
     "propertyId" TEXT NOT NULL,
@@ -247,7 +247,7 @@ CREATE TABLE IF NOT EXISTS public."Unit" (
 );
 
 -- CreateTable
-CREATE TABLE IF NOT EXISTS public."UnitMedia" (
+CREATE TABLE public."UnitMedia" (
     "id" TEXT NOT NULL DEFAULT gen_random_uuid()::text,
     "unitId" TEXT NOT NULL,
     "kind" "MediaKind" NOT NULL,
@@ -260,7 +260,7 @@ CREATE TABLE IF NOT EXISTS public."UnitMedia" (
 );
 
 -- CreateTable
-CREATE TABLE IF NOT EXISTS public."Listing" (
+CREATE TABLE public."Listing" (
     "id" TEXT NOT NULL DEFAULT gen_random_uuid()::text,
     "organizationId" TEXT NOT NULL,
     "unitId" TEXT NOT NULL,
@@ -292,7 +292,7 @@ CREATE TABLE IF NOT EXISTS public."Listing" (
 );
 
 -- CreateTable
-CREATE TABLE IF NOT EXISTS public."ListingPublication" (
+CREATE TABLE public."ListingPublication" (
     "id" TEXT NOT NULL DEFAULT gen_random_uuid()::text,
     "listingId" TEXT NOT NULL,
     "channel" TEXT NOT NULL,
@@ -305,7 +305,7 @@ CREATE TABLE IF NOT EXISTS public."ListingPublication" (
 );
 
 -- CreateTable
-CREATE TABLE IF NOT EXISTS public."Favorite" (
+CREATE TABLE public."Favorite" (
     "id" TEXT NOT NULL DEFAULT gen_random_uuid()::text,
     "organizationId" TEXT NOT NULL,
     "personId" TEXT NOT NULL,
@@ -316,7 +316,7 @@ CREATE TABLE IF NOT EXISTS public."Favorite" (
 );
 
 -- CreateTable
-CREATE TABLE IF NOT EXISTS public."SavedSearch" (
+CREATE TABLE public."SavedSearch" (
     "id" TEXT NOT NULL DEFAULT gen_random_uuid()::text,
     "organizationId" TEXT NOT NULL,
     "personId" TEXT NOT NULL,

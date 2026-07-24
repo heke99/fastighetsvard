@@ -1,0 +1,146 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      NEXT_PUBLIC_SUPABASE_URL: http://127.0.0.1:54321
+      NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: ci_publishable_key_not_for_production
+      SUPABASE_SECRET_KEY: ci_secret_key_not_for_production
+      APP_URL: http://127.0.0.1:3000
+      APP_ENCRYPTION_KEY: 0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef
+      SIGNING_OTP_PEPPER: ci-signing-otp-pepper-with-at-least-32-characters
+      CRON_SECRET: ci-only-secret-with-at-least-32-characters
+      TRUST_PROXY_HEADERS: "false"
+      EMAIL_LOG_LINKS: "true"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .node-version
+          cache: npm
+      - name: Verify npm version
+        run: npm install --global npm@10.9.2 && npm --version
+      - run: npm ci
+      - run: npm run lint
+      - run: npm run typecheck
+      - run: npm run test:unit
+      - run: npm run test:concurrency
+      - run: npm run build
+
+  database:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .node-version
+          cache: npm
+      - run: npm ci
+      - uses: supabase/setup-cli@v1
+        with:
+          version: 2.109.1
+      - run: supabase start
+      - run: supabase db reset
+      - name: Install PostgreSQL client
+        run: sudo apt-get update && sudo apt-get install -y postgresql-client
+      - run: npm run db:verify
+      - run: npm run test:rls
+      - name: Stop Supabase
+        if: always()
+        run: supabase stop --no-backup
+
+  e2e:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    env:
+      APP_URL: http://127.0.0.1:3000
+      E2E_BASE_URL: http://127.0.0.1:3000
+      APP_ENCRYPTION_KEY: 0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef
+      SIGNING_OTP_PEPPER: ci-signing-otp-pepper-with-at-least-32-characters
+      CRON_SECRET: ci-only-secret-with-at-least-32-characters
+      TRUST_PROXY_HEADERS: "false"
+      EMAIL_LOG_LINKS: "true"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .node-version
+          cache: npm
+      - name: Verify npm version
+        run: npm install --global npm@10.9.2 && npm --version
+      - run: npm ci
+      - uses: supabase/setup-cli@v1
+        with:
+          version: 2.109.1
+      - run: supabase start
+      - run: supabase db reset
+      - name: Export local Supabase credentials
+        shell: bash
+        run: |
+          supabase status -o env > /tmp/supabase.env
+          set -a
+          source /tmp/supabase.env
+          set +a
+          echo "NEXT_PUBLIC_SUPABASE_URL=${API_URL}" >> "$GITHUB_ENV"
+          echo "NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=${ANON_KEY}" >> "$GITHUB_ENV"
+          echo "SUPABASE_SECRET_KEY=${SERVICE_ROLE_KEY}" >> "$GITHUB_ENV"
+      - run: npm run build
+      - name: Start application
+        run: npm run start > /tmp/fastighetsvard-next.log 2>&1 & echo $! > /tmp/fastighetsvard-next.pid
+      - name: Wait for application
+        shell: bash
+        run: |
+          for attempt in {1..60}; do
+            if curl --fail --silent http://127.0.0.1:3000/ >/dev/null; then
+              exit 0
+            fi
+            sleep 1
+          done
+          cat /tmp/fastighetsvard-next.log
+          exit 1
+      - run: npm run test:e2e
+      - name: Print application log on failure
+        if: failure()
+        run: cat /tmp/fastighetsvard-next.log || true
+      - name: Stop services
+        if: always()
+        run: |
+          test ! -f /tmp/fastighetsvard-next.pid || kill "$(cat /tmp/fastighetsvard-next.pid)" || true
+          supabase stop --no-backup
+
+  security:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+      pull-requests: read
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .node-version
+          cache: npm
+      - run: npm ci
+      - name: Dependency audit
+        run: npm audit --omit=dev --audit-level=critical
+      - name: Dependency review
+        if: github.event_name == 'pull_request'
+        uses: actions/dependency-review-action@v4
+        with:
+          fail-on-severity: critical
+      - name: Secret scan
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

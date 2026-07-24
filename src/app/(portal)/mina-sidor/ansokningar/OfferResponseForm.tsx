@@ -5,7 +5,7 @@ import { respondToOfferAction, type OfferFormState } from "./actions";
 
 const initialState: OfferFormState = { status: "idle" };
 
-export function OfferResponseForm({ offerId }: { offerId: string }) {
+export function OfferResponseForm({ offerId, idempotencyKey }: { offerId: string; idempotencyKey: string }) {
   const [state, formAction, pending] = useActionState(respondToOfferAction, initialState);
 
   if (state.status === "success") {
@@ -19,6 +19,7 @@ export function OfferResponseForm({ offerId }: { offerId: string }) {
   return (
     <form action={formAction} className="mt-3 flex flex-wrap items-center gap-2" noValidate>
       <input type="hidden" name="offerId" value={offerId} />
+      <input type="hidden" name="idempotencyKey" value={idempotencyKey} />
       {state.status === "error" && (
         <div role="alert" className="w-full rounded-lg bg-red-50 p-3 text-sm font-medium text-red-800">
           {state.message}

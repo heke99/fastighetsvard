@@ -1,10 +1,21 @@
+import { randomInt } from "crypto";
 import { db } from "@/lib/db";
 import { audit } from "@/lib/audit";
+import { hmacSha256, sha256 } from "@/lib/crypto";
+import { sendEmail } from "@/lib/email";
 import { assertTransition, contractTransitions } from "@/lib/state-machines";
 import { dispatchEvent } from "@/lib/services/webhooks";
+import {
+  createEmailSigningChallenge,
+  requestRentalContractTermination,
+  verifyEmailSigningChallenge,
+} from "@/lib/repositories/rental-operations";
 import type { ContractStatus, Database } from "@/lib/database-types";
 
-/** Statusändring med statusmaskin, historik och revisionslogg. */
+/**
+ * Äldre administrativ statusfunktion. Concurrency-kritiska övergångar som
+ * signering, aktivering och uppsägning ska gå genom de särskilda RPC:erna.
+ */
 export async function changeContractStatus(
   organizationId: string,
   contractId: string,
@@ -12,12 +23,9 @@ export async function changeContractStatus(
   opts: { comment?: string; actorUserId?: string } = {}
 ) {
   const result = await db.$transaction(async (tx) => {
-    const contract = await tx.contract.findFirst({
-      where: { id: contractId, organizationId },
-    });
+    const contract = await tx.contract.findFirst({ where: { id: contractId, organizationId } });
     if (!contract) throw new Error("Avtalet hittades inte.");
     assertTransition("contract", contractTransitions, contract.status, toStatus);
-
     const updated = await tx.contract.update({
       where: { id: contractId },
       data: {
@@ -66,61 +74,64 @@ export async function changeContractStatus(
   return result;
 }
 
-/**
- * Part signerar avtal. När alla parter signerat går avtalet till SIGNED.
- * Signerade dokument ändras aldrig – ändringar kräver ny version.
- */
-export async function signContract(
-  organizationId: string,
-  contractId: string,
-  personId: string,
-  method: string = "email_code"
-) {
-  return db.$transaction(async (tx) => {
-    const contract = await tx.contract.findFirst({
-      where: { id: contractId, organizationId },
-      include: { parties: true },
-    });
-    if (!contract) throw new Error("Avtalet hittades inte.");
-    if (!["SENT_FOR_SIGNING", "PARTIALLY_SIGNED"].includes(contract.status)) {
-      throw new Error("Avtalet är inte öppet för signering.");
-    }
-    const party = contract.parties.find((p) => p.personId === personId && !p.signedAt);
-    if (!party) throw new Error("Du är inte signeringspart på detta avtal eller har redan signerat.");
+/** Begär en kortlivad och single-use e-postkod bunden till dokumenthashen. */
+function signingOtpHash(challengeSecret: string): string {
+  const pepper = process.env.SIGNING_OTP_PEPPER;
+  if (!pepper || pepper.length < 32) {
+    throw new Error("SIGNING_OTP_PEPPER måste vara minst 32 tecken.");
+  }
+  return hmacSha256(pepper, challengeSecret);
+}
 
-    await tx.contractParty.update({
-      where: { id: party.id },
-      data: { signedAt: new Date(), signatureMethod: method },
-    });
+export async function requestContractSigningCode(input: {
+  contractId: string;
+  personId: string;
+  verifiedEmail: string;
+}) {
+  const code = randomInt(0, 1_000_000).toString().padStart(6, "0");
+  const expiresAt = new Date(Date.now() + 10 * 60 * 1000);
+  const challenge = await createEmailSigningChallenge({
+    contractId: input.contractId,
+    personId: input.personId,
+    codeHash: signingOtpHash(code),
+    destinationHash: sha256(input.verifiedEmail.toLowerCase().trim()),
+    expiresAt,
+  });
 
-    const remaining = contract.parties.filter(
-      (p) => p.id !== party.id && !p.signedAt && p.role !== "LANDLORD"
-    );
-    const newStatus: ContractStatus = remaining.length === 0 ? "SIGNED" : "PARTIALLY_SIGNED";
-    assertTransition("contract", contractTransitions, contract.status, newStatus);
+  const brand = process.env.BRAND_COMPANY_NAME?.trim() || "Fastighetsvärd";
+  await sendEmail({
+    to: input.verifiedEmail,
+    subject: `Signeringskod för ditt avtal hos ${brand}`,
+    text: `Din signeringskod är ${code}. Koden gäller i 10 minuter och kan bara användas en gång.`,
+    html: `<p>Din signeringskod är <strong>${code}</strong>.</p><p>Koden gäller i 10 minuter och kan bara användas en gång.</p>`,
+  });
 
-    const updated = await tx.contract.update({
-      where: { id: contractId },
-      data: { status: newStatus },
-    });
-    await tx.contractStatusEvent.create({
-      data: { contractId, fromStatus: contract.status, toStatus: newStatus, comment: `Signerad av part ${personId}` },
-    });
-    await audit(
-      {
-        organizationId,
-        action: "contract_signed_by_party",
-        entityType: "contract",
-        entityId: contractId,
-        after: { personId, method, newStatus },
-      },
-      tx
-    );
-    return updated;
+  return {
+    challengeId: challenge.challengeId,
+    expiresAt: challenge.expiresAt,
+    maskedDestination: input.verifiedEmail.replace(/^(.{1,2}).*(@.*)$/, "$1••••$2"),
+  };
+}
+
+/** Verifierar OTP och registrerar signaturen atomiskt mot exakt dokumenthash. */
+export async function verifyContractSigningCode(input: {
+  challengeId: string;
+  personId: string;
+  code: string;
+  ip?: string;
+  userAgent?: string;
+}) {
+  if (!/^\d{6}$/.test(input.code)) throw new Error("Signeringskoden ska bestå av sex siffror.");
+  return verifyEmailSigningChallenge({
+    challengeId: input.challengeId,
+    personId: input.personId,
+    codeHash: signingOtpHash(input.code),
+    ip: input.ip,
+    userAgent: input.userAgent,
   });
 }
 
-/** Ny avtalsversion – används i stället för att ändra signerat innehåll. */
+/** Ny avtalsversion för osignerade avtal. Full adminmigrering till RPC återstår. */
 export async function createContractVersion(
   organizationId: string,
   contractId: string,
@@ -145,98 +156,37 @@ export async function createContractVersion(
   });
 }
 
-/**
- * Uppsägning från Mina sidor. Beräknar tidigaste slutdatum enligt
- * uppsägningstid (kalendermånader: uppsägningstid räknas från nästkommande
- * månadsskifte).
- */
 export function calculateEarliestEndDate(noticePeriodMonths: number, from: Date = new Date()): Date {
-  const d = new Date(Date.UTC(from.getUTCFullYear(), from.getUTCMonth() + 1 + noticePeriodMonths, 0));
-  return d;
+  return new Date(Date.UTC(from.getUTCFullYear(), from.getUTCMonth() + 1 + noticePeriodMonths, 0));
 }
 
+/**
+ * Registrerar en uppsägningsbegäran men lämnar kontraktet ACTIVE under hela
+ * uppsägningstiden. Först complete_move_out får avsluta kontraktet.
+ */
 export async function requestTermination(
-  organizationId: string,
+  _organizationId: string,
   contractId: string,
   personId: string,
   desiredMoveOutDate: Date,
-  opts: { reason?: string; isInternalTransfer?: boolean; newContractId?: string; actorUserId?: string } = {}
+  opts: { reason?: string; isInternalTransfer?: boolean; newContractId?: string; actorUserId?: string; idempotencyKey: string }
 ) {
-  return db.$transaction(async (tx) => {
-    const contract = await tx.contract.findFirst({
-      where: { id: contractId, organizationId },
-      include: { parties: true },
-    });
-    if (!contract) throw new Error("Avtalet hittades inte.");
-    if (contract.status !== "ACTIVE") throw new Error("Endast aktiva avtal kan sägas upp.");
-    const isParty = contract.parties.some(
-      (p) => p.personId === personId && (p.role === "TENANT" || p.role === "CO_TENANT")
-    );
-    if (!isParty) throw new Error("Du är inte part i detta avtal.");
-
-    const existing = await tx.termination.findFirst({
-      where: { contractId, status: { in: ["REQUESTED", "CONFIRMED", "INSPECTION_BOOKED"] } },
-    });
-    if (existing) throw new Error("Det finns redan en pågående uppsägning för avtalet.");
-
-    const earliestEndDate = calculateEarliestEndDate(contract.noticePeriodMonths);
-    const effectiveEndDate =
-      desiredMoveOutDate > earliestEndDate ? desiredMoveOutDate : earliestEndDate;
-
-    const termination = await tx.termination.create({
-      data: {
-        organizationId,
-        contractId,
-        requestedByPersonId: personId,
-        desiredMoveOutDate,
-        earliestEndDate,
-        effectiveEndDate,
-        reason: opts.reason ?? null,
-        isInternalTransfer: opts.isInternalTransfer ?? false,
-        newContractId: opts.newContractId ?? null,
-      },
-    });
-
-    assertTransition("contract", contractTransitions, contract.status, "TERMINATED");
-    await tx.contract.update({
-      where: { id: contractId },
-      data: {
-        status: "TERMINATED",
-        terminatedAt: new Date(),
-        terminationEffectiveDate: effectiveEndDate,
-      },
-    });
-    await tx.contractStatusEvent.create({
-      data: {
-        contractId,
-        fromStatus: contract.status,
-        toStatus: "TERMINATED",
-        comment: opts.isInternalTransfer ? "Uppsagt p.g.a. intern flytt" : "Uppsagt av hyresgäst",
-      },
-    });
-
-    // Objektet blir kommande ledigt.
-    await tx.unit.update({
-      where: { id: contract.unitId },
-      data: { status: "UPCOMING", availableFrom: effectiveEndDate },
-    });
-
-    await audit(
-      {
-        organizationId,
-        userId: opts.actorUserId,
-        action: "termination_requested",
-        entityType: "termination",
-        entityId: termination.id,
-        after: {
-          contractId,
-          effectiveEndDate: effectiveEndDate.toISOString(),
-          isInternalTransfer: opts.isInternalTransfer ?? false,
-        },
-      },
-      tx
-    );
-
-    return termination;
+  const requestHash = sha256(JSON.stringify({
+    contractId,
+    personId,
+    desiredMoveOutDate: desiredMoveOutDate.toISOString(),
+    reason: opts.reason ?? null,
+    isInternalTransfer: opts.isInternalTransfer ?? false,
+    newContractId: opts.newContractId ?? null,
+  }));
+  return requestRentalContractTermination({
+    contractId,
+    personId,
+    desiredMoveOutDate,
+    reason: opts.reason,
+    isInternalTransfer: opts.isInternalTransfer,
+    newContractId: opts.newContractId,
+    idempotencyKey: opts.idempotencyKey,
+    requestHash,
   });
 }

@@ -142,6 +142,46 @@ REVOKE ALL ON FUNCTION public.current_app_person_id() FROM public;
 GRANT EXECUTE ON FUNCTION public.current_app_organization_id() TO authenticated;
 GRANT EXECUTE ON FUNCTION public.current_app_person_id() TO authenticated;
 
+
+CREATE OR REPLACE FUNCTION public.current_app_user_id()
+RETURNS text
+LANGUAGE sql
+STABLE
+SECURITY DEFINER
+SET search_path = public
+AS $$
+  SELECT "id" FROM public."User"
+  WHERE "authUserId" = auth.uid() AND "isActive" = true
+  LIMIT 1
+$$;
+
+CREATE OR REPLACE FUNCTION public.app_has_permission(p_permission text)
+RETURNS boolean
+LANGUAGE sql
+STABLE
+SECURITY DEFINER
+SET search_path = public
+AS $$
+  SELECT EXISTS (
+    SELECT 1
+    FROM public."User" u
+    JOIN public."UserRole" ur ON ur."userId" = u."id"
+    JOIN public."RolePermission" rp ON rp."roleId" = ur."roleId"
+    WHERE u."authUserId" = auth.uid()
+      AND u."isActive" = true
+      AND (
+        rp."permission" = '*'
+        OR rp."permission" = p_permission
+        OR rp."permission" = split_part(p_permission, ':', 1) || ':*'
+      )
+  )
+$$;
+
+REVOKE ALL ON FUNCTION public.current_app_user_id() FROM public;
+REVOKE ALL ON FUNCTION public.app_has_permission(text) FROM public;
+GRANT EXECUTE ON FUNCTION public.current_app_user_id() TO authenticated;
+GRANT EXECUTE ON FUNCTION public.app_has_permission(text) TO authenticated;
+
 -- RLS is enabled on every application table. Server administration uses the
 -- Supabase secret key; browser access remains policy-controlled.
 

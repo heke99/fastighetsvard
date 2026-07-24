@@ -1,11 +1,11 @@
 -- Östgöta El Teknik Fastighetsplattform
 -- Step: Billing and accounting integration tables
--- Safe to run in filename order. This file is transactional.
+-- Canonical installation migration. It must run exactly once in filename order.
 
 BEGIN;
 SET LOCAL search_path = public, extensions;
 
-CREATE TABLE IF NOT EXISTS public."Invoice" (
+CREATE TABLE public."Invoice" (
     "id" TEXT NOT NULL DEFAULT gen_random_uuid()::text,
     "organizationId" TEXT NOT NULL,
     "personId" TEXT NOT NULL,
@@ -35,7 +35,7 @@ CREATE TABLE IF NOT EXISTS public."Invoice" (
 );
 
 -- CreateTable
-CREATE TABLE IF NOT EXISTS public."InvoiceLine" (
+CREATE TABLE public."InvoiceLine" (
     "id" TEXT NOT NULL DEFAULT gen_random_uuid()::text,
     "invoiceId" TEXT NOT NULL,
     "description" TEXT NOT NULL,
@@ -49,7 +49,7 @@ CREATE TABLE IF NOT EXISTS public."InvoiceLine" (
 );
 
 -- CreateTable
-CREATE TABLE IF NOT EXISTS public."InvoiceStatusEvent" (
+CREATE TABLE public."InvoiceStatusEvent" (
     "id" TEXT NOT NULL DEFAULT gen_random_uuid()::text,
     "invoiceId" TEXT NOT NULL,
     "fromStatus" "InvoiceStatus",
@@ -63,7 +63,7 @@ CREATE TABLE IF NOT EXISTS public."InvoiceStatusEvent" (
 );
 
 -- CreateTable
-CREATE TABLE IF NOT EXISTS public."Payment" (
+CREATE TABLE public."Payment" (
     "id" TEXT NOT NULL DEFAULT gen_random_uuid()::text,
     "organizationId" TEXT NOT NULL,
     "amount" DECIMAL(12,2) NOT NULL,
@@ -77,7 +77,7 @@ CREATE TABLE IF NOT EXISTS public."Payment" (
 );
 
 -- CreateTable
-CREATE TABLE IF NOT EXISTS public."PaymentAllocation" (
+CREATE TABLE public."PaymentAllocation" (
     "id" TEXT NOT NULL DEFAULT gen_random_uuid()::text,
     "paymentId" TEXT NOT NULL,
     "invoiceId" TEXT NOT NULL,
@@ -88,7 +88,7 @@ CREATE TABLE IF NOT EXISTS public."PaymentAllocation" (
 );
 
 -- CreateTable
-CREATE TABLE IF NOT EXISTS public."ExternalReference" (
+CREATE TABLE public."ExternalReference" (
     "id" TEXT NOT NULL DEFAULT gen_random_uuid()::text,
     "organizationId" TEXT NOT NULL,
     "externalSystem" TEXT NOT NULL,
@@ -111,7 +111,7 @@ CREATE TABLE IF NOT EXISTS public."ExternalReference" (
 );
 
 -- CreateTable
-CREATE TABLE IF NOT EXISTS public."IntegrationConnection" (
+CREATE TABLE public."IntegrationConnection" (
     "id" TEXT NOT NULL DEFAULT gen_random_uuid()::text,
     "organizationId" TEXT NOT NULL,
     "provider" TEXT NOT NULL,
@@ -128,7 +128,7 @@ CREATE TABLE IF NOT EXISTS public."IntegrationConnection" (
 );
 
 -- CreateTable
-CREATE TABLE IF NOT EXISTS public."IntegrationSyncJob" (
+CREATE TABLE public."IntegrationSyncJob" (
     "id" TEXT NOT NULL DEFAULT gen_random_uuid()::text,
     "organizationId" TEXT NOT NULL,
     "connectionId" TEXT NOT NULL,
@@ -150,7 +150,7 @@ CREATE TABLE IF NOT EXISTS public."IntegrationSyncJob" (
 );
 
 -- CreateTable
-CREATE TABLE IF NOT EXISTS public."SyncReviewItem" (
+CREATE TABLE public."SyncReviewItem" (
     "id" TEXT NOT NULL DEFAULT gen_random_uuid()::text,
     "organizationId" TEXT NOT NULL,
     "syncJobId" TEXT,

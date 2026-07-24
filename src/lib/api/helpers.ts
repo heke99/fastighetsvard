@@ -1,10 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { ZodError, type ZodSchema } from "zod";
-import { db } from "@/lib/db";
 import { sha256 } from "@/lib/crypto";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { ApiError, type ApiContext, authenticateApiRequest, checkRateLimit } from "./auth";
 import type { ApiScope } from "@/lib/permissions";
-import type { Database } from "@/lib/database-types";
 
 export interface Pagination {
   page: number;
@@ -97,7 +96,7 @@ export function withApiAuth(
     let ctx: ApiContext | undefined;
     try {
       ctx = await authenticateApiRequest(req, scope);
-      checkRateLimit(ctx.apiKey.id);
+      await checkRateLimit(ctx.apiKey.id);
       const params = await routeCtx.params;
       return await handler(req, ctx, params ?? {});
     } catch (error) {
@@ -116,12 +115,16 @@ export async function parseBody<T>(req: NextRequest, schema: ZodSchema<T>): Prom
   return schema.parse(json);
 }
 
-const IDEMPOTENCY_TTL_MS = 24 * 60 * 60 * 1000;
+interface AtomicIdempotencyClaim {
+  recordId: string;
+  isReplay: boolean;
+  responseStatus: number | null;
+  responseBody: unknown;
+}
 
 /**
- * Idempotency-stöd för muterande anrop. Om samma Idempotency-Key används
- * igen med samma request-body returneras det sparade svaret. Samma nyckel
- * med annan body ger 409.
+ * Atomisk API-idempotens. Claim, request-hash-konflikt och replay avgörs av
+ * PostgreSQL innan domänoperationen körs. Check-then-create används inte.
  */
 export async function withIdempotency(
   req: NextRequest,
@@ -134,30 +137,57 @@ export async function withIdempotency(
     const result = await execute();
     return apiJson(result.body, result.status, ctx);
   }
-  const requestHash = sha256(bodyText);
-  const existing = await db.idempotencyRecord.findUnique({
-    where: { apiKeyId_idempotencyKey: { apiKeyId: ctx.apiKey.id, idempotencyKey: key } },
-  });
-  if (existing) {
-    if (existing.requestHash !== requestHash) {
-      throw new ApiError(
-        409,
-        "idempotency_conflict",
-        "Samma Idempotency-Key har använts med en annan request-body."
-      );
-    }
-    return apiJson(existing.responseBody, existing.responseStatus, ctx);
+  if (key.length > 200) {
+    throw new ApiError(400, "invalid_idempotency_key", "Idempotency-Key är för lång.");
   }
-  const result = await execute();
-  await db.idempotencyRecord.create({
-    data: {
-      apiKeyId: ctx.apiKey.id,
-      idempotencyKey: key,
-      requestHash,
-      responseStatus: result.status,
-      responseBody: result.body as Database.InputJsonValue,
-      expiresAt: new Date(Date.now() + IDEMPOTENCY_TTL_MS),
-    },
+
+  const client = createAdminClient();
+  const operation = `api:${req.method}:${new URL(req.url).pathname}`;
+  const { data, error } = await client.rpc("claim_idempotent_operation", {
+    p_organization_id: ctx.organizationId,
+    p_actor_type: "api_key",
+    p_actor_id: ctx.apiKey.id,
+    p_operation: operation,
+    p_idempotency_key: key,
+    p_request_hash: sha256(bodyText),
+    p_lease_seconds: 120,
   });
-  return apiJson(result.body, result.status, ctx);
+  if (error) {
+    if (error.message.includes("idempotency_key_reused_with_different_request")) {
+      throw new ApiError(409, "idempotency_conflict", "Samma Idempotency-Key har använts med en annan request-body.");
+    }
+    if (error.message.includes("operation_already_processing")) {
+      throw new ApiError(409, "idempotency_in_progress", "En identisk begäran behandlas redan.");
+    }
+    throw new ApiError(503, "idempotency_unavailable", "Idempotens kunde inte verifieras.");
+  }
+
+  const raw = Array.isArray(data) ? data[0] : data;
+  const claim = raw as AtomicIdempotencyClaim | null;
+  if (!claim?.recordId) {
+    throw new ApiError(503, "idempotency_unavailable", "Idempotenssvaret var ogiltigt.");
+  }
+  if (claim.isReplay) {
+    return apiJson(claim.responseBody, claim.responseStatus ?? 200, ctx);
+  }
+
+  try {
+    const result = await execute();
+    const completion = await client.rpc("complete_idempotent_operation", {
+      p_record_id: claim.recordId,
+      p_response_status: result.status,
+      p_response_body: result.body,
+    });
+    if (completion.error) {
+      throw new ApiError(503, "idempotency_completion_failed", "Svaret kunde inte lagras idempotent.");
+    }
+    return apiJson(result.body, result.status, ctx);
+  } catch (error) {
+    await client.rpc("fail_idempotent_operation", {
+      p_record_id: claim.recordId,
+      p_error: error instanceof Error ? error.message : "operation_failed",
+    });
+    throw error;
+  }
 }
+

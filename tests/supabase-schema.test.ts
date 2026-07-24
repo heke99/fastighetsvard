@@ -15,7 +15,7 @@ describe("Supabase-native projekt", () => {
       .filter((name) => name.endsWith(".sql"))
       .sort();
 
-    expect(files.length).toBeGreaterThanOrEqual(15);
+    expect(files.length).toBe(15);
 
     const sql = files
       .map((file) => readFileSync(resolve(migrationDir, file), "utf8"))
@@ -24,7 +24,7 @@ describe("Supabase-native projekt", () => {
     expect(sql).toContain("REFERENCES auth.users(id)");
     expect(sql).toContain("ENABLE ROW LEVEL SECURITY");
     expect(sql).toContain("storage.buckets");
-    expect(sql).toContain('CREATE TABLE IF NOT EXISTS public."Organization"');
-    expect(sql).toContain('CREATE TABLE IF NOT EXISTS public."Counter"');
+    expect(sql).toContain('CREATE TABLE public."Organization"');
+    expect(sql).toContain('CREATE TABLE public."Counter"');
   });
 });

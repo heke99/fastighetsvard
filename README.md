@@ -1,89 +1,62 @@
-# Östgöta El Teknik – Fastighetsplattform
+# Fastighetsvärd
 
-Fastighetsplattform för uthyrning, försäljning, Mina sidor, felanmälan,
-arbetsorder, avtal, fakturavisning, bokföringsintegrationer, REST API och
-webhooks.
+Next.js- och Supabase-plattform för en enskild hyresvärds uthyrningsflöde: annons, sökande, ansökan, visning, erbjudande, avtal, inflyttning, hyresgästportal, uppsägning och avflyttning.
 
-## Teknik
+## Status
 
-- Next.js 15, React 19 och TypeScript
-- Supabase Auth för inloggning, återställning och sessionscookies
-- Supabase Postgres via Data API
-- Supabase SQL-migrationer och Row Level Security
-- Supabase Storage för media och dokument
-- Resend för transaktionsmejl
-- Vercel för webb, API-routes och cron
+Projektet har fått en första produktionshärdning av migrationskedja, atomiska kärnoperationer, Auth, RLS, Storage, idempotens, OTP-signering, rate limiting och CI. Hela målbilden är **inte** färdig och projektet ska inte hantera skarpa personuppgifter innan blockerarna i [`docs/PRODUCTION_HARDENING_PHASE1.md`](docs/PRODUCTION_HARDENING_PHASE1.md) är stängda.
 
-Projektet har ingen Prisma-runtime, inget Prisma-schema och kräver varken
-`DATABASE_URL` eller `DIRECT_URL`.
+Den största kvarvarande tekniska skulden är `src/lib/db.ts`: en Prisma-liknande Supabase-adapter som fortfarande används av äldre admin- och läsflöden. Kritiska portaloperationer är flyttade till domänspecifika PostgreSQL-RPC:er, men adaptern måste tas bort helt före produktion.
 
-## Lokal start
+## Låsta verktygsversioner
+
+- Node.js 22.16.0
+- npm 10.9.2
+- Next.js 15.5.20
+- Supabase CLI 2.109.1
+
+## Lokal start och verifiering
 
 ```bash
+nvm install 22.16.0
+nvm use 22.16.0
+npm install -g npm@10.9.2
 npm ci
 cp .env.example .env.local
-# fyll i Supabase URL, publishable key och secret key
+supabase start
+npm run db:reset
+npm run db:verify
+npm run test:rls
+npm run lint
 npm run typecheck
-npm test
-npm run dev
-```
-
-## Databas
-
-Länka Supabase CLI och applicera SQL-migrationerna:
-
-```bash
-npx supabase login
-npm run supabase:link -- --project-ref DIN_PROJECT_REF
-npm run db:push
-```
-
-Migrationerna finns i `supabase/migrations/` och grunddata i
-`supabase/seed.sql`.
-
-Skapa första superadmin efter att migration och seed är applicerade:
-
-```bash
-cp .env.example .env.local
-# fyll i BOOTSTRAP_ADMIN_EMAIL och BOOTSTRAP_ADMIN_PASSWORD
-npm run bootstrap:admin
-```
-
-Ta därefter bort bootstrap-lösenordet ur `.env.local`.
-
-## Verifiering
-
-```bash
-npm run typecheck
-npm test
+npm run test:unit
+npm run test:concurrency
 npm run build
+npm run dev
+npm run test:e2e
 ```
 
 ## Struktur
 
 ```text
-supabase/migrations/        Databasschema, constraints, RLS och Storage
-supabase/seed.sql           Organisation och systemroller, inga demokonton
-scripts/bootstrap-admin.mjs Säker engångsskapning av superadmin
-src/lib/supabase/           Browser-, server-, middleware- och admin-klienter
-src/lib/db.ts               Supabase Data API-gateway för domänlagret
-src/lib/auth.ts             Supabase Auth + applikationens RBAC-profil
-src/lib/services/           Affärslogik
-src/app/(public)/           Publik webb
-src/app/(portal)/           Mina sidor
-src/app/admin/              Administration
-src/app/entreprenor/        Entreprenörsportal
-src/app/api/                REST API, integrationer, webhooks och cron
+supabase/migrations/       Canonical schema och härdningsmigrationer
+supabase/tests/            Schema- och RLS-verifiering
+supabase/manual/           Preflight/backfill-rapport för befintlig miljö
+src/lib/repositories/      Domänspecifik PostgreSQL/Supabase-åtkomst
+src/lib/services/          Domäntjänster
+src/app/(public)/          Publik webb
+src/app/(portal)/          Sökande- och hyresgästportal
+src/app/admin/             Administration
+src/app/entreprenor/       Entreprenörsportal
+src/app/api/               API, integrationer och skyddade systemroutes
+docs/                      Arkitektur, deployment, drift och releasegrind
 ```
 
-## Säkerhetsprinciper
+## Dokumentation
 
-- Supabase secret key används endast i serverkod.
-- Supabase Auth-användaren länkas 1:1 till tabellen `User`.
-- RBAC kontrolleras i server actions och API-routes.
-- RLS är aktiverat på samtliga applikationstabeller.
-- Offentlig direktåtkomst begränsas till publicerad katalogdata.
-- Juridiska och ekonomiska förändringar revisionsloggas.
-- API-nycklar och integrationsuppgifter lagras hashade eller krypterade.
-
-Se [SUPABASE_VERCEL_SETUP.md](./SUPABASE_VERCEL_SETUP.md) för driftsättning.
+- [Produktionshärdning och kvarvarande blockerare](docs/PRODUCTION_HARDENING_PHASE1.md)
+- [Databas, RLS och Storage](docs/DATABASE_RLS_STORAGE.md)
+- [Installation och deployment](docs/DEPLOYMENT.md)
+- [Drift, backup och incidenter](docs/OPERATIONS_AND_INCIDENTS.md)
+- [Test- och releasegrind](docs/TEST_AND_RELEASE_GATE.md)
+- [Leveransrapport](DELIVERY_REPORT.md)

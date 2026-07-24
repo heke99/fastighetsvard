@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { db } from "@/lib/db";
@@ -78,6 +79,7 @@ export default async function ApplyPage({
             listingId={listing.id}
             slug={listing.slug}
             hasActiveContract={Boolean(activeContract)}
+            idempotencyKey={randomUUID()}
           />
         </>
       )}

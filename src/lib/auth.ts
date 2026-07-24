@@ -4,6 +4,7 @@ import { db } from "./db";
 import { hasPermission, type Resource, type Action } from "./permissions";
 import { audit } from "./audit";
 import { createServerSupabaseClient } from "./supabase/server";
+import { getTrustedClientIp } from "./http-client-ip";
 
 export class AuthError extends Error {
   constructor(message: string, public code: string) {
@@ -144,6 +145,5 @@ export async function requireStaff(): Promise<CurrentUser> {
 
 export async function getClientIp(): Promise<string | undefined> {
   const requestHeaders = await headers();
-  return requestHeaders.get("x-forwarded-for")?.split(",")[0]?.trim() ??
-    requestHeaders.get("x-real-ip") ?? undefined;
+  return getTrustedClientIp(requestHeaders);
 }

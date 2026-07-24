@@ -1,6 +1,8 @@
 import { NextRequest } from "next/server";
 import { db } from "@/lib/db";
 import { sha256 } from "@/lib/crypto";
+import { getTrustedClientIp } from "@/lib/http-client-ip";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { hasApiScope, type ApiScope } from "@/lib/permissions";
 import type { ApiKey } from "@/lib/database-types";
 
@@ -44,7 +46,7 @@ export async function authenticateApiRequest(
     throw new ApiError(401, "expired_api_key", "API-nyckeln har gått ut.");
   }
   if (apiKey.allowedIps.length > 0) {
-    const ip = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "";
+    const ip = getTrustedClientIp(req.headers) ?? "";
     if (!apiKey.allowedIps.includes(ip)) {
       throw new ApiError(403, "ip_not_allowed", "Anrop från denna IP-adress är inte tillåtet.");
     }
@@ -66,20 +68,17 @@ export async function authenticateApiRequest(
   };
 }
 
-/** Enkel in-memory rate limiting per API-nyckel (per instans). */
-const buckets = new Map<string, { count: number; resetAt: number }>();
-const RATE_LIMIT = 300; // anrop per minut
-const WINDOW_MS = 60_000;
-
-export function checkRateLimit(keyId: string): void {
-  const now = Date.now();
-  const bucket = buckets.get(keyId);
-  if (!bucket || bucket.resetAt < now) {
-    buckets.set(keyId, { count: 1, resetAt: now + WINDOW_MS });
-    return;
-  }
-  bucket.count++;
-  if (bucket.count > RATE_LIMIT) {
+/** Distribuerad rate limiting genom en atomisk PostgreSQL-upsert. */
+export async function checkRateLimit(keyId: string): Promise<void> {
+  const { data, error } = await createAdminClient().rpc("consume_rate_limit", {
+    p_scope: "api_key",
+    p_subject: keyId,
+    p_limit: 300,
+    p_window_seconds: 60,
+  });
+  if (error) throw new ApiError(503, "rate_limit_unavailable", "Rate limiting kunde inte verifieras.");
+  const result = data as { allowed?: boolean } | null;
+  if (!result?.allowed) {
     throw new ApiError(429, "rate_limited", "För många anrop. Försök igen om en stund.");
   }
 }
