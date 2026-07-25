@@ -1,0 +1,17 @@
+---
+description: FaddeBo identity and canonical rental lifecycle
+alwaysApply: true
+---
+
+FaddeBo is the customer-facing brand. The legal organization is Östgöta El
+Teknik AB, organization number 559350-5620. Legal documents must preserve the
+legal entity while customer-facing product surfaces use the brand.
+
+Canonical lifecycle:
+organization → brand → property → building → unit → vacancy → listing →
+applicant → application → eligibility → selection → viewing → offer →
+reservation → contract → signing → tenancy → move-in → portal → billing →
+payment → maintenance → notice → inspection → move-out → unit preparation.
+
+Never create separate public/admin representations of the same entity. Signed
+contracts, signing evidence and finalized financial records are immutable.

@@ -1,8 +1,8 @@
 import { redirect } from "next/navigation";
-import { db } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth";
 import { WorkOrderStatusBadge } from "@/components/StatusBadges";
 import { ContractorWorkOrderActions } from "./ContractorActions";
+import { listContractorWorkOrders } from "@/lib/repositories/admin-records";
 
 export const metadata = { title: "Mina arbetsorder" };
 
@@ -11,23 +11,7 @@ export default async function ContractorPage() {
   if (!user?.supplierId) redirect("/logga-in");
 
   // Entreprenören ser ENDAST arbetsorder tilldelade den egna leverantören.
-  const workOrders = await db.workOrder.findMany({
-    where: { supplierId: user.supplierId },
-    include: {
-      request: {
-        select: {
-          requestNumber: true,
-          contactPhone: true,
-          preferredTime: true,
-          masterKeyAllowed: true,
-          petsInHome: true,
-          unit: { select: { address: true, city: true } },
-        },
-      },
-      documents: { select: { id: true, title: true } },
-    },
-    orderBy: [{ priority: "desc" }, { createdAt: "desc" }],
-  });
+  const workOrders = await listContractorWorkOrders(user.supplierId);
 
   return (
     <div className="space-y-6">

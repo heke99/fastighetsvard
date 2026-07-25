@@ -1,9 +1,9 @@
 import { redirect } from "next/navigation";
-import { db } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth";
 import { hasPermission, API_SCOPES } from "@/lib/permissions";
 import { ActionForm } from "@/components/admin/ActionForm";
 import { createApiKeyAction, revokeApiKeyAction } from "../actions";
+import { listAdminApiKeys } from "@/lib/repositories/admin-records";
 
 export const metadata = { title: "Admin – API-nycklar" };
 
@@ -13,10 +13,7 @@ export default async function AdminApiKeysPage() {
     redirect("/admin");
   }
 
-  const keys = await db.apiKey.findMany({
-    where: { organizationId: user.organizationId },
-    orderBy: { createdAt: "desc" },
-  });
+  const keys = await listAdminApiKeys(user.organizationId);
 
   const canCreate = hasPermission(user.permissions, "apikeys", "create");
   const canRevoke = hasPermission(user.permissions, "apikeys", "delete");

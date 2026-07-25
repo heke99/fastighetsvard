@@ -1,7 +1,56 @@
 -- Safe baseline data. No demo users or passwords are created.
-INSERT INTO "Organization" ("id","name","orgNumber","email","updatedAt")
-VALUES ('11111111-1111-4111-8111-111111111111','Östgöta El Teknik',NULL,'info@ostgotaelteknik.se',now())
-ON CONFLICT ("id") DO UPDATE SET "name"=EXCLUDED."name", "updatedAt"=now();
+INSERT INTO "Organization" (
+  "id","name","legalName","orgNumber","email","dataProtectionEmail","updatedAt"
+)
+VALUES (
+  '11111111-1111-4111-8111-111111111111',
+  'Östgöta El Teknik',
+  'Östgöta El Teknik AB',
+  '559350-5620',
+  'info@ostgotaelteknik.se',
+  'dataskydd@ostgotaelteknik.se',
+  now()
+)
+ON CONFLICT ("id") DO UPDATE SET
+  "name"=EXCLUDED."name",
+  "legalName"=EXCLUDED."legalName",
+  "orgNumber"=EXCLUDED."orgNumber",
+  "email"=EXCLUDED."email",
+  "dataProtectionEmail"=EXCLUDED."dataProtectionEmail",
+  "updatedAt"=now();
+
+UPDATE "Organization"
+SET "legalName" = 'Östgöta El Teknik AB',
+    "dataProtectionEmail" = 'dataskydd@ostgotaelteknik.se',
+    "updatedAt" = now()
+WHERE "id" = '11111111-1111-4111-8111-111111111111';
+
+INSERT INTO "Brand" (
+  "id","organizationId","name","slug","legalDisplayName","supportEmail",
+  "privacyPolicyUrl","termsUrl","isPrimary","status","updatedAt"
+)
+VALUES (
+  '22222222-2222-4222-8222-222222222222',
+  '11111111-1111-4111-8111-111111111111',
+  'FaddeBo',
+  'faddebo',
+  'FaddeBo – ett varumärke inom Östgöta El Teknik AB, org.nr 559350-5620',
+  'info@ostgotaelteknik.se',
+  '/integritetspolicy',
+  '/allmanna-villkor',
+  true,
+  'ACTIVE',
+  now()
+)
+ON CONFLICT ("id") DO UPDATE SET
+  "name"=EXCLUDED."name",
+  "legalDisplayName"=EXCLUDED."legalDisplayName",
+  "supportEmail"=EXCLUDED."supportEmail",
+  "privacyPolicyUrl"=EXCLUDED."privacyPolicyUrl",
+  "termsUrl"=EXCLUDED."termsUrl",
+  "isPrimary"=true,
+  "status"='ACTIVE',
+  "updatedAt"=now();
 
 INSERT INTO "Role" ("id","organizationId","name","slug","isSystem","updatedAt") VALUES ('86f9f9c3-b94e-4e5b-8abf-1e6f723295e0',NULL,'Superadmin','superadmin',true,now()) ON CONFLICT ("slug") WHERE "organizationId" IS NULL DO UPDATE SET "name"=EXCLUDED."name","isSystem"=true,"updatedAt"=now();
 INSERT INTO "RolePermission" ("id","roleId","permission") SELECT 'bc1574ab-a4bd-4c1d-b2e3-a827e3713e8e',"id",'*' FROM "Role" WHERE "organizationId" IS NULL AND "slug"='superadmin' ON CONFLICT ("roleId","permission") DO NOTHING;
@@ -71,7 +120,7 @@ INSERT INTO "RolePermission" ("id","roleId","permission") SELECT '1c5c71b2-a9d2-
 INSERT INTO "RolePermission" ("id","roleId","permission") SELECT 'c6d1e0a8-3935-44d0-b5f2-af2a0b789513',"id",'imports:*' FROM "Role" WHERE "organizationId" IS NULL AND "slug"='property-manager' ON CONFLICT ("roleId","permission") DO NOTHING;
 INSERT INTO "RolePermission" ("id","roleId","permission") SELECT 'efe8dbe7-73d5-4fcf-8dce-95d66a5d6c08',"id",'reports:read' FROM "Role" WHERE "organizationId" IS NULL AND "slug"='property-manager' ON CONFLICT ("roleId","permission") DO NOTHING;
 
-INSERT INTO "Role" ("id","organizationId","name","slug","isSystem","updatedAt") VALUES ('9c34da84-aaeb-4da0-8c6e-209898707f3a',NULL,'Fastighetsvärd','caretaker',true,now()) ON CONFLICT ("slug") WHERE "organizationId" IS NULL DO UPDATE SET "name"=EXCLUDED."name","isSystem"=true,"updatedAt"=now();
+INSERT INTO "Role" ("id","organizationId","name","slug","isSystem","updatedAt") VALUES ('9c34da84-aaeb-4da0-8c6e-209898707f3a',NULL,'Kvartersvärd','caretaker',true,now()) ON CONFLICT ("slug") WHERE "organizationId" IS NULL DO UPDATE SET "name"=EXCLUDED."name","isSystem"=true,"updatedAt"=now();
 INSERT INTO "RolePermission" ("id","roleId","permission") SELECT 'e671985f-dc2e-48c1-a175-c38f1758319e',"id",'properties:read' FROM "Role" WHERE "organizationId" IS NULL AND "slug"='caretaker' ON CONFLICT ("roleId","permission") DO NOTHING;
 INSERT INTO "RolePermission" ("id","roleId","permission") SELECT '8afbf684-3d1c-495c-b55a-05f3a98ecc76',"id",'buildings:read' FROM "Role" WHERE "organizationId" IS NULL AND "slug"='caretaker' ON CONFLICT ("roleId","permission") DO NOTHING;
 INSERT INTO "RolePermission" ("id","roleId","permission") SELECT '96a69b66-dbf9-4544-96d2-b1ba876669de',"id",'units:read' FROM "Role" WHERE "organizationId" IS NULL AND "slug"='caretaker' ON CONFLICT ("roleId","permission") DO NOTHING;
@@ -148,4 +197,3 @@ INSERT INTO "RolePermission" ("id","roleId","permission") SELECT '0fba2641-6ae5-
 
 INSERT INTO "Role" ("id","organizationId","name","slug","isSystem","updatedAt") VALUES ('7346e0b4-74b0-49e2-8a98-964751e7c9e5',NULL,'Rapportläsare','report-viewer',true,now()) ON CONFLICT ("slug") WHERE "organizationId" IS NULL DO UPDATE SET "name"=EXCLUDED."name","isSystem"=true,"updatedAt"=now();
 INSERT INTO "RolePermission" ("id","roleId","permission") SELECT 'c76fb88b-e7c3-40b8-8ad8-b9b918854c44',"id",'reports:read' FROM "Role" WHERE "organizationId" IS NULL AND "slug"='report-viewer' ON CONFLICT ("roleId","permission") DO NOTHING;
-

@@ -21,15 +21,50 @@ async function one(table, query) {
   return data;
 }
 
-let organization = await one("Organization", supabase.from("Organization").select("*").order("createdAt").limit(1).maybeSingle());
+let organization = await one(
+  "Organization",
+  supabase
+    .from("Organization")
+    .select("id,name,legalName,orgNumber")
+    .order("createdAt")
+    .limit(1)
+    .maybeSingle()
+);
 if (!organization) {
-  organization = await one("Organization", supabase.from("Organization").insert({ id: randomUUID(), name: "Östgöta El Teknik", email: "info@ostgotaelteknik.se" }).select("*").single());
+  organization = await one("Organization", supabase.from("Organization").insert({
+    id: randomUUID(),
+    name: "Östgöta El Teknik",
+    legalName: "Östgöta El Teknik AB",
+    orgNumber: "559350-5620",
+    email: "info@ostgotaelteknik.se",
+    dataProtectionEmail: "dataskydd@ostgotaelteknik.se",
+  }).select("id,name,legalName,orgNumber").single());
+  await one("Brand", supabase.from("Brand").insert({
+    id: randomUUID(),
+    organizationId: organization.id,
+    name: "FaddeBo",
+    slug: "faddebo",
+    legalDisplayName: "FaddeBo – ett varumärke inom Östgöta El Teknik AB, org.nr 559350-5620",
+    supportEmail: "info@ostgotaelteknik.se",
+    privacyPolicyUrl: "/integritetspolicy",
+    termsUrl: "/allmanna-villkor",
+    isPrimary: true,
+    status: "ACTIVE",
+  }).select("id,organizationId,name,slug").single());
 }
-let person = await one("Person", supabase.from("Person").select("*").eq("organizationId", organization.id).eq("email", email.toLowerCase()).maybeSingle());
+let person = await one(
+  "Person",
+  supabase
+    .from("Person")
+    .select("id,organizationId,firstName,lastName,email")
+    .eq("organizationId", organization.id)
+    .eq("email", email.toLowerCase())
+    .maybeSingle()
+);
 if (!person) {
   person = await one("Person", supabase.from("Person").insert({
     id: randomUUID(), organizationId: organization.id, firstName: "System", lastName: "Admin", email: email.toLowerCase(), country: "SE"
-  }).select("*").single());
+  }).select("id,organizationId,firstName,lastName,email").single());
 }
 let authUser;
 const { data: linkData, error: linkError } = await supabase.auth.admin.generateLink({ type: "magiclink", email: email.toLowerCase() });
@@ -45,12 +80,30 @@ if (!authUser) {
 await one("User", supabase.from("User").upsert({
   id: randomUUID(), authUserId: authUser.id, organizationId: organization.id, personId: person.id, email: email.toLowerCase(), emailVerifiedAt: new Date().toISOString(), isActive: true
 }, { onConflict: "authUserId" }));
-let role = await one("Role", supabase.from("Role").select("*").eq("slug", "superadmin").is("organizationId", null).maybeSingle());
+let role = await one(
+  "Role",
+  supabase
+    .from("Role")
+    .select("id,name,slug")
+    .eq("slug", "superadmin")
+    .is("organizationId", null)
+    .maybeSingle()
+);
 if (!role) {
-  role = await one("Role", supabase.from("Role").insert({ id: randomUUID(), name: "Superadmin", slug: "superadmin", isSystem: true }).select("*").single());
+  role = await one(
+    "Role",
+    supabase
+      .from("Role")
+      .insert({ id: randomUUID(), name: "Superadmin", slug: "superadmin", isSystem: true })
+      .select("id,name,slug")
+      .single()
+  );
   await one("RolePermission", supabase.from("RolePermission").insert({ id: randomUUID(), roleId: role.id, permission: "*" }));
 }
-const profile = await one("User", supabase.from("User").select("*").eq("authUserId", authUser.id).single());
+const profile = await one(
+  "User",
+  supabase.from("User").select("id,authUserId").eq("authUserId", authUser.id).single()
+);
 const existingRole = await one("UserRole", supabase.from("UserRole").select("id").eq("userId", profile.id).eq("roleId", role.id).is("propertyId", null).maybeSingle());
 if (!existingRole) await one("UserRole", supabase.from("UserRole").insert({ id: randomUUID(), userId: profile.id, roleId: role.id, propertyId: null }));
 console.log(`Superadmin klar: ${email}`);

@@ -1,12 +1,14 @@
-# Fastighetsvärd
+# FaddeBo
 
-Next.js- och Supabase-plattform för en enskild hyresvärds uthyrningsflöde: annons, sökande, ansökan, visning, erbjudande, avtal, inflyttning, hyresgästportal, uppsägning och avflyttning.
+FaddeBo är Östgöta El Teknik AB:s Next.js- och Supabase-plattform för hela
+uthyrningsflödet: annons, sökande, ansökan, visning, erbjudande, avtal,
+inflyttning, hyresgästportal, uppsägning och avflyttning.
 
 ## Status
 
-Projektet har fått en första produktionshärdning av migrationskedja, atomiska kärnoperationer, Auth, RLS, Storage, idempotens, OTP-signering, rate limiting och CI. Hela målbilden är **inte** färdig och projektet ska inte hantera skarpa personuppgifter innan blockerarna i [`docs/PRODUCTION_HARDENING_PHASE1.md`](docs/PRODUCTION_HARDENING_PHASE1.md) är stängda.
+Projektet har fått en första produktionshärdning av migrationskedja, atomiska kärnoperationer, Auth, RLS, Storage, idempotens, OTP-signering, rate limiting och CI. Den tidigare generiska heltabellsadaptern är borttagen; läsningar går via avgränsade repositories och fler-radsoperationer via PostgreSQL-RPC:er.
 
-Den största kvarvarande tekniska skulden är `src/lib/db.ts`: en Prisma-liknande Supabase-adapter som fortfarande används av äldre admin- och läsflöden. Kritiska portaloperationer är flyttade till domänspecifika PostgreSQL-RPC:er, men adaptern måste tas bort helt före produktion.
+Hela målbilden är **inte** färdig och projektet ska inte hantera skarpa personuppgifter innan blockerarna i [`docs/PRODUCTION_HARDENING_PHASE1.md`](docs/PRODUCTION_HARDENING_PHASE1.md) är stängda. Särskilt återstår att exekvera och verifiera migrationskedjan, RLS, Storage, verklig concurrency, browser-E2E och providerflöden i en riktig Supabase-testmiljö.
 
 ## Låsta verktygsversioner
 

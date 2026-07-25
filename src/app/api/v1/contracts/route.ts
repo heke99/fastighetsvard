@@ -1,7 +1,6 @@
-import { db } from "@/lib/db";
 import { withApiAuth, parsePagination, paginatedResponse } from "@/lib/api/helpers";
 import { serializeContract } from "@/lib/api/serializers";
-import type { Database, ContractStatus } from "@/lib/database-types";
+import { listApiContracts } from "@/lib/repositories/external-api-records";
 
 export const GET = withApiAuth("contracts:read", async (req, ctx) => {
   const url = new URL(req.url);
@@ -10,23 +9,14 @@ export const GET = withApiAuth("contracts:read", async (req, ctx) => {
   const unitId = url.searchParams.get("unit_id");
   const personId = url.searchParams.get("person_id");
 
-  const where: Database.ContractWhereInput = {
+  const { items, total } = await listApiContracts({
     organizationId: ctx.organizationId,
-    ...(status ? { status: status.toUpperCase() as ContractStatus } : {}),
-    ...(unitId ? { unitId } : {}),
-    ...(personId ? { parties: { some: { personId } } } : {}),
-  };
-
-  const [items, total] = await Promise.all([
-    db.contract.findMany({
-      where,
-      include: { externalReferences: true },
-      orderBy: { createdAt: "desc" },
-      skip: pagination.skip,
-      take: pagination.take,
-    }),
-    db.contract.count({ where }),
-  ]);
+    status: status?.toUpperCase(),
+    unitId,
+    personId,
+    skip: pagination.skip,
+    take: pagination.take,
+  });
 
   return paginatedResponse(items.map(serializeContract), total, pagination, ctx);
 });

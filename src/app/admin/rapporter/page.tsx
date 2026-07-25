@@ -1,8 +1,8 @@
 import { redirect } from "next/navigation";
-import { db } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth";
 import { hasPermission } from "@/lib/permissions";
 import { formatSek } from "@/components/ListingCard";
+import { getAdminReportMetrics } from "@/lib/repositories/admin-records";
 
 export const metadata = { title: "Admin – Rapporter" };
 
@@ -13,32 +13,10 @@ export default async function AdminReportsPage() {
   }
   const organizationId = user.organizationId;
 
-  const [
+  const {
     unitsByStatus, applicationsByStatus, invoiceAgg, overdueAgg,
     maintenanceByStatus, workOrderCosts, moveIns, moveOuts, listingStats,
-  ] = await Promise.all([
-    db.unit.groupBy({ by: ["status"], where: { organizationId }, _count: true }),
-    db.application.groupBy({ by: ["status"], where: { organizationId }, _count: true }),
-    db.invoice.aggregate({
-      where: { organizationId, isCreditNote: false },
-      _sum: { totalAmount: true, paidAmount: true },
-      _count: true,
-    }),
-    db.invoice.aggregate({
-      where: { organizationId, status: { in: ["OVERDUE", "REMINDED", "COLLECTION"] } },
-      _sum: { totalAmount: true, paidAmount: true },
-      _count: true,
-    }),
-    db.maintenanceRequest.groupBy({ by: ["status"], where: { organizationId }, _count: true }),
-    db.workOrder.aggregate({ where: { organizationId }, _sum: { cost: true }, _count: true }),
-    db.contract.count({
-      where: { organizationId, status: { in: ["SIGNED", "ACTIVE"] }, startDate: { gte: new Date(Date.now() - 90 * 24 * 3600 * 1000) } },
-    }),
-    db.termination.count({
-      where: { organizationId, requestedAt: { gte: new Date(Date.now() - 90 * 24 * 3600 * 1000) } },
-    }),
-    db.listing.aggregate({ where: { organizationId }, _count: true }),
-  ]);
+  } = await getAdminReportMetrics(organizationId);
 
   const totalUnits = unitsByStatus.reduce((s, u) => s + u._count, 0);
   const rented = unitsByStatus.find((u) => u.status === "RENTED")?._count ?? 0;

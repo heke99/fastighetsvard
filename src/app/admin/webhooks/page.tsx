@@ -1,5 +1,4 @@
 import { redirect } from "next/navigation";
-import { db } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth";
 import { hasPermission } from "@/lib/permissions";
 import {
@@ -7,6 +6,7 @@ import {
   toggleSubscriptionAction,
   processWebhookQueueAction,
 } from "../actions";
+import { listAdminWebhooks } from "@/lib/repositories/admin-records";
 
 export const metadata = { title: "Admin – Webhooks" };
 
@@ -16,24 +16,8 @@ export default async function AdminWebhooksPage() {
     redirect("/admin");
   }
 
-  const [subscriptions, deliveries, inboundEvents] = await Promise.all([
-    db.webhookSubscription.findMany({
-      where: { organizationId: user.organizationId },
-      include: { _count: { select: { deliveries: true } } },
-      orderBy: { createdAt: "desc" },
-    }),
-    db.webhookDelivery.findMany({
-      where: { organizationId: user.organizationId },
-      include: { subscription: { select: { url: true } } },
-      orderBy: { createdAt: "desc" },
-      take: 30,
-    }),
-    db.inboundWebhookEvent.findMany({
-      where: { organizationId: user.organizationId },
-      orderBy: { createdAt: "desc" },
-      take: 20,
-    }),
-  ]);
+  const { subscriptions, deliveries, inboundEvents } =
+    await listAdminWebhooks(user.organizationId);
 
   const canUpdate = hasPermission(user.permissions, "webhooks", "update");
 

@@ -1,6 +1,9 @@
+import { getBranding } from "@/lib/branding";
+
 export const metadata = { title: "Kontakt" };
 
 export default function ContactPage() {
+  const brand = getBranding();
   return (
     <div className="mx-auto max-w-3xl px-4 py-10 sm:px-6">
       <h1 className="text-2xl font-bold text-stone-900 sm:text-3xl">Kontakta oss</h1>
@@ -13,31 +16,30 @@ export default function ContactPage() {
           <h2 className="font-semibold text-stone-900">Kundtjänst</h2>
           <p className="mt-1 text-sm text-stone-600">Vardagar 08–17</p>
           <p className="mt-2 text-sm">
-            <a href="tel:+4613100000" className="font-medium text-brand-700">013-10 00 00</a>
+            <a href={`tel:${brand.phoneHref}`} className="font-medium text-brand-700">{brand.phone}</a>
           </p>
           <p className="text-sm">
-            <a href="mailto:info@ostgotaelteknik.se" className="font-medium text-brand-700">info@ostgotaelteknik.se</a>
+            <a href={`mailto:${brand.supportEmail}`} className="font-medium text-brand-700">{brand.supportEmail}</a>
           </p>
         </div>
         <div className="card p-5">
           <h2 className="font-semibold text-stone-900">Jour – akuta fel</h2>
           <p className="mt-1 text-sm text-stone-600">Dygnet runt</p>
           <p className="mt-2 text-sm">
-            <a href="tel:+4613100001" className="font-medium text-brand-700">013-10 00 01</a>
+            <a href={`tel:${brand.emergencyPhoneHref}`} className="font-medium text-brand-700">{brand.emergencyPhone}</a>
           </p>
         </div>
         <div className="card p-5">
           <h2 className="font-semibold text-stone-900">Uthyrning</h2>
           <p className="mt-2 text-sm">
-            <a href="mailto:uthyrning@ostgotaelteknik.se" className="font-medium text-brand-700">uthyrning@ostgotaelteknik.se</a>
+            <a href={`mailto:${brand.leasingEmail}`} className="font-medium text-brand-700">{brand.leasingEmail}</a>
           </p>
         </div>
         <div className="card p-5">
           <h2 className="font-semibold text-stone-900">Besöksadress</h2>
           <address className="mt-2 text-sm not-italic text-stone-600">
-            Östgöta El Teknik AB<br />
-            Industrigatan 12<br />
-            582 55 Linköping
+            {brand.legalName}<br />
+            {brand.postalAddress}
           </address>
         </div>
       </div>

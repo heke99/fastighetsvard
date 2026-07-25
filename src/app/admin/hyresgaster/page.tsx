@@ -1,9 +1,9 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { db } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth";
 import { hasPermission } from "@/lib/permissions";
 import { sendInvitationAction } from "../actions";
+import { listAdminPersons } from "@/lib/repositories/admin-records";
 
 export const metadata = { title: "Admin – Hyresgäster & personer" };
 
@@ -18,32 +18,7 @@ export default async function AdminTenantsPage({
   }
   const { q } = await searchParams;
 
-  const persons = await db.person.findMany({
-    where: {
-      organizationId: user.organizationId,
-      ...(q
-        ? {
-            OR: [
-              { firstName: { contains: q, mode: "insensitive" } },
-              { lastName: { contains: q, mode: "insensitive" } },
-              { email: { contains: q, mode: "insensitive" } },
-            ],
-          }
-        : {}),
-    },
-    include: {
-      roles: true,
-      user: { select: { id: true, lastLoginAt: true } },
-      contractParties: {
-        where: { role: { in: ["TENANT", "CO_TENANT"] }, contract: { status: "ACTIVE" } },
-        include: { contract: { include: { unit: { select: { address: true } } } } },
-      },
-      invitations: { orderBy: { createdAt: "desc" }, take: 1 },
-      externalReferences: { where: { entityType: "customer" } },
-    },
-    orderBy: [{ lastName: "asc" }, { firstName: "asc" }],
-    take: 200,
-  });
+  const persons = await listAdminPersons(user.organizationId, q);
 
   const roleLabels: Record<string, string> = {
     TENANT: "Hyresgäst", APPLICANT: "Sökande", CO_APPLICANT: "Medsökande",

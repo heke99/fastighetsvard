@@ -45,9 +45,9 @@ export async function sendInvitationEmail(to: string, url: string): Promise<void
   const brand = getBranding();
   await sendEmail({
     to,
-    subject: `Aktivera ${brand.portalName} hos ${brand.companyName}`,
+    subject: `Aktivera ${brand.portalName} hos ${brand.brandName}`,
     text: `Aktivera ditt konto: ${url}`,
-    html: `<p>Hej!</p><p>Du har blivit inbjuden till ${brand.portalName} hos ${brand.companyName}.</p><p><a href="${url}">Aktivera ditt konto</a></p><p>Länken gäller i 14 dagar.</p>`,
+    html: `<p>Hej!</p><p>Du har blivit inbjuden till ${brand.portalName} hos ${brand.brandName}.</p><p><a href="${url}">Aktivera ditt konto</a></p><p>Länken gäller i 14 dagar.</p>`,
   });
 }
 

@@ -1,7 +1,6 @@
-import { db } from "@/lib/db";
 import { withApiAuth, parsePagination, paginatedResponse } from "@/lib/api/helpers";
 import { serializePayment } from "@/lib/api/serializers";
-import type { Database } from "@/lib/database-types";
+import { listOrganizationRecords } from "@/lib/repositories/api-records";
 
 export const GET = withApiAuth("payments:read", async (req, ctx) => {
   const url = new URL(req.url);
@@ -9,27 +8,18 @@ export const GET = withApiAuth("payments:read", async (req, ctx) => {
   const from = url.searchParams.get("from");
   const to = url.searchParams.get("to");
 
-  const where: Database.PaymentWhereInput = {
+  const { items, total } = await listOrganizationRecords({
+    table: "Payment",
+    columns: "id,amount,currency,paidAt,method,reference,createdAt",
     organizationId: ctx.organizationId,
-    ...(from || to
-      ? {
-          paidAt: {
-            ...(from ? { gte: new Date(from) } : {}),
-            ...(to ? { lte: new Date(to) } : {}),
-          },
-        }
-      : {}),
-  };
-
-  const [items, total] = await Promise.all([
-    db.payment.findMany({
-      where,
-      orderBy: { paidAt: "desc" },
-      skip: pagination.skip,
-      take: pagination.take,
-    }),
-    db.payment.count({ where }),
-  ]);
+    filters: [
+      ...(from ? [{ column: "paidAt", operator: "gte" as const, value: new Date(from).toISOString() }] : []),
+      ...(to ? [{ column: "paidAt", operator: "lte" as const, value: new Date(to).toISOString() }] : []),
+    ],
+    order: { column: "paidAt", ascending: false },
+    skip: pagination.skip,
+    take: pagination.take,
+  });
 
   return paginatedResponse(items.map(serializePayment), total, pagination, ctx);
 });

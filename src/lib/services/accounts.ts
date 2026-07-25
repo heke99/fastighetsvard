@@ -1,13 +1,16 @@
-import { db } from "@/lib/db";
 import { sha256 } from "@/lib/crypto";
 import { getAppUrl } from "@/lib/app-url";
 import { claimInvitation } from "@/lib/repositories/rental-operations";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
+import {
+  getDefaultOrganizationRecord,
+  getInvitationClaimDetails,
+} from "@/lib/repositories/account-lookups";
 
 /** Plattformen körs för en organisation. Används av kontrollerade adminflöden. */
 export async function getDefaultOrganization() {
-  const org = await db.organization.findFirst({ orderBy: { createdAt: "asc" } });
+  const org = await getDefaultOrganizationRecord();
   if (!org) throw new Error("Ingen organisation är konfigurerad. Kör Supabase-seedningen.");
   return org;
 }
@@ -67,11 +70,12 @@ export async function registerAccount(input: RegisterInput) {
  */
 export async function activateInvitation(token: string, password: string, _ip?: string) {
   const tokenHash = sha256(token);
-  const invitation = await db.invitation.findUnique({
-    where: { tokenHash },
-    include: { person: true },
-  });
-  if (!invitation || invitation.acceptedAt || invitation.expiresAt < new Date()) {
+  const invitation = await getInvitationClaimDetails(tokenHash);
+  if (
+    !invitation ||
+    invitation.acceptedAt ||
+    new Date(invitation.expiresAt) < new Date()
+  ) {
     throw new Error("Inbjudan är ogiltig eller har gått ut.");
   }
 

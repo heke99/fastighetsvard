@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
-import { db } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth";
 import { hasPermission } from "@/lib/permissions";
+import { listAdminTerminations } from "@/lib/repositories/admin-records";
 
 export const metadata = { title: "Admin – Uppsägningar" };
 
@@ -19,15 +19,7 @@ export default async function AdminTerminationsPage() {
     redirect("/admin");
   }
 
-  const terminations = await db.termination.findMany({
-    where: { organizationId: user.organizationId },
-    include: {
-      contract: { include: { unit: { select: { unitNumber: true, address: true } } } },
-      requestedBy: { select: { firstName: true, lastName: true } },
-    },
-    orderBy: { requestedAt: "desc" },
-    take: 100,
-  });
+  const terminations = await listAdminTerminations(user.organizationId);
 
   return (
     <div className="space-y-6">

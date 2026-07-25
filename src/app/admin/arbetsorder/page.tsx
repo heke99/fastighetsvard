@@ -1,11 +1,11 @@
 import { redirect } from "next/navigation";
-import { db } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth";
 import { hasPermission } from "@/lib/permissions";
 import { WorkOrderStatusBadge } from "@/components/StatusBadges";
 import { changeWorkOrderStatusAction } from "../actions";
 import { workOrderTransitions } from "@/lib/state-machines";
 import { formatSek } from "@/components/ListingCard";
+import { listAdminWorkOrders } from "@/lib/repositories/admin-records";
 
 export const metadata = { title: "Admin – Arbetsorder" };
 
@@ -15,15 +15,7 @@ export default async function AdminWorkOrdersPage() {
     redirect("/admin");
   }
 
-  const workOrders = await db.workOrder.findMany({
-    where: { organizationId: user.organizationId },
-    include: {
-      supplier: { select: { name: true } },
-      request: { select: { requestNumber: true, unit: { select: { address: true } } } },
-    },
-    orderBy: [{ priority: "desc" }, { createdAt: "desc" }],
-    take: 100,
-  });
+  const workOrders = await listAdminWorkOrders(user.organizationId);
 
   const canUpdate = hasPermission(user.permissions, "workorders", "update");
 

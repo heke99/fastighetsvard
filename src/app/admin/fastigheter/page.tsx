@@ -1,9 +1,9 @@
 import { redirect } from "next/navigation";
-import { db } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth";
 import { hasPermission } from "@/lib/permissions";
 import { ActionForm } from "@/components/admin/ActionForm";
 import { createPropertyAction } from "../actions";
+import { listAdminProperties } from "@/lib/repositories/admin-records";
 
 export const metadata = { title: "Admin – Fastigheter" };
 
@@ -13,11 +13,7 @@ export default async function AdminPropertiesPage() {
     redirect("/admin");
   }
 
-  const properties = await db.property.findMany({
-    where: { organizationId: user.organizationId },
-    include: { _count: { select: { units: true, buildings: true } } },
-    orderBy: [{ city: "asc" }, { name: "asc" }],
-  });
+  const properties = await listAdminProperties(user.organizationId);
 
   const canCreate = hasPermission(user.permissions, "properties", "create");
 

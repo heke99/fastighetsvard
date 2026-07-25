@@ -2,9 +2,9 @@
 
 import { redirect } from "next/navigation";
 import { z } from "zod";
-import { db } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth";
 import { createMaintenanceRequest } from "@/lib/services/maintenance";
+import { getMyRentalUnit } from "@/lib/repositories/portal-records";
 
 export interface MaintenanceFormState {
   status: "idle" | "error";
@@ -45,15 +45,8 @@ export async function createMaintenanceAction(
   let propertyId: string | undefined;
   if (data.unitId !== "common") {
     // Behörighetskontroll: endast objekt personen har avtal på.
-    const contract = await db.contract.findFirst({
-      where: {
-        unitId: data.unitId,
-        organizationId: user.organizationId,
-        parties: { some: { personId: user.personId, role: { in: ["TENANT", "CO_TENANT"] } } },
-      },
-      include: { unit: { select: { propertyId: true } } },
-    });
-    if (!contract) {
+    const unit = await getMyRentalUnit(data.unitId);
+    if (!unit) {
       return {
         status: "error",
         message: "Du kan bara göra felanmälan för objekt du hyr.",
@@ -61,7 +54,7 @@ export async function createMaintenanceAction(
       };
     }
     unitId = data.unitId;
-    propertyId = contract.unit.propertyId;
+    propertyId = String(unit.propertyId);
   }
 
   try {

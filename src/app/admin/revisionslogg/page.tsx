@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
-import { db } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth";
 import { hasPermission } from "@/lib/permissions";
+import { listAdminAuditEvents } from "@/lib/repositories/admin-records";
 
 export const metadata = { title: "Admin – Revisionslogg" };
 
@@ -16,15 +16,7 @@ export default async function AdminAuditPage({
   }
   const { entity } = await searchParams;
 
-  const events = await db.auditEvent.findMany({
-    where: {
-      organizationId: user.organizationId,
-      ...(entity ? { entityType: entity } : {}),
-    },
-    include: { user: { select: { email: true } } },
-    orderBy: { createdAt: "desc" },
-    take: 200,
-  });
+  const events = await listAdminAuditEvents(user.organizationId, entity);
 
   return (
     <div className="space-y-6">

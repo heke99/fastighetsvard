@@ -1,21 +1,19 @@
-import { db } from "@/lib/db";
+import { getBranding } from "@/lib/branding";
+import { listPublicProperties } from "@/lib/repositories/public-catalog";
 
 export const metadata = { title: "Våra fastigheter" };
 export const dynamic = "force-dynamic";
 
 export default async function PropertiesPage() {
-  const properties = await db.property.findMany({
-    where: { status: { in: ["ACTIVE", "UNDER_RENOVATION"] } },
-    include: { _count: { select: { units: true } } },
-    orderBy: [{ city: "asc" }, { name: "asc" }],
-  });
+  const brand = getBranding();
+  const properties = await listPublicProperties();
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6">
       <h1 className="text-2xl font-bold text-stone-900 sm:text-3xl">Våra fastigheter</h1>
       <p className="mt-1 max-w-2xl text-stone-500">
-        Östgöta El Teknik äger och förvaltar fastigheter i Östergötland. Här ser du
-        hela vårt bestånd.
+        {brand.brandName} förvaltar {brand.legalName}s fastigheter i
+        Östergötland. Här ser du hela beståndet.
       </p>
       {properties.length === 0 ? (
         <div className="card mt-8 p-12 text-center text-stone-500">
@@ -40,7 +38,7 @@ export default async function PropertiesPage() {
                   {p.energyClass && (
                     <div><dt className="sr-only">Energiklass</dt><dd>Energiklass {p.energyClass}</dd></div>
                   )}
-                  <div><dt className="sr-only">Antal objekt</dt><dd>{p._count.units} objekt</dd></div>
+                  <div><dt className="sr-only">Antal objekt</dt><dd>{p.unitCount} objekt</dd></div>
                 </dl>
                 {p.status === "UNDER_RENOVATION" && (
                   <span className="badge mt-3 bg-accent-500/20 text-accent-600">Renoveras</span>

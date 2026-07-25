@@ -1,9 +1,9 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { db } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth";
 import { formatSek } from "@/components/ListingCard";
 import { ContractStatusBadge } from "@/components/StatusBadges";
+import { listMyContracts } from "@/lib/repositories/portal-records";
 
 export const metadata = { title: "Mina avtal" };
 
@@ -11,11 +11,7 @@ export default async function MyContractsPage() {
   const user = await getCurrentUser();
   if (!user?.personId) redirect("/logga-in");
 
-  const contracts = await db.contract.findMany({
-    where: { parties: { some: { personId: user.personId } } },
-    include: { unit: true, parties: true },
-    orderBy: { createdAt: "desc" },
-  });
+  const contracts = await listMyContracts();
 
   return (
     <div className="space-y-6">

@@ -15,7 +15,7 @@ describe("Supabase-native projekt", () => {
       .filter((name) => name.endsWith(".sql"))
       .sort();
 
-    expect(files.length).toBe(15);
+    expect(files.length).toBe(29);
 
     const sql = files
       .map((file) => readFileSync(resolve(migrationDir, file), "utf8"))
@@ -26,5 +26,6 @@ describe("Supabase-native projekt", () => {
     expect(sql).toContain("storage.buckets");
     expect(sql).toContain('CREATE TABLE public."Organization"');
     expect(sql).toContain('CREATE TABLE public."Counter"');
+    expect(sql).toContain('CREATE TABLE public."Brand"');
   });
 });

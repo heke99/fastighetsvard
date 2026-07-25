@@ -1,7 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
-import { db } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth";
+import {
+  createMySavedSearch,
+  deleteMySavedSearch,
+} from "@/lib/repositories/portal-records";
 
 const schema = z.object({
   name: z.string().min(1).max(120),
@@ -23,15 +26,13 @@ export async function POST(req: NextRequest) {
       { status: 422 }
     );
   }
-  const saved = await db.savedSearch.create({
-    data: {
-      organizationId: user.organizationId,
-      personId: user.personId,
-      name: parsed.data.name,
-      criteria: parsed.data.criteria,
-    },
+  const id = await createMySavedSearch({
+    organizationId: user.organizationId,
+    personId: user.personId,
+    name: parsed.data.name,
+    criteria: parsed.data.criteria,
   });
-  return NextResponse.json({ data: { id: saved.id } }, { status: 201 });
+  return NextResponse.json({ data: { id } }, { status: 201 });
 }
 
 export async function DELETE(req: NextRequest) {
@@ -50,8 +51,6 @@ export async function DELETE(req: NextRequest) {
     );
   }
   // Ägarkontroll: endast egna bevakningar kan tas bort.
-  const deleted = await db.savedSearch.deleteMany({
-    where: { id, personId: user.personId },
-  });
-  return NextResponse.json({ data: { deleted: deleted.count > 0 } });
+  const deleted = await deleteMySavedSearch(user.personId, id);
+  return NextResponse.json({ data: { deleted } });
 }

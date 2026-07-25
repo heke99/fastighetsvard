@@ -1,32 +1,27 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { db } from "@/lib/db";
+import { getBranding } from "@/lib/branding";
 import { getCurrentUser } from "@/lib/auth";
 import { formatSek } from "@/components/ListingCard";
+import { listMyContracts } from "@/lib/repositories/portal-records";
 
 export const metadata = { title: "Mitt boende" };
 
 export default async function MyHousingPage() {
+  const brand = getBranding();
   const user = await getCurrentUser();
   if (!user?.personId) redirect("/logga-in");
 
-  const contracts = await db.contract.findMany({
-    where: {
-      status: { in: ["ACTIVE", "TERMINATED"] },
-      parties: { some: { personId: user.personId, role: { in: ["TENANT", "CO_TENANT"] } } },
-    },
-    include: {
-      unit: { include: { property: true } },
-      terminations: { where: { status: { notIn: ["CANCELLED"] } } },
-    },
-    orderBy: { startDate: "desc" },
+  const contracts = await listMyContracts({
+    statuses: ["ACTIVE", "TERMINATED"],
+    roles: ["TENANT", "CO_TENANT"],
   });
 
   return (
     <div className="space-y-6">
       <header>
         <h1 className="text-2xl font-bold text-stone-900">Mitt boende</h1>
-        <p className="mt-1 text-stone-500">Objekt du hyr av Östgöta El Teknik.</p>
+        <p className="mt-1 text-stone-500">Objekt du hyr genom {brand.brandName}.</p>
       </header>
 
       {contracts.length === 0 ? (

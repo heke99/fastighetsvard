@@ -1,8 +1,8 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { db } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth";
 import { formatSek } from "@/components/ListingCard";
+import { getAdminDashboardMetrics } from "@/lib/repositories/admin-records";
 
 export const metadata = { title: "Admin – Dashboard" };
 
@@ -11,53 +11,14 @@ export default async function AdminDashboardPage() {
   if (!user?.organizationId) redirect("/logga-in");
   const organizationId = user.organizationId;
 
-  const now = new Date();
-  const in30Days = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
-
-  const [
+  const metrics = await getAdminDashboardMetrics(organizationId);
+  const {
     totalUnits, rentedUnits, availableUnits, upcomingUnits, forSaleUnits,
     publishedListings, activeApplications, contractsAwaitingSignature,
     overdueInvoices, activeMaintenanceRequests, urgentWorkOrders,
     upcomingMoveIns, upcomingMoveOuts, failedWebhooks, pendingReviewItems,
-    failedSyncJobs, invoiceSums,
-  ] = await Promise.all([
-    db.unit.count({ where: { organizationId } }),
-    db.unit.count({ where: { organizationId, status: "RENTED" } }),
-    db.unit.count({ where: { organizationId, status: { in: ["PUBLISHED", "APPLICATION_OPEN"] } } }),
-    db.unit.count({ where: { organizationId, status: "UPCOMING" } }),
-    db.unit.count({ where: { organizationId, status: { in: ["FOR_SALE", "BIDDING"] } } }),
-    db.listing.count({ where: { organizationId, status: "PUBLISHED" } }),
-    db.application.count({
-      where: { organizationId, status: { notIn: ["CLOSED", "WITHDRAWN", "DECLINED"] } },
-    }),
-    db.contract.count({
-      where: { organizationId, status: { in: ["SENT_FOR_SIGNING", "PARTIALLY_SIGNED"] } },
-    }),
-    db.invoice.count({
-      where: { organizationId, status: { in: ["OVERDUE", "REMINDED", "COLLECTION"] } },
-    }),
-    db.maintenanceRequest.count({
-      where: { organizationId, status: { notIn: ["CLOSED", "REJECTED"] } },
-    }),
-    db.workOrder.count({
-      where: { organizationId, priority: "URGENT", status: { notIn: ["DONE", "APPROVED", "INVOICED", "CANCELLED"] } },
-    }),
-    db.contract.count({
-      where: { organizationId, status: { in: ["SIGNED", "ACTIVE"] }, startDate: { gte: now, lte: in30Days } },
-    }),
-    db.termination.count({
-      where: { organizationId, effectiveEndDate: { gte: now, lte: in30Days }, status: { not: "CANCELLED" } },
-    }),
-    db.webhookDelivery.count({
-      where: { organizationId, status: { in: ["FAILED", "DEAD_LETTER"] } },
-    }),
-    db.syncReviewItem.count({ where: { organizationId, status: "PENDING" } }),
-    db.integrationSyncJob.count({ where: { organizationId, status: "FAILED" } }),
-    db.invoice.aggregate({
-      where: { organizationId, isCreditNote: false },
-      _sum: { paidAmount: true },
-    }),
-  ]);
+    failedSyncJobs, paidAmount,
+  } = metrics;
 
   const occupancyRate = totalUnits > 0 ? Math.round((rentedUnits / totalUnits) * 100) : 0;
   const vacancyRate = 100 - occupancyRate;
@@ -78,7 +39,7 @@ export default async function AdminDashboardPage() {
     { label: "Utflyttningar (30 dgr)", value: upcomingMoveOuts, href: "/admin/uppsagningar" },
     { label: "Uthyrningsgrad", value: `${occupancyRate} %`, href: "/admin/rapporter" },
     { label: "Vakansgrad", value: `${vacancyRate} %`, href: "/admin/rapporter" },
-    { label: "Inbetalt (externt ekonomisystem)", value: `${formatSek(invoiceSums._sum.paidAmount ?? 0)} kr`, href: "/admin/fakturor" },
+    { label: "Inbetalt (externt ekonomisystem)", value: `${formatSek(paidAmount ?? 0)} kr`, href: "/admin/fakturor" },
     { label: "Misslyckade webhooks", value: failedWebhooks, href: "/admin/webhooks", alert: failedWebhooks > 0 },
     { label: "Synkfel / granskningskö", value: `${failedSyncJobs} / ${pendingReviewItems}`, href: "/admin/integrationer", alert: pendingReviewItems > 0 },
   ];

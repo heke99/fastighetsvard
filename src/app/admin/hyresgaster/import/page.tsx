@@ -2,8 +2,8 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth";
 import { hasPermission } from "@/lib/permissions";
-import { db } from "@/lib/db";
 import { ImportWizard } from "./ImportWizard";
+import { listAdminImportJobs } from "@/lib/repositories/admin-records";
 
 export const metadata = { title: "Admin – Import av hyresgäster" };
 
@@ -13,11 +13,7 @@ export default async function ImportPage() {
     redirect("/admin");
   }
 
-  const recentJobs = await db.importJob.findMany({
-    where: { organizationId: user.organizationId, importType: "tenants" },
-    orderBy: { createdAt: "desc" },
-    take: 10,
-  });
+  const recentJobs = await listAdminImportJobs(user.organizationId, "tenants");
 
   return (
     <div className="max-w-4xl space-y-6">

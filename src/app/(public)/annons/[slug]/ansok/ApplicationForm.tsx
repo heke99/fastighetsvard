@@ -149,7 +149,7 @@ export function ApplicationForm({
         <label className="flex items-start gap-2 text-sm text-stone-700">
           <input type="checkbox" name="consent" value="1" required className="mt-0.5 h-4 w-4 rounded border-stone-300 text-brand-700" aria-describedby={state.fieldErrors?.consent ? "consent-error" : undefined} />
           <span>
-            Jag samtycker till att Östgöta El Teknik behandlar mina personuppgifter
+            Jag samtycker till att Östgöta El Teknik AB, som driver FaddeBo, behandlar mina personuppgifter
             för att handlägga min bostadsansökan, i enlighet med integritetspolicyn. <span aria-hidden="true" className="text-red-600">*</span>
           </span>
         </label>

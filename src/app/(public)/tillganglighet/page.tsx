@@ -1,12 +1,16 @@
+import { getBranding } from "@/lib/branding";
+
 export const metadata = { title: "Tillgänglighet" };
 
 export default function AccessibilityPage() {
+  const branding = getBranding();
+
   return (
     <div className="mx-auto max-w-3xl px-4 py-10 sm:px-6">
       <h1 className="text-2xl font-bold text-stone-900 sm:text-3xl">Tillgänglighetsredogörelse</h1>
       <div className="mt-6 space-y-4 text-sm leading-relaxed text-stone-700">
         <p>
-          Östgöta El Teknik strävar efter att denna webbplats ska kunna användas av
+          {branding.brandName} strävar efter att denna webbplats ska kunna användas av
           alla, oavsett funktionsförmåga. Målet är att uppfylla WCAG 2.2 nivå AA.
         </p>
         <p>Webbplatsen är byggd med:</p>

@@ -1,11 +1,11 @@
 import { redirect } from "next/navigation";
-import { db } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth";
 import { hasPermission } from "@/lib/permissions";
 import { ApplicationStatusBadge } from "@/components/StatusBadges";
 import { changeApplicationStatusAction, sendOfferAction } from "../actions";
 import { applicationTransitions } from "@/lib/state-machines";
 import { formatSek } from "@/components/ListingCard";
+import { listAdminApplications } from "@/lib/repositories/admin-records";
 
 export const metadata = { title: "Admin – Ansökningar" };
 
@@ -15,16 +15,7 @@ export default async function AdminApplicationsPage() {
     redirect("/admin");
   }
 
-  const applications = await db.application.findMany({
-    where: { organizationId: user.organizationId },
-    include: {
-      listing: { include: { unit: { select: { address: true, unitNumber: true } } } },
-      members: { include: { person: true } },
-      offers: true,
-    },
-    orderBy: { createdAt: "desc" },
-    take: 100,
-  });
+  const applications = await listAdminApplications(user.organizationId);
 
   const canUpdate = hasPermission(user.permissions, "applications", "update");
   const canOffer = hasPermission(user.permissions, "offers", "create");
@@ -40,7 +31,10 @@ export default async function AdminApplicationsPage() {
           {applications.map((app) => {
             const main = app.members.find((m) => m.role === "MAIN_APPLICANT");
             const nextStatuses = (applicationTransitions[app.status] ?? []).filter(
-              (s) => s !== "OFFER_SENT"
+              (s) => ![
+                "SUBMITTED", "OFFER_SENT", "ACCEPTED", "DECLINED",
+                "CONTRACT_SENT", "CONTRACT_SIGNED", "WITHDRAWN",
+              ].includes(s)
             );
             return (
               <li key={app.id} className="card p-5">
@@ -75,6 +69,7 @@ export default async function AdminApplicationsPage() {
                     {nextStatuses.map((next) => (
                       <form key={next} action={changeApplicationStatusAction}>
                         <input type="hidden" name="applicationId" value={app.id} />
+                        <input type="hidden" name="expectedStatus" value={app.status} />
                         <input type="hidden" name="toStatus" value={next} />
                         <button type="submit" className="rounded border border-stone-300 px-2 py-1 text-xs font-medium text-stone-700 hover:bg-stone-100">
                           → {next}

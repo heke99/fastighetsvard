@@ -1,5 +1,5 @@
-import { db } from "./db";
 import type { Database } from "@/lib/database-types";
+import { createAdminClient } from "@/lib/supabase/admin";
 
 export interface AuditInput {
   organizationId?: string | null;
@@ -33,10 +33,8 @@ export function redact(value: unknown): unknown {
   return value;
 }
 
-export async function audit(input: AuditInput, tx?: Database.TransactionClient) {
-  const client = tx ?? db;
-  await client.auditEvent.create({
-    data: {
+export async function audit(input: AuditInput) {
+  const data = {
       organizationId: input.organizationId ?? null,
       userId: input.userId ?? null,
       actorType: input.actorType ?? "user",
@@ -48,6 +46,7 @@ export async function audit(input: AuditInput, tx?: Database.TransactionClient) 
       after: input.after === undefined ? undefined : (redact(input.after) as Database.InputJsonValue),
       ip: input.ip ?? null,
       correlationId: input.correlationId ?? null,
-    },
-  });
+  };
+  const { error } = await createAdminClient().from("AuditEvent").insert(data);
+  if (error) throw new Error(`Audit kunde inte skrivas (${error.code}).`);
 }

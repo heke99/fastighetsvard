@@ -1,8 +1,8 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
-import { db } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth";
 import { MaintenanceStatusBadge } from "@/components/StatusBadges";
+import { getMyMaintenanceRequest } from "@/lib/repositories/portal-records";
 
 export const metadata = { title: "Felanmälan" };
 
@@ -15,15 +15,7 @@ export default async function MaintenanceDetailPage({
   if (!user?.personId) redirect("/logga-in");
   const { id } = await params;
 
-  // Tenant-isolering: endast egna ärenden.
-  const request = await db.maintenanceRequest.findFirst({
-    where: { id, personId: user.personId },
-    include: {
-      unit: { select: { address: true, city: true } },
-      comments: { where: { isInternal: false }, orderBy: { createdAt: "asc" } },
-      statusHistory: { orderBy: { createdAt: "asc" } },
-    },
-  });
+  const request = await getMyMaintenanceRequest(user.personId, id);
   if (!request) notFound();
 
   return (

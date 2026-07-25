@@ -49,7 +49,7 @@ export function RegisterForm() {
       <label className="flex items-start gap-2 text-sm text-stone-700">
         <input type="checkbox" name="consent" value="1" required className="mt-0.5 h-4 w-4 rounded border-stone-300 text-brand-700" />
         <span>
-          Jag godkänner att Östgöta El Teknik behandlar mina personuppgifter enligt{" "}
+          Jag godkänner att Östgöta El Teknik AB, som driver FaddeBo, behandlar mina personuppgifter enligt{" "}
           <a href="/integritetspolicy" className="text-brand-700 underline">integritetspolicyn</a>.
         </span>
       </label>

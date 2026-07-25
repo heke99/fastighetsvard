@@ -1,13 +1,17 @@
+import { getBranding } from "@/lib/branding";
+
 export const metadata = { title: "Integritetspolicy" };
 
 export default function PrivacyPage() {
+  const brand = getBranding();
   return (
     <div className="mx-auto max-w-3xl px-4 py-10 sm:px-6">
       <h1 className="text-2xl font-bold text-stone-900 sm:text-3xl">Integritetspolicy</h1>
       <div className="prose prose-stone mt-6 max-w-none text-stone-700">
         <p>
-          Östgöta El Teknik AB (org.nr 559350-5620) är personuppgiftsansvarig för
-          behandlingen av personuppgifter på denna plattform.
+          {brand.legalName} (org.nr {brand.organizationNumber}) är
+          personuppgiftsansvarig för behandlingen av personuppgifter på denna
+          plattform.
         </p>
         <h2 className="mt-6 text-lg font-semibold text-stone-900">Vilka uppgifter behandlar vi?</h2>
         <p className="mt-2 text-sm leading-relaxed">
@@ -28,8 +32,8 @@ export default function PrivacyPage() {
         <p className="mt-2 text-sm leading-relaxed">
           Du har rätt till registerutdrag, rättelse, radering (där det är juridiskt
           möjligt), dataportabilitet och att invända mot behandling. Kontakta{" "}
-          <a href="mailto:dataskydd@ostgotaelteknik.se" className="text-brand-700 underline">
-            dataskydd@ostgotaelteknik.se
+          <a href={`mailto:${brand.privacyEmail}`} className="text-brand-700 underline">
+            {brand.privacyEmail}
           </a>{" "}
           eller använd funktionerna under Mina sidor → Min profil.
         </p>

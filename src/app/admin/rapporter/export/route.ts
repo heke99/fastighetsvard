@@ -1,8 +1,8 @@
 import { NextResponse } from "next/server";
-import { db } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth";
 import { hasPermission } from "@/lib/permissions";
 import { audit } from "@/lib/audit";
+import { listAdminUnits } from "@/lib/repositories/admin-records";
 
 /** CSV-export av objekt- och uthyrningsrapport. */
 export async function GET() {
@@ -14,17 +14,7 @@ export async function GET() {
     );
   }
 
-  const units = await db.unit.findMany({
-    where: { organizationId: user.organizationId },
-    include: {
-      property: { select: { name: true } },
-      contracts: {
-        where: { status: "ACTIVE" },
-        include: { parties: { include: { person: true } } },
-      },
-    },
-    orderBy: { unitNumber: "asc" },
-  });
+  const { units } = await listAdminUnits(user.organizationId, undefined, 5000);
 
   const header = "objektsnummer;typ;adress;ort;status;hyra;hyresgast;avtalsnummer;fastighet";
   const lines = units.map((u) => {

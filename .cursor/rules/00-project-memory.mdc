@@ -1,0 +1,14 @@
+---
+description: Mandatory persistent FaddeBo project-memory workflow
+alwaysApply: true
+---
+
+Read `AGENTS.md`, `.agent-memory/README.md`, `current-state.md`,
+`open-blockers.md`, `next-actions.md`, `canonical-architecture.md` and relevant
+domain memory before non-trivial work. Inspect the implementation. Code, current
+schema and executed tests outrank historical memory.
+
+Update affected memory documents in the same task. Before completion, run
+applicable verification, update state/blockers/actions and append a concise
+session log. Never store secrets, tokens, personal identifiers or production
+data in memory. Memory installation is not a stopping point.

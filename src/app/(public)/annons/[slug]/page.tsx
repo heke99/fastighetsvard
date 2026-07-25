@@ -1,9 +1,13 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { db } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth";
 import { formatSek, formatDate } from "@/components/ListingCard";
 import { FavoriteButton } from "@/components/FavoriteButton";
+import {
+  getCurrentActiveTenancy,
+  getPublicListingBySlug,
+  isFavoriteListing,
+} from "@/lib/repositories/public-catalog";
 
 export const dynamic = "force-dynamic";
 
@@ -13,43 +17,17 @@ export default async function ListingDetailPage({
   params: Promise<{ slug: string }>;
 }) {
   const { slug } = await params;
-  const listing = await db.listing.findFirst({
-    where: { slug, status: "PUBLISHED" },
-    include: {
-      unit: {
-        include: {
-          media: { orderBy: { sortOrder: "asc" } },
-          property: { select: { name: true, energyClass: true, yearBuilt: true } },
-        },
-      },
-      viewings: {
-        where: { startsAt: { gte: new Date() } },
-        orderBy: { startsAt: "asc" },
-        take: 5,
-      },
-    },
-  });
+  const listing = await getPublicListingBySlug(slug);
   if (!listing) notFound();
 
   const user = await getCurrentUser();
-  const isFavorite = user?.personId
-    ? Boolean(
-        await db.favorite.findUnique({
-          where: { personId_listingId: { personId: user.personId, listingId: listing.id } },
-        })
-      )
-    : false;
-
-  const hasActiveContract = user?.personId
-    ? Boolean(
-        await db.contract.findFirst({
-          where: {
-            status: "ACTIVE",
-            parties: { some: { personId: user.personId, role: { in: ["TENANT", "CO_TENANT"] } } },
-          },
-        })
-      )
-    : false;
+  const [isFavorite, activeTenancy] = user?.personId
+    ? await Promise.all([
+        isFavoriteListing(user.personId, String(listing.id)),
+        getCurrentActiveTenancy(),
+      ])
+    : [false, null];
+  const hasActiveContract = Boolean(activeTenancy);
 
   const { unit } = listing;
   const isSale = listing.category === "SALE";

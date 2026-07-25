@@ -1,7 +1,6 @@
-import { db } from "@/lib/db";
 import { withApiAuth, parsePagination, paginatedResponse } from "@/lib/api/helpers";
 import { serializePerson } from "@/lib/api/serializers";
-import type { Database } from "@/lib/database-types";
+import { listApiTenants } from "@/lib/repositories/external-api-records";
 
 /** GET /api/v1/tenants – personer med rollen TENANT. */
 export const GET = withApiAuth("tenants:read", async (req, ctx) => {
@@ -9,28 +8,12 @@ export const GET = withApiAuth("tenants:read", async (req, ctx) => {
   const pagination = parsePagination(req);
   const activeOnly = url.searchParams.get("active") === "true";
 
-  const where: Database.PersonWhereInput = {
+  const { items, total } = await listApiTenants({
     organizationId: ctx.organizationId,
-    roles: { some: { role: "TENANT" } },
-    ...(activeOnly
-      ? {
-          contractParties: {
-            some: { role: { in: ["TENANT", "CO_TENANT"] }, contract: { status: "ACTIVE" } },
-          },
-        }
-      : {}),
-  };
-
-  const [items, total] = await Promise.all([
-    db.person.findMany({
-      where,
-      include: { externalReferences: { where: { entityType: "customer" } } },
-      orderBy: { lastName: "asc" },
-      skip: pagination.skip,
-      take: pagination.take,
-    }),
-    db.person.count({ where }),
-  ]);
+    activeOnly,
+    skip: pagination.skip,
+    take: pagination.take,
+  });
 
   return paginatedResponse(items.map(serializePerson), total, pagination, ctx);
 });

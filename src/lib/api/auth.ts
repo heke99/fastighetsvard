@@ -1,5 +1,4 @@
 import { NextRequest } from "next/server";
-import { db } from "@/lib/db";
 import { sha256 } from "@/lib/crypto";
 import { getTrustedClientIp } from "@/lib/http-client-ip";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -38,11 +37,20 @@ export async function authenticateApiRequest(
     throw new ApiError(401, "unauthenticated", "Authorization: Bearer <api-key> krävs.");
   }
   const key = header.slice(7).trim();
-  const apiKey = await db.apiKey.findUnique({ where: { keyHash: sha256(key) } });
+  const admin = createAdminClient();
+  const { data, error } = await admin
+    .from("ApiKey")
+    .select("id,organizationId,name,keyPrefix,keyHash,scopes,allowedIps,isActive,lastUsedAt,expiresAt,revokedAt")
+    .eq("keyHash", sha256(key))
+    .maybeSingle();
+  if (error) {
+    throw new ApiError(503, "api_key_lookup_failed", "API-nyckeln kunde inte verifieras.");
+  }
+  const apiKey = data as ApiKey | null;
   if (!apiKey || !apiKey.isActive || apiKey.revokedAt) {
     throw new ApiError(401, "invalid_api_key", "Ogiltig eller revokerad API-nyckel.");
   }
-  if (apiKey.expiresAt && apiKey.expiresAt < new Date()) {
+  if (apiKey.expiresAt && new Date(apiKey.expiresAt) < new Date()) {
     throw new ApiError(401, "expired_api_key", "API-nyckeln har gått ut.");
   }
   if (apiKey.allowedIps.length > 0) {
@@ -55,10 +63,13 @@ export async function authenticateApiRequest(
     throw new ApiError(403, "insufficient_scope", `Nyckeln saknar behörighet: ${requiredScope}.`);
   }
 
-  await db.apiKey.update({
-    where: { id: apiKey.id },
-    data: { lastUsedAt: new Date() },
-  });
+  const { error: updateError } = await admin
+    .from("ApiKey")
+    .update({ lastUsedAt: new Date().toISOString() })
+    .eq("id", apiKey.id);
+  if (updateError) {
+    throw new ApiError(503, "api_key_update_failed", "API-nyckeln kunde inte registreras.");
+  }
 
   return {
     apiKey,

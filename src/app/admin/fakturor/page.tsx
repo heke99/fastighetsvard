@@ -1,10 +1,9 @@
 import { redirect } from "next/navigation";
-import { db } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth";
 import { hasPermission } from "@/lib/permissions";
 import { InvoiceStatusBadge } from "@/components/StatusBadges";
 import { formatSek } from "@/components/ListingCard";
-import type { InvoiceStatus } from "@/lib/database-types";
+import { listAdminInvoices } from "@/lib/repositories/admin-records";
 
 export const metadata = { title: "Admin – Fakturor" };
 
@@ -19,19 +18,7 @@ export default async function AdminInvoicesPage({
   }
   const { status } = await searchParams;
 
-  const invoices = await db.invoice.findMany({
-    where: {
-      organizationId: user.organizationId,
-      ...(status ? { status: status as InvoiceStatus } : {}),
-    },
-    include: {
-      person: { select: { firstName: true, lastName: true } },
-      contract: { select: { contractNumber: true } },
-      externalReferences: true,
-    },
-    orderBy: { invoiceDate: "desc" },
-    take: 200,
-  });
+  const invoices = await listAdminInvoices(user.organizationId, status);
 
   return (
     <div className="space-y-6">

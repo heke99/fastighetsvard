@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
-import { db } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth";
 import { MaintenanceForm } from "./MaintenanceForm";
+import { listMyRentalUnits } from "@/lib/repositories/portal-records";
 
 export const metadata = { title: "Ny felanmälan" };
 
@@ -14,15 +14,7 @@ export default async function NewMaintenancePage({
   if (!user?.personId) redirect("/logga-in?next=/mina-sidor/felanmalan/ny");
   const { unit: preselectedUnit } = await searchParams;
 
-  // Objekt personen har aktiva avtal på.
-  const contracts = await db.contract.findMany({
-    where: {
-      status: { in: ["ACTIVE", "TERMINATED"] },
-      parties: { some: { personId: user.personId, role: { in: ["TENANT", "CO_TENANT"] } } },
-    },
-    include: { unit: { select: { id: true, address: true, city: true, propertyId: true } } },
-  });
-  const units = [...new Map<string, { id: string; address: string; city: string }>(contracts.map((c: any) => [c.unit.id, c.unit])).values()];
+  const units = await listMyRentalUnits();
 
   return (
     <div className="space-y-6">

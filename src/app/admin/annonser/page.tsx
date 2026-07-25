@@ -1,11 +1,11 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { db } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth";
 import { hasPermission } from "@/lib/permissions";
 import { ActionForm } from "@/components/admin/ActionForm";
 import { createListingAction, changeListingStatusAction } from "../actions";
 import { listingTransitions } from "@/lib/state-machines";
+import { listAdminListings } from "@/lib/repositories/admin-records";
 
 export const metadata = { title: "Admin – Annonser" };
 
@@ -20,24 +20,7 @@ export default async function AdminListingsPage() {
     redirect("/admin");
   }
 
-  const [listings, units] = await Promise.all([
-    db.listing.findMany({
-      where: { organizationId: user.organizationId },
-      include: {
-        unit: { select: { unitNumber: true, address: true, city: true } },
-        _count: { select: { applications: true, favorites: true } },
-      },
-      orderBy: { createdAt: "desc" },
-      take: 100,
-    }),
-    db.unit.findMany({
-      where: {
-        organizationId: user.organizationId,
-        status: { in: ["NOT_PUBLISHED", "UPCOMING", "DRAFT", "PUBLISHED"] },
-      },
-      orderBy: { unitNumber: "asc" },
-    }),
-  ]);
+  const { listings, units } = await listAdminListings(user.organizationId);
 
   const canUpdate = hasPermission(user.permissions, "listings", "update");
   const canCreate = hasPermission(user.permissions, "listings", "create");
@@ -84,6 +67,7 @@ export default async function AdminListingsPage() {
                       {(listingTransitions[l.status] ?? []).map((next) => (
                         <form key={next} action={changeListingStatusAction}>
                           <input type="hidden" name="listingId" value={l.id} />
+                          <input type="hidden" name="expectedStatus" value={l.status} />
                           <input type="hidden" name="toStatus" value={next} />
                           <button type="submit" className="rounded border border-stone-300 px-2 py-1 text-xs font-medium text-stone-700 hover:bg-stone-100">
                             → {statusLabels[next]}

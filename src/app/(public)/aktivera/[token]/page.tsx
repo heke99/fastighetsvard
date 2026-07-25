@@ -1,5 +1,5 @@
-import { db } from "@/lib/db";
 import { sha256 } from "@/lib/crypto";
+import { getInvitationPreview } from "@/lib/repositories/account-lookups";
 import { ActivateForm } from "./ActivateForm";
 
 export const metadata = { title: "Aktivera konto" };
@@ -11,11 +11,11 @@ export default async function ActivatePage({
   params: Promise<{ token: string }>;
 }) {
   const { token } = await params;
-  const invitation = await db.invitation.findUnique({
-    where: { tokenHash: sha256(token) },
-    include: { person: { select: { firstName: true } } },
-  });
-  const valid = invitation && !invitation.acceptedAt && invitation.expiresAt > new Date();
+  const invitation = await getInvitationPreview(sha256(token));
+  const valid =
+    invitation &&
+    !invitation.acceptedAt &&
+    new Date(invitation.expiresAt) > new Date();
 
   return (
     <div className="mx-auto max-w-md px-4 py-12 sm:px-6">
@@ -23,7 +23,7 @@ export default async function ActivatePage({
       {valid ? (
         <>
           <p className="mt-1 text-stone-500">
-            Hej {invitation.person.firstName}! Välj ett lösenord för att aktivera
+            Hej {invitation.firstName}! Välj ett lösenord för att aktivera
             ditt konto på Mina sidor. Här ser du sedan ditt avtal, dina fakturor och
             kan göra felanmälningar.
           </p>

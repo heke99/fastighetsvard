@@ -1,77 +1,45 @@
 import { randomInt } from "crypto";
-import { db } from "@/lib/db";
-import { audit } from "@/lib/audit";
 import { hmacSha256, sha256 } from "@/lib/crypto";
 import { sendEmail } from "@/lib/email";
-import { assertTransition, contractTransitions } from "@/lib/state-machines";
-import { dispatchEvent } from "@/lib/services/webhooks";
+import { getBranding } from "@/lib/branding";
 import {
+  activateSignedRentalContract,
+  changeRentalContractStatus,
+  createRentalContractVersion,
   createEmailSigningChallenge,
   requestRentalContractTermination,
   verifyEmailSigningChallenge,
 } from "@/lib/repositories/rental-operations";
-import type { ContractStatus, Database } from "@/lib/database-types";
+import type { ContractStatus } from "@/lib/database-types";
 
-/**
- * Äldre administrativ statusfunktion. Concurrency-kritiska övergångar som
- * signering, aktivering och uppsägning ska gå genom de särskilda RPC:erna.
- */
 export async function changeContractStatus(
-  organizationId: string,
+  _organizationId: string,
   contractId: string,
   toStatus: ContractStatus,
-  opts: { comment?: string; actorUserId?: string } = {}
+  opts: {
+    expectedStatus: ContractStatus;
+    comment?: string;
+    idempotencyKey?: string;
+  }
 ) {
-  const result = await db.$transaction(async (tx) => {
-    const contract = await tx.contract.findFirst({ where: { id: contractId, organizationId } });
-    if (!contract) throw new Error("Avtalet hittades inte.");
-    assertTransition("contract", contractTransitions, contract.status, toStatus);
-    const updated = await tx.contract.update({
-      where: { id: contractId },
-      data: {
-        status: toStatus,
-        activatedAt: toStatus === "ACTIVE" ? new Date() : contract.activatedAt,
-        terminatedAt: toStatus === "TERMINATED" ? new Date() : contract.terminatedAt,
-      },
-    });
-    await tx.contractStatusEvent.create({
-      data: {
-        contractId,
-        fromStatus: contract.status,
-        toStatus,
-        comment: opts.comment ?? null,
-        changedByUserId: opts.actorUserId ?? null,
-      },
-    });
-    await audit(
-      {
-        organizationId,
-        userId: opts.actorUserId,
-        action: "status_change",
-        entityType: "contract",
-        entityId: contractId,
-        before: { status: contract.status },
-        after: { status: toStatus },
-      },
-      tx
-    );
-    return updated;
-  });
-
-  const eventMap: Partial<Record<ContractStatus, string>> = {
-    SIGNED: "contract.signed",
-    ACTIVE: "contract.activated",
-    TERMINATED: "contract.terminated",
-  };
-  const event = eventMap[toStatus];
-  if (event) {
-    await dispatchEvent(organizationId, event, {
+  if (toStatus === "ACTIVE") {
+    if (!opts.idempotencyKey) throw new Error("Idempotency key krävs för avtalsaktivering.");
+    return activateSignedRentalContract({
       contractId,
-      contractNumber: result.contractNumber,
-      status: toStatus,
+      idempotencyKey: opts.idempotencyKey,
+      requestHash: sha256(JSON.stringify({
+        contractId,
+        expectedStatus: opts.expectedStatus,
+        toStatus,
+      })),
     });
   }
-  return result;
+  return changeRentalContractStatus({
+    contractId,
+    expectedStatus: opts.expectedStatus,
+    toStatus,
+    comment: opts.comment,
+  });
 }
 
 /** Begär en kortlivad och single-use e-postkod bunden till dokumenthashen. */
@@ -98,7 +66,7 @@ export async function requestContractSigningCode(input: {
     expiresAt,
   });
 
-  const brand = process.env.BRAND_COMPANY_NAME?.trim() || "Fastighetsvärd";
+  const brand = getBranding().brandName;
   await sendEmail({
     to: input.verifiedEmail,
     subject: `Signeringskod för ditt avtal hos ${brand}`,
@@ -133,26 +101,16 @@ export async function verifyContractSigningCode(input: {
 
 /** Ny avtalsversion för osignerade avtal. Full adminmigrering till RPC återstår. */
 export async function createContractVersion(
-  organizationId: string,
+  _organizationId: string,
   contractId: string,
   content: Record<string, unknown>,
-  actorUserId?: string
+  expectedContractVersion: number
 ) {
-  return db.$transaction(async (tx) => {
-    const contract = await tx.contract.findFirst({
-      where: { id: contractId, organizationId },
-      include: { versions: { orderBy: { versionNumber: "desc" }, take: 1 } },
-    });
-    if (!contract) throw new Error("Avtalet hittades inte.");
-    const nextVersion = (contract.versions[0]?.versionNumber ?? 0) + 1;
-    return tx.contractVersion.create({
-      data: {
-        contractId,
-        versionNumber: nextVersion,
-        content: content as Database.InputJsonValue,
-        createdByUserId: actorUserId ?? null,
-      },
-    });
+  return createRentalContractVersion({
+    contractId,
+    content,
+    documentHash: sha256(JSON.stringify(content)),
+    expectedContractVersion,
   });
 }
 

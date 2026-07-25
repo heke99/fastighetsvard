@@ -1,5 +1,4 @@
 import { z } from "zod";
-import { db } from "@/lib/db";
 import {
   withApiAuth,
   parsePagination,
@@ -10,19 +9,18 @@ import { serializeWebhookSubscription } from "@/lib/api/serializers";
 import { OUTBOUND_EVENTS } from "@/lib/services/webhooks";
 import { generateToken } from "@/lib/crypto";
 import { audit } from "@/lib/audit";
+import {
+  createApiWebhookSubscription,
+  listApiWebhookSubscriptions,
+} from "@/lib/repositories/external-api-records";
 
 export const GET = withApiAuth("webhook-subscriptions:read", async (req, ctx) => {
   const pagination = parsePagination(req);
-  const where = { organizationId: ctx.organizationId };
-  const [items, total] = await Promise.all([
-    db.webhookSubscription.findMany({
-      where,
-      orderBy: { createdAt: "desc" },
-      skip: pagination.skip,
-      take: pagination.take,
-    }),
-    db.webhookSubscription.count({ where }),
-  ]);
+  const { items, total } = await listApiWebhookSubscriptions({
+    organizationId: ctx.organizationId,
+    skip: pagination.skip,
+    take: pagination.take,
+  });
   return paginatedResponse(items.map(serializeWebhookSubscription), total, pagination, ctx);
 });
 
@@ -40,13 +38,11 @@ export const POST = withApiAuth("webhook-subscriptions:write", async (req, ctx) 
   return withIdempotency(req, ctx, bodyText, async () => {
     const input = createSchema.parse(JSON.parse(bodyText));
     const secret = `whsec_${generateToken(32)}`;
-    const subscription = await db.webhookSubscription.create({
-      data: {
-        organizationId: ctx.organizationId,
-        url: input.url,
-        secret,
-        events: input.events,
-      },
+    const subscription = await createApiWebhookSubscription({
+      organizationId: ctx.organizationId,
+      url: input.url,
+      secret,
+      events: input.events,
     });
     await audit({
       organizationId: ctx.organizationId,

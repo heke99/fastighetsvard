@@ -2,7 +2,7 @@
 
 ## Omfattning
 
-Denna etapp åtgärdar de mest riskfyllda fundamenten i den ursprungliga lösningen. Den är inte en deklaration att hela HomeQ-målbilden är färdig.
+Denna etapp åtgärdar de mest riskfyllda fundamenten i den ursprungliga lösningen. Den är inte en deklaration att hela FaddeBo-målbilden är färdig.
 
 Genomfört:
 
@@ -18,22 +18,22 @@ Genomfört:
 - default-deny RLS för nya domäntabeller och path-bunden privat Storage-läsning;
 - databasbaserad distribuerad rate limiting;
 - synkroniserad Node/npm-version och utökad CI;
-- central grundkonfiguration för branding.
+- central grundkonfiguration för branding;
+- separat FaddeBo-varumärke och juridisk organisation;
+- avvecklad generisk heltabellsadapter och domänspecifika repositories/RPC:er.
 
 ## Kända blockerare
 
 Följande måste slutföras innan riktiga personuppgifter eller juridiskt bindande avtal används:
 
-1. `src/lib/db.ts` finns kvar och används av äldre admin- och read-flöden. Den gör heltabellsläsningar, Node-filtrering och har en falsk `$transaction`.
-2. Alla adminmuteringar är ännu inte flyttade till domänspecifika repositories/RPC-funktioner.
-3. Personnummerkolumnen i legacy-schemat är inte fullt backfillad till krypterat värde + HMAC-sökhash.
-4. E-post-OTP skickas direkt i requesten; leveransen ska flyttas till transactional outbox-worker.
-5. Full e-signeringsprovider/BankID, certifikatbevis och slut-PDF-generering återstår.
-6. SSRF-skydd och asynkron inkommande webhookprocessor är inte komplett.
-7. Ekonomiprovider är inte produktionskopplad och mockprovider måste hållas avstängd i produktion.
-8. Fullständig RLS-matris för alla äldre tabeller och samtliga skrivoperationer måste verifieras mot riktig lokal Supabase.
-9. Verkliga parallella concurrencytester och E2E har inte körts i denna miljö.
-10. Publik sökning, bevakningar, kravmotor, visningsväntelista, dokumentgranskning, full in-/avflyttning och entreprenörsflöden är inte kompletta enligt masterplanen.
+1. Personnummerkolumnen i legacy-schemat är inte fullt backfillad till krypterat värde + HMAC-sökhash.
+2. E-post-OTP skickas direkt i requesten; leveransen ska flyttas till transactional outbox-worker.
+3. Full e-signeringsprovider/BankID, certifikatbevis och slut-PDF-generering återstår.
+4. SSRF-skydd och asynkron inkommande webhookprocessor måste runtime-verifieras.
+5. Ekonomiprovider är inte produktionskopplad och mockprovider måste hållas avstängd i produktion.
+6. Fullständig migrationskedja, RLS-matris och Storage-policyer måste exekveras och verifieras mot riktig Supabase.
+7. Verkliga parallella concurrencytester och E2E har inte körts i denna miljö.
+8. Publik sökning, bevakningar, kravmotor, visningsväntelista, dokumentgranskning, full in-/avflyttning och entreprenörsflöden behöver fullständig produktacceptans mot masterplanen.
 
 ## Säkerhetsgräns
 

@@ -105,7 +105,7 @@ export const SYSTEM_ROLES: {
   },
   {
     slug: "caretaker",
-    name: "Fastighetsvärd",
+    name: "Kvartersvärd",
     permissions: [
       "properties:read", "buildings:read", "units:read", "maintenance:*",
       "workorders:*", "messages:*", "persons:read", "documents:read",

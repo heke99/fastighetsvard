@@ -1,8 +1,8 @@
 {
-  "name": "ostgota-el-teknik-fastighet",
+  "name": "faddebo",
   "version": "1.0.0",
   "private": true,
-  "description": "Fastighetsplattform för Östgöta El Teknik – uthyrning, försäljning, Mina sidor, förvaltning och bokföringsintegration.",
+  "description": "FaddeBo – fastighets-, uthyrnings- och hyresgästplattform för Östgöta El Teknik AB.",
   "scripts": {
     "dev": "next dev",
     "build": "next build",

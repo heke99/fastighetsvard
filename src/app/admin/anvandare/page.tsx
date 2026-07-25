@@ -1,9 +1,9 @@
 import { redirect } from "next/navigation";
-import { db } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth";
 import { hasPermission } from "@/lib/permissions";
 import { ActionForm } from "@/components/admin/ActionForm";
 import { createStaffUserAction, createRoleAction } from "../actions";
+import { listAdminUsersAndRoles } from "@/lib/repositories/admin-records";
 
 export const metadata = { title: "Admin – Användare & roller" };
 
@@ -13,23 +13,7 @@ export default async function AdminUsersPage() {
     redirect("/admin");
   }
 
-  const [users, roles] = await Promise.all([
-    db.user.findMany({
-      where: { organizationId: user.organizationId },
-      include: {
-        person: { select: { firstName: true, lastName: true } },
-        userRoles: { include: { role: { select: { name: true, slug: true } } } },
-        supplier: { select: { name: true } },
-      },
-      orderBy: { createdAt: "desc" },
-      take: 200,
-    }),
-    db.role.findMany({
-      where: { OR: [{ organizationId: null }, { organizationId: user.organizationId }] },
-      include: { permissions: true, _count: { select: { userRoles: true } } },
-      orderBy: { name: "asc" },
-    }),
-  ]);
+  const { users, roles } = await listAdminUsersAndRoles(user.organizationId);
 
   const canCreateUser = hasPermission(user.permissions, "users", "create");
   const canCreateRole = hasPermission(user.permissions, "roles", "create");
@@ -75,9 +59,6 @@ export default async function AdminUsersPage() {
                   <span className={`badge ${u.isActive ? "bg-brand-100 text-brand-800" : "bg-red-100 text-red-800"}`}>
                     {u.isActive ? "Aktiv" : "Avstängd"}
                   </span>
-                  {u.lockedUntil && u.lockedUntil > new Date() && (
-                    <span className="badge ml-1 bg-red-100 text-red-800">Låst</span>
-                  )}
                 </td>
               </tr>
             ))}

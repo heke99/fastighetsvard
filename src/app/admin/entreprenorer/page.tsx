@@ -1,9 +1,9 @@
 import { redirect } from "next/navigation";
-import { db } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth";
 import { hasPermission } from "@/lib/permissions";
 import { ActionForm } from "@/components/admin/ActionForm";
 import { createSupplierAction } from "../actions";
+import { listAdminSuppliers } from "@/lib/repositories/admin-records";
 
 export const metadata = { title: "Admin – Entreprenörer" };
 
@@ -13,14 +13,7 @@ export default async function AdminSuppliersPage() {
     redirect("/admin");
   }
 
-  const suppliers = await db.supplier.findMany({
-    where: { organizationId: user.organizationId },
-    include: {
-      users: { select: { email: true } },
-      _count: { select: { workOrders: true } },
-    },
-    orderBy: { name: "asc" },
-  });
+  const suppliers = await listAdminSuppliers(user.organizationId);
 
   const canCreate = hasPermission(user.permissions, "suppliers", "create");
 

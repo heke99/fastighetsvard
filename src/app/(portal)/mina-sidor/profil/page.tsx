@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
-import { db } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth";
+import { getMyProfile } from "@/lib/repositories/portal-records";
 import { ProfileForm, DataExportButton } from "./forms";
 
 export const metadata = { title: "Min profil" };
@@ -10,7 +10,7 @@ export default async function ProfilePage() {
   if (!user) redirect("/logga-in");
 
   const person = user.personId
-    ? await db.person.findUnique({ where: { id: user.personId } })
+    ? await getMyProfile(user.personId)
     : null;
 
   return (

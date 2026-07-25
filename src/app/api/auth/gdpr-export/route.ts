@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
-import { db } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth";
 import { audit } from "@/lib/audit";
+import { getMyGdprExport } from "@/lib/repositories/portal-records";
 
 /**
  * GET /api/auth/gdpr-export
@@ -16,20 +16,7 @@ export async function GET() {
     );
   }
 
-  const person = await db.person.findUnique({
-    where: { id: user.personId },
-    include: {
-      roles: true,
-      applicationMembers: { include: { application: { include: { listing: { select: { title: true } } } } } },
-      contractParties: { include: { contract: { select: { contractNumber: true, status: true, startDate: true, rent: true } } } },
-      invoices: { select: { invoiceNumber: true, status: true, invoiceDate: true, dueDate: true, totalAmount: true, paidAmount: true } },
-      maintenanceRequests: { select: { requestNumber: true, title: true, status: true, createdAt: true } },
-      favorites: { include: { listing: { select: { title: true } } } },
-      savedSearches: { select: { name: true, criteria: true, createdAt: true } },
-      notifications: { select: { eventType: true, title: true, createdAt: true } },
-      documents: { select: { title: true, type: true, createdAt: true } },
-    },
-  });
+  const person = await getMyGdprExport(user.personId);
 
   await audit({
     organizationId: user.organizationId,

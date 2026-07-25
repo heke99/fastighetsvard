@@ -7,8 +7,8 @@ const brand = getBranding();
 export const metadata: Metadata = {
   metadataBase: new URL(brand.appUrl),
   title: {
-    default: `${brand.companyName} – Bostäder & lokaler`,
-    template: `%s | ${brand.companyName}`,
+    default: `${brand.brandName} – Bostäder & lokaler`,
+    template: `%s | ${brand.brandName}`,
   },
   description: brand.description,
 };

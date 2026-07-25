@@ -2,7 +2,10 @@ import Link from "next/link";
 import { searchListings, type ListingSearchParams } from "@/lib/services/listings";
 import { ListingCard, type ListingWithUnit } from "@/components/ListingCard";
 import { getCurrentUser } from "@/lib/auth";
-import { db } from "@/lib/db";
+import {
+  listFavoriteListingIds,
+  listPublishedCities,
+} from "@/lib/repositories/public-catalog";
 import type { ListingCategory } from "@/lib/database-types";
 import { SaveSearchButton } from "./SaveSearchButton";
 
@@ -68,16 +71,12 @@ export async function ListingSearchPage({
 
   const [result, cities, favorites] = await Promise.all([
     searchListings(params),
-    db.unit.findMany({
-      where: { listings: { some: { status: "PUBLISHED" } } },
-      select: { city: true },
-      distinct: ["city"],
-    }),
+    listPublishedCities(category),
     user?.personId
-      ? db.favorite.findMany({ where: { personId: user.personId }, select: { listingId: true } })
-      : Promise.resolve([]),
+      ? listFavoriteListingIds(user.personId)
+      : Promise.resolve(new Set<string>()),
   ]);
-  const favoriteIds = new Set(favorites.map((f) => f.listingId));
+  const favoriteIds = favorites;
   const isSale = category === "SALE";
 
   const checkboxes: { name: string; label: string }[] = [
@@ -120,8 +119,8 @@ export async function ListingSearchPage({
               <label htmlFor="city" className="label">Ort</label>
               <select id="city" name="city" defaultValue={params.city ?? ""} className="input">
                 <option value="">Alla orter</option>
-                {cities.map((c) => (
-                  <option key={c.city} value={c.city}>{c.city}</option>
+                {cities.map((city) => (
+                  <option key={city} value={city}>{city}</option>
                 ))}
               </select>
             </div>

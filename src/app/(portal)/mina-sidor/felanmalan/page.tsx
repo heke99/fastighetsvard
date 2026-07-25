@@ -1,8 +1,8 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { db } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth";
 import { MaintenanceStatusBadge } from "@/components/StatusBadges";
+import { listMyMaintenanceRequests } from "@/lib/repositories/portal-records";
 
 export const metadata = { title: "Mina felanmälningar" };
 
@@ -10,11 +10,7 @@ export default async function MyMaintenancePage() {
   const user = await getCurrentUser();
   if (!user?.personId) redirect("/logga-in");
 
-  const requests = await db.maintenanceRequest.findMany({
-    where: { personId: user.personId },
-    include: { unit: { select: { address: true } } },
-    orderBy: { createdAt: "desc" },
-  });
+  const requests = await listMyMaintenanceRequests(user.personId);
 
   return (
     <div className="space-y-6">

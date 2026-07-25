@@ -1,12 +1,12 @@
 import { randomUUID } from "node:crypto";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
-import { db } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth";
 import { formatSek } from "@/components/ListingCard";
 import { ContractStatusBadge } from "@/components/StatusBadges";
 import { calculateEarliestEndDate } from "@/lib/services/contracts";
 import { SignContractForm, TerminateContractForm } from "./forms";
+import { getMyContract } from "@/lib/repositories/portal-records";
 
 export const metadata = { title: "Avtal" };
 
@@ -19,18 +19,7 @@ export default async function ContractDetailPage({
   if (!user?.personId) redirect("/logga-in");
   const { id } = await params;
 
-  // Tenant-isolering: endast avtal där personen är part.
-  const contract = await db.contract.findFirst({
-    where: { id, parties: { some: { personId: user.personId } } },
-    include: {
-      unit: { include: { property: true } },
-      parties: { include: { person: true } },
-      versions: { orderBy: { versionNumber: "desc" } },
-      documents: true,
-      statusHistory: { orderBy: { createdAt: "desc" }, take: 10 },
-      terminations: { where: { status: { not: "CANCELLED" } } },
-    },
-  });
+  const contract = await getMyContract(id);
   if (!contract) notFound();
 
   const myParty = contract.parties.find((p) => p.personId === user.personId);

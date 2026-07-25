@@ -1,7 +1,6 @@
-import { db } from "@/lib/db";
 import { withApiAuth, parsePagination, paginatedResponse } from "@/lib/api/helpers";
 import { serializeUnit } from "@/lib/api/serializers";
-import type { Database, UnitStatus, UnitType } from "@/lib/database-types";
+import { listOrganizationRecords } from "@/lib/repositories/api-records";
 
 export const GET = withApiAuth("units:read", async (req, ctx) => {
   const url = new URL(req.url);
@@ -11,23 +10,20 @@ export const GET = withApiAuth("units:read", async (req, ctx) => {
   const city = url.searchParams.get("city");
   const propertyId = url.searchParams.get("property_id");
 
-  const where: Database.UnitWhereInput = {
+  const { items, total } = await listOrganizationRecords({
+    table: "Unit",
+    columns: "id,propertyId,unitNumber,apartmentNumber,type,status,address,postalCode,city,area,floorLevel,rooms,livingArea,rent,price,availableFrom,createdAt,updatedAt",
     organizationId: ctx.organizationId,
-    ...(status ? { status: status.toUpperCase() as UnitStatus } : {}),
-    ...(type ? { type: type.toUpperCase() as UnitType } : {}),
-    ...(city ? { city: { equals: city, mode: "insensitive" } } : {}),
-    ...(propertyId ? { propertyId } : {}),
-  };
-
-  const [items, total] = await Promise.all([
-    db.unit.findMany({
-      where,
-      orderBy: { unitNumber: "asc" },
-      skip: pagination.skip,
-      take: pagination.take,
-    }),
-    db.unit.count({ where }),
-  ]);
+    filters: [
+      ...(status ? [{ column: "status", operator: "eq" as const, value: status.toUpperCase() }] : []),
+      ...(type ? [{ column: "type", operator: "eq" as const, value: type.toUpperCase() }] : []),
+      ...(city ? [{ column: "city", operator: "ilike" as const, value: city }] : []),
+      ...(propertyId ? [{ column: "propertyId", operator: "eq" as const, value: propertyId }] : []),
+    ],
+    order: { column: "unitNumber", ascending: true },
+    skip: pagination.skip,
+    take: pagination.take,
+  });
 
   return paginatedResponse(items.map(serializeUnit), total, pagination, ctx);
 });

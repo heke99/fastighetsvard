@@ -1,12 +1,11 @@
 import { redirect } from "next/navigation";
-import { db } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth";
 import { hasPermission } from "@/lib/permissions";
 import { ContractStatusBadge } from "@/components/StatusBadges";
 import { changeContractStatusAction } from "../actions";
 import { contractTransitions } from "@/lib/state-machines";
 import { formatSek } from "@/components/ListingCard";
-import type { ContractStatus } from "@/lib/database-types";
+import { listAdminContracts } from "@/lib/repositories/admin-records";
 
 export const metadata = { title: "Admin – Avtal" };
 
@@ -21,19 +20,7 @@ export default async function AdminContractsPage({
   }
   const { status } = await searchParams;
 
-  const contracts = await db.contract.findMany({
-    where: {
-      organizationId: user.organizationId,
-      ...(status ? { status: status as ContractStatus } : {}),
-    },
-    include: {
-      unit: { select: { unitNumber: true, address: true } },
-      parties: { include: { person: true } },
-      externalReferences: true,
-    },
-    orderBy: { createdAt: "desc" },
-    take: 100,
-  });
+  const contracts = await listAdminContracts(user.organizationId, status);
 
   const canUpdate = hasPermission(user.permissions, "contracts", "update");
 
@@ -79,11 +66,22 @@ export default async function AdminContractsPage({
                     {canUpdate && (
                       <div className="flex flex-wrap gap-1.5">
                         {(contractTransitions[c.status] ?? [])
-                          .filter((next) => !["TERMINATED", "RESCINDED"].includes(next) || c.status === "ACTIVE")
+                          .filter((next) => (
+                            next === "ACTIVE"
+                            || !["SENT_FOR_SIGNING", "PARTIALLY_SIGNED", "SIGNED", "TERMINATED", "ENDED"].includes(next)
+                          ))
                           .map((next) => (
                             <form key={next} action={changeContractStatusAction}>
                               <input type="hidden" name="contractId" value={c.id} />
+                              <input type="hidden" name="expectedStatus" value={c.status} />
                               <input type="hidden" name="toStatus" value={next} />
+                              {next === "ACTIVE" && (
+                                <input
+                                  type="hidden"
+                                  name="idempotencyKey"
+                                  value={`contract-activate:${c.id}:${c.updatedAt.toISOString()}`}
+                                />
+                              )}
                               <button type="submit" className="rounded border border-stone-300 px-2 py-1 text-xs font-medium text-stone-700 hover:bg-stone-100">
                                 → {next}
                               </button>

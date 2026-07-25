@@ -1,6 +1,8 @@
 export interface BrandingConfig {
-  companyName: string;
+  brandName: string;
+  brandSlug: string;
   legalName: string;
+  legalDisplayName: string;
   organizationNumber: string;
   portalName: string;
   tagline: string;
@@ -26,16 +28,23 @@ function value(name: string, fallback: string): string {
  * och kan ändras per miljö utan kodändring.
  */
 export function getBranding(): BrandingConfig {
-  const companyName = value("BRAND_COMPANY_NAME", "Östgöta El Teknik");
+  const brandName = value("BRAND_NAME", value("BRAND_COMPANY_NAME", "FaddeBo"));
+  const legalName = value("BRAND_LEGAL_NAME", "Östgöta El Teknik AB");
+  const organizationNumber = value("BRAND_ORGANIZATION_NUMBER", "559350-5620");
   return {
-    companyName,
-    legalName: value("BRAND_LEGAL_NAME", `${companyName} AB`),
-    organizationNumber: value("BRAND_ORGANIZATION_NUMBER", "559350-5620"),
+    brandName,
+    brandSlug: value("BRAND_SLUG", "faddebo"),
+    legalName,
+    legalDisplayName: value(
+      "BRAND_LEGAL_DISPLAY_NAME",
+      `${brandName} – ett varumärke inom ${legalName}, org.nr ${organizationNumber}`
+    ),
+    organizationNumber,
     portalName: value("BRAND_PORTAL_NAME", "Mina sidor"),
-    tagline: value("BRAND_TAGLINE", "Fastigheter"),
+    tagline: value("BRAND_TAGLINE", "Boende nära dig"),
     description: value(
       "BRAND_DESCRIPTION",
-      `${companyName} äger, förvaltar och hyr ut bostäder och lokaler.`
+      `${brandName} förvaltar och hyr ut bostäder och lokaler i Östergötland.`
     ),
     appUrl: value("APP_URL", "http://localhost:3000"),
     supportEmail: value("SUPPORT_EMAIL", "info@example.se"),

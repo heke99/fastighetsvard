@@ -7,7 +7,7 @@ export function Logo({ variant = "dark" }: { variant?: "dark" | "light" }) {
     <Link
       href="/"
       className="flex items-center gap-2.5 shrink-0"
-      aria-label={`${brand.companyName} – till startsidan`}
+      aria-label={`${brand.brandName} – till startsidan`}
     >
       <span
         aria-hidden="true"
@@ -29,7 +29,7 @@ export function Logo({ variant = "dark" }: { variant?: "dark" | "light" }) {
             variant === "light" ? "text-white" : "text-stone-900"
           }`}
         >
-          {brand.companyName}
+          {brand.brandName}
         </span>
         <span
           className={`block text-[11px] font-medium uppercase tracking-widest ${

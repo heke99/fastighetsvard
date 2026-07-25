@@ -5,7 +5,6 @@ export type Decimal = number | string;
 export namespace Database {
   export type JsonValue = import("./database-types").JsonValue;
   export type InputJsonValue = import("./database-types").InputJsonValue;
-  export type TransactionClient = import("./db").SupabaseDatabase;
   export type Decimal = number | string;
   export type PersonWhereInput = Record<string, unknown>;
   export type PersonUpdateInput = Record<string, any>;

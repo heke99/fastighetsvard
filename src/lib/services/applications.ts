@@ -1,9 +1,7 @@
-import { db } from "@/lib/db";
-import { audit } from "@/lib/audit";
 import { sha256 } from "@/lib/crypto";
-import { assertTransition, applicationTransitions } from "@/lib/state-machines";
 import {
   acceptRentalOffer,
+  changeRentalApplicationStatus,
   declineRentalOffer,
   sendRentalOffer,
   submitRentalApplication,
@@ -62,50 +60,17 @@ export async function submitApplication(_organizationId: string, input: Applicat
   });
 }
 
-/**
- * Äldre administrativa statusändringar är kvar tills hela adminmodulen har
- * flyttats till domän-RPC:er. Denna funktion får inte användas för acceptans,
- * kontraktsaktivering eller andra concurrency-kritiska övergångar.
- */
 export async function changeApplicationStatus(
-  organizationId: string,
+  _organizationId: string,
   applicationId: string,
   toStatus: ApplicationStatus,
-  opts: { comment?: string; actorUserId?: string } = {}
+  opts: { expectedStatus: ApplicationStatus; comment?: string }
 ) {
-  return db.$transaction(async (tx) => {
-    const app = await tx.application.findFirst({ where: { id: applicationId, organizationId } });
-    if (!app) throw new Error("Ansökan hittades inte.");
-    assertTransition("application", applicationTransitions, app.status, toStatus);
-    const updated = await tx.application.update({
-      where: { id: applicationId },
-      data: {
-        status: toStatus,
-        closedAt: ["CLOSED", "WITHDRAWN"].includes(toStatus) ? new Date() : app.closedAt,
-      },
-    });
-    await tx.applicationStatusEvent.create({
-      data: {
-        applicationId,
-        fromStatus: app.status,
-        toStatus,
-        comment: opts.comment ?? null,
-        changedByUserId: opts.actorUserId ?? null,
-      },
-    });
-    await audit(
-      {
-        organizationId,
-        userId: opts.actorUserId,
-        action: "status_change",
-        entityType: "application",
-        entityId: applicationId,
-        before: { status: app.status },
-        after: { status: toStatus },
-      },
-      tx
-    );
-    return updated;
+  return changeRentalApplicationStatus({
+    applicationId,
+    expectedStatus: opts.expectedStatus,
+    toStatus,
+    comment: opts.comment,
   });
 }
 

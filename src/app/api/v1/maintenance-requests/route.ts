@@ -1,5 +1,4 @@
 import { z } from "zod";
-import { db } from "@/lib/db";
 import {
   withApiAuth,
   parsePagination,
@@ -8,27 +7,24 @@ import {
 } from "@/lib/api/helpers";
 import { serializeMaintenanceRequest } from "@/lib/api/serializers";
 import { createMaintenanceRequest } from "@/lib/services/maintenance";
-import type { Database, MaintenanceStatus } from "@/lib/database-types";
+import { listOrganizationRecords } from "@/lib/repositories/api-records";
 
 export const GET = withApiAuth("maintenance:read", async (req, ctx) => {
   const url = new URL(req.url);
   const pagination = parsePagination(req);
   const status = url.searchParams.get("status");
 
-  const where: Database.MaintenanceRequestWhereInput = {
+  const { items, total } = await listOrganizationRecords({
+    table: "MaintenanceRequest",
+    columns: "id,requestNumber,unitId,status,priority,category,title,isEmergency,createdAt,updatedAt",
     organizationId: ctx.organizationId,
-    ...(status ? { status: status.toUpperCase() as MaintenanceStatus } : {}),
-  };
-
-  const [items, total] = await Promise.all([
-    db.maintenanceRequest.findMany({
-      where,
-      orderBy: { createdAt: "desc" },
-      skip: pagination.skip,
-      take: pagination.take,
-    }),
-    db.maintenanceRequest.count({ where }),
-  ]);
+    filters: status
+      ? [{ column: "status", operator: "eq", value: status.toUpperCase() }]
+      : [],
+    order: { column: "createdAt", ascending: false },
+    skip: pagination.skip,
+    take: pagination.take,
+  });
 
   return paginatedResponse(items.map(serializeMaintenanceRequest), total, pagination, ctx);
 });

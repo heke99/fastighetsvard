@@ -1,15 +1,15 @@
 import { z } from "zod";
-import { db } from "@/lib/db";
 import { withApiAuth, apiJson, parseBody } from "@/lib/api/helpers";
 import { ApiError } from "@/lib/api/auth";
 import { serializePerson } from "@/lib/api/serializers";
 import { audit } from "@/lib/audit";
+import {
+  getApiCustomer,
+  updateApiCustomer,
+} from "@/lib/repositories/external-api-records";
 
 export const GET = withApiAuth("customers:read", async (_req, ctx, params) => {
-  const person = await db.person.findFirst({
-    where: { id: params.id, organizationId: ctx.organizationId },
-    include: { externalReferences: { where: { entityType: "customer" } } },
-  });
+  const person = await getApiCustomer(ctx.organizationId, params.id);
   if (!person) throw new ApiError(404, "not_found", "Kunden hittades inte.");
   return apiJson({ data: serializePerson(person) }, 200, ctx);
 });
@@ -26,24 +26,19 @@ const patchSchema = z.object({
 
 export const PATCH = withApiAuth("customers:write", async (req, ctx, params) => {
   const input = await parseBody(req, patchSchema);
-  const person = await db.person.findFirst({
-    where: { id: params.id, organizationId: ctx.organizationId },
-  });
+  const person = await getApiCustomer(ctx.organizationId, params.id);
   if (!person) throw new ApiError(404, "not_found", "Kunden hittades inte.");
 
-  const updated = await db.person.update({
-    where: { id: person.id },
-    data: {
-      firstName: input.first_name ?? undefined,
-      lastName: input.last_name ?? undefined,
-      email: input.email === undefined ? undefined : input.email?.toLowerCase() ?? null,
-      phone: input.phone === undefined ? undefined : input.phone,
-      address: input.address === undefined ? undefined : input.address,
-      postalCode: input.postal_code === undefined ? undefined : input.postal_code,
-      city: input.city === undefined ? undefined : input.city,
-    },
-    include: { externalReferences: true },
+  const updated = await updateApiCustomer(ctx.organizationId, person.id, {
+    firstName: input.first_name,
+    lastName: input.last_name,
+    email: input.email === undefined ? undefined : input.email?.toLowerCase() ?? null,
+    phone: input.phone,
+    address: input.address,
+    postalCode: input.postal_code,
+    city: input.city,
   });
+  if (!updated) throw new ApiError(404, "not_found", "Kunden hittades inte.");
 
   await audit({
     organizationId: ctx.organizationId,

@@ -1,8 +1,12 @@
 import { randomUUID } from "node:crypto";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
-import { db } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth";
+import {
+  getCurrentActiveTenancy,
+  getPublicListingBySlug,
+  hasCurrentActiveApplication,
+} from "@/lib/repositories/public-catalog";
 import { ApplicationForm } from "./ApplicationForm";
 
 export const metadata = { title: "Ansök om bostad" };
@@ -18,27 +22,13 @@ export default async function ApplyPage({
   if (!user) redirect(`/logga-in?next=/annons/${slug}/ansok`);
   if (!user.personId) redirect("/mina-sidor/profil?komplettera=1");
 
-  const listing = await db.listing.findFirst({
-    where: { slug, status: "PUBLISHED" },
-    include: { unit: true },
-  });
+  const listing = await getPublicListingBySlug(slug);
   if (!listing) notFound();
 
-  const activeContract = await db.contract.findFirst({
-    where: {
-      status: "ACTIVE",
-      parties: { some: { personId: user.personId, role: { in: ["TENANT", "CO_TENANT"] } } },
-    },
-    include: { unit: { select: { address: true, city: true } } },
-  });
-
-  const existingApplication = await db.application.findFirst({
-    where: {
-      listingId: listing.id,
-      members: { some: { personId: user.personId, role: "MAIN_APPLICANT" } },
-      status: { notIn: ["CLOSED", "WITHDRAWN", "DECLINED"] },
-    },
-  });
+  const [activeContract, existingApplication] = await Promise.all([
+    getCurrentActiveTenancy(),
+    hasCurrentActiveApplication(String(listing.id)),
+  ]);
 
   return (
     <div className="mx-auto max-w-3xl px-4 py-8 sm:px-6">
@@ -68,7 +58,7 @@ export default async function ApplyPage({
         <>
           {activeContract && (
             <div className="mt-6 rounded-xl bg-brand-50 p-4 text-sm text-brand-900">
-              <p className="font-semibold">Du hyr redan {activeContract.unit.address}, {activeContract.unit.city}.</p>
+              <p className="font-semibold">Du hyr redan {activeContract.address}, {activeContract.city}.</p>
               <p className="mt-1">
                 Du kan ändå söka den här bostaden. Om du får den hjälper vi dig att
                 samordna uppsägningen av ditt nuvarande avtal (intern omflyttning).

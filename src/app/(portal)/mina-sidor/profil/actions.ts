@@ -2,9 +2,12 @@
 
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
-import { db } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth";
 import { audit } from "@/lib/audit";
+import {
+  getMyProfile,
+  updateMyProfile,
+} from "@/lib/repositories/portal-records";
 
 export interface ProfileFormState {
   status: "idle" | "error" | "success";
@@ -32,17 +35,14 @@ export async function updateProfileAction(
     return { status: "error", message: "Kontrollera fälten." };
   }
 
-  const before = await db.person.findUnique({ where: { id: user.personId } });
-  await db.person.update({
-    where: { id: user.personId },
-    data: {
-      firstName: parsed.data.firstName,
-      lastName: parsed.data.lastName,
-      phone: parsed.data.phone || null,
-      address: parsed.data.address || null,
-      postalCode: parsed.data.postalCode || null,
-      city: parsed.data.city || null,
-    },
+  const before = await getMyProfile(user.personId);
+  await updateMyProfile(user.personId, {
+    firstName: parsed.data.firstName,
+    lastName: parsed.data.lastName,
+    phone: parsed.data.phone || null,
+    address: parsed.data.address || null,
+    postalCode: parsed.data.postalCode || null,
+    city: parsed.data.city || null,
   });
   await audit({
     organizationId: user.organizationId,

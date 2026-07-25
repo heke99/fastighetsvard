@@ -1,8 +1,15 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { db } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth";
 import { formatSek } from "@/components/ListingCard";
+import {
+  getMyPortalCounts,
+  listMyApplications,
+  listMyContracts,
+  listMyInvoices,
+  listMyMaintenanceRequests,
+  listMyUpcomingViewings,
+} from "@/lib/repositories/portal-records";
 
 export const metadata = { title: "Mina sidor" };
 
@@ -11,62 +18,47 @@ export default async function PortalOverviewPage() {
   if (!user?.personId) redirect("/logga-in?next=/mina-sidor");
   const personId = user.personId;
 
-  const [activeContracts, unpaidInvoices, activeRequests, applications, pendingOffers, unsignedContracts, unreadMessages, notifications, favoritesCount, savedSearchesCount, upcomingViewings] =
+  const [activeContracts, invoices, requests, applications, unsignedContracts, counts, upcomingViewings] =
     await Promise.all([
-      db.contract.findMany({
-        where: {
-          status: "ACTIVE",
-          parties: { some: { personId, role: { in: ["TENANT", "CO_TENANT"] } } },
-        },
-        include: { unit: true },
+      listMyContracts({
+        statuses: ["ACTIVE"],
+        roles: ["TENANT", "CO_TENANT"],
       }),
-      db.invoice.findMany({
-        where: {
-          personId,
-          status: { in: ["SENT", "PARTIALLY_PAID", "OVERDUE", "REMINDED"] },
-        },
-        orderBy: { dueDate: "asc" },
-        take: 5,
+      listMyInvoices(personId, 50),
+      listMyMaintenanceRequests(personId),
+      listMyApplications({ limit: 50 }),
+      listMyContracts({
+        statuses: ["SENT_FOR_SIGNING", "PARTIALLY_SIGNED"],
       }),
-      db.maintenanceRequest.findMany({
-        where: { personId, status: { notIn: ["CLOSED", "REJECTED"] } },
-        orderBy: { createdAt: "desc" },
-        take: 5,
-      }),
-      db.application.findMany({
-        where: {
-          members: { some: { personId } },
-          status: { notIn: ["CLOSED", "WITHDRAWN"] },
-        },
-        include: { listing: true },
-        orderBy: { createdAt: "desc" },
-        take: 5,
-      }),
-      db.offer.findMany({
-        where: { personId, status: "SENT", expiresAt: { gte: new Date() } },
-        include: { listing: true },
-      }),
-      db.contract.findMany({
-        where: {
-          status: { in: ["SENT_FOR_SIGNING", "PARTIALLY_SIGNED"] },
-          parties: { some: { personId, signedAt: null } },
-        },
-        include: { unit: true },
-      }),
-      db.message.count({ where: { recipientPersonId: personId, readAt: null } }),
-      db.notification.findMany({
-        where: { personId, readAt: null },
-        orderBy: { createdAt: "desc" },
-        take: 5,
-      }),
-      db.favorite.count({ where: { personId } }),
-      db.savedSearch.count({ where: { personId } }),
-      db.viewingAttendee.findMany({
-        where: { personId, status: "BOOKED", viewing: { startsAt: { gte: new Date() } } },
-        include: { viewing: { include: { listing: true } } },
-        take: 3,
-      }),
+      getMyPortalCounts(personId),
+      listMyUpcomingViewings(3),
     ]);
+  const unpaidInvoices = invoices
+    .filter((invoice) => ["SENT", "PARTIALLY_PAID", "OVERDUE", "REMINDED"].includes(invoice.status))
+    .sort((a, b) => String(a.dueDate).localeCompare(String(b.dueDate)))
+    .slice(0, 5);
+  const activeRequests = requests
+    .filter((request) => !["CLOSED", "REJECTED"].includes(request.status))
+    .slice(0, 5);
+  const activeApplications = applications
+    .filter((application) => !["CLOSED", "WITHDRAWN"].includes(application.status))
+    .slice(0, 5);
+  const pendingOffers: Record<string, any>[] = applications.flatMap((application) =>
+    (application.offers as Record<string, any>[])
+      .filter((offer) => offer.status === "SENT" && new Date(offer.expiresAt) >= new Date())
+      .map((offer) => ({ ...offer, listing: application.listing } as Record<string, any>))
+  );
+  const unsignedForPerson = unsignedContracts.filter((contract) =>
+    contract.parties.some((party: Record<string, any>) =>
+      party.personId === personId && !party.signedAt
+    )
+  );
+  const {
+    unreadMessages,
+    notifications,
+    favoritesCount,
+    savedSearchesCount,
+  } = counts;
 
   const firstName = user.person?.firstName ?? "";
 
@@ -78,7 +70,7 @@ export default async function PortalOverviewPage() {
       </header>
 
       {/* Kräver åtgärd */}
-      {(pendingOffers.length > 0 || unsignedContracts.length > 0) && (
+      {(pendingOffers.length > 0 || unsignedForPerson.length > 0) && (
         <section aria-labelledby="atgard" className="space-y-3">
           <h2 id="atgard" className="text-lg font-semibold text-stone-900">Kräver din åtgärd</h2>
           {pendingOffers.map((offer) => (
@@ -92,7 +84,7 @@ export default async function PortalOverviewPage() {
               <Link href="/mina-sidor/ansokningar" className="btn-accent shrink-0">Svara på erbjudandet</Link>
             </div>
           ))}
-          {unsignedContracts.map((contract) => (
+          {unsignedForPerson.map((contract) => (
             <div key={contract.id} className="card flex flex-col gap-3 border-l-4 border-l-brand-600 p-4 sm:flex-row sm:items-center sm:justify-between">
               <div>
                 <p className="font-semibold text-stone-900">Avtal att signera: {contract.contractNumber}</p>
@@ -132,7 +124,7 @@ export default async function PortalOverviewPage() {
         </Link>
         <Link href="/mina-sidor/ansokningar" className="card p-4 transition hover:shadow-md">
           <p className="text-sm text-stone-500">Pågående ansökningar</p>
-          <p className="mt-1 text-xl font-bold text-stone-900">{applications.length} st</p>
+          <p className="mt-1 text-xl font-bold text-stone-900">{activeApplications.length} st</p>
         </Link>
       </section>
 
@@ -194,9 +186,9 @@ export default async function PortalOverviewPage() {
           <ul className="mt-3 divide-y divide-stone-100">
             {upcomingViewings.map((va) => (
               <li key={va.id} className="py-2.5 text-sm">
-                <p className="font-medium text-stone-900">{va.viewing.listing.title}</p>
+                <p className="font-medium text-stone-900">{va.listingTitle}</p>
                 <p className="text-stone-500">
-                  {new Date(va.viewing.startsAt).toLocaleString("sv-SE", { dateStyle: "full", timeStyle: "short" })}
+                  {new Date(va.startsAt).toLocaleString("sv-SE", { dateStyle: "full", timeStyle: "short" })}
                 </p>
               </li>
             ))}

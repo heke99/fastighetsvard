@@ -1,11 +1,11 @@
 import { redirect } from "next/navigation";
-import { db } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth";
 import { hasPermission } from "@/lib/permissions";
 import { MaintenanceStatusBadge } from "@/components/StatusBadges";
 import { ActionForm } from "@/components/admin/ActionForm";
 import { changeMaintenanceStatusAction, createWorkOrderAction } from "../actions";
 import { maintenanceTransitions } from "@/lib/state-machines";
+import { listAdminMaintenance } from "@/lib/repositories/admin-records";
 
 export const metadata = { title: "Admin – Felanmälningar" };
 
@@ -15,22 +15,7 @@ export default async function AdminMaintenancePage() {
     redirect("/admin");
   }
 
-  const [requests, suppliers] = await Promise.all([
-    db.maintenanceRequest.findMany({
-      where: { organizationId: user.organizationId },
-      include: {
-        unit: { select: { address: true, unitNumber: true } },
-        person: { select: { firstName: true, lastName: true, phone: true } },
-        workOrders: { select: { id: true, orderNumber: true, status: true } },
-      },
-      orderBy: [{ isEmergency: "desc" }, { createdAt: "desc" }],
-      take: 100,
-    }),
-    db.supplier.findMany({
-      where: { organizationId: user.organizationId, isActive: true },
-      orderBy: { name: "asc" },
-    }),
-  ]);
+  const { requests, suppliers } = await listAdminMaintenance(user.organizationId);
 
   const canUpdate = hasPermission(user.permissions, "maintenance", "update");
   const canCreateWO = hasPermission(user.permissions, "workorders", "create");

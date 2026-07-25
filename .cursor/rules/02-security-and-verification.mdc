@@ -1,0 +1,12 @@
+---
+description: Mandatory security and verification controls
+alwaysApply: true
+---
+
+Evaluate authentication, authorization, organization isolation, RLS, Storage,
+service-role use, validation, data exposure, idempotency, transaction safety,
+audit, secrets and immutability for every change.
+
+Use VERIFIED, IMPLEMENTED, PARTIAL, NOT RUN, UNVERIFIED, BLOCKED or FAILED
+precisely. Never report PASS without execution. Missing external infrastructure
+blocks only its dependent runtime verification, not unrelated implementation.

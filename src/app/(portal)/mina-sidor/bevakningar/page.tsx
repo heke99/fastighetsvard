@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { db } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth";
+import { listMySavedSearches } from "@/lib/repositories/portal-records";
 import { DeleteSavedSearchButton } from "./DeleteSavedSearchButton";
 
 export const metadata = { title: "Mina bevakningar" };
@@ -10,10 +10,7 @@ export default async function SavedSearchesPage() {
   const user = await getCurrentUser();
   if (!user?.personId) redirect("/logga-in");
 
-  const searches = await db.savedSearch.findMany({
-    where: { personId: user.personId },
-    orderBy: { createdAt: "desc" },
-  });
+  const searches = await listMySavedSearches(user.personId);
 
   return (
     <div className="space-y-6">

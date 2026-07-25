@@ -1,10 +1,10 @@
 import { randomUUID } from "node:crypto";
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { db } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth";
 import { ApplicationStatusBadge } from "@/components/StatusBadges";
 import { OfferResponseForm } from "./OfferResponseForm";
+import { listMyApplications } from "@/lib/repositories/portal-records";
 
 export const metadata = { title: "Mina ansökningar" };
 
@@ -17,15 +17,7 @@ export default async function MyApplicationsPage({
   if (!user?.personId) redirect("/logga-in");
   const { skickad } = await searchParams;
 
-  const applications = await db.application.findMany({
-    where: { members: { some: { personId: user.personId } } },
-    include: {
-      listing: { include: { unit: { select: { address: true, city: true } } } },
-      offers: { where: { status: "SENT" } },
-      members: true,
-    },
-    orderBy: { createdAt: "desc" },
-  });
+  const applications = await listMyApplications();
 
   return (
     <div className="space-y-6">

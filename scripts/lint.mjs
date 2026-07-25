@@ -1,4 +1,4 @@
-import { readFileSync, readdirSync } from "node:fs";
+import { existsSync, readFileSync, readdirSync } from "node:fs";
 import { resolve } from "node:path";
 
 const errors = [];
@@ -95,6 +95,16 @@ if (contracts.includes("codeHash: sha256(code)") || contracts.includes("codeHash
 if (!contracts.includes("SIGNING_OTP_PEPPER") || !contracts.includes("hmacSha256")) {
   errors.push("OTP-signering saknar HMAC med SIGNING_OTP_PEPPER.");
 }
+if (applications.slice(applications.indexOf("export async function changeApplicationStatus")).includes("db.$transaction")) {
+  errors.push("Administrativ ansökningsstatus använder fortfarande falsk transaktion.");
+}
+const listings = read("src/lib/services/listings.ts");
+if (listings.slice(listings.indexOf("export async function changeListingStatus")).includes("db.$transaction")) {
+  errors.push("Annonsstatus använder fortfarande falsk transaktion.");
+}
+if (contracts.includes("db.$transaction")) {
+  errors.push("Avtalskommandon använder fortfarande falsk transaktion.");
+}
 if (migrationSql.includes("claim_outbox_jobs(text,integer,integer) TO authenticated")) {
   errors.push("Outbox-claim får inte vara körbar av vanliga autentiserade användare.");
 }
@@ -108,9 +118,26 @@ const nvmVersion = read(".nvmrc").trim().replace(/^v/, "");
 if (nodeVersion !== nvmVersion) errors.push(".node-version och .nvmrc skiljer sig.");
 if (pkg.engines?.node !== nodeVersion) errors.push("package.json engines.node skiljer sig från låst Node-version.");
 
-const adapter = read("src/lib/db.ts");
-if (adapter.includes("async $transaction") || adapter.includes('select("*")')) {
-  warnings.push("Den generiska Prisma-liknande adaptern finns kvar för icke-migrerade admin-/read-flöden och är en kvarvarande produktionsblockerare.");
+if (existsSync(resolve("src/lib/db.ts"))) {
+  errors.push("Den förbjudna generiska databasanpassningen src/lib/db.ts finns kvar.");
+}
+const sourceFiles = [];
+const collectSources = (directory) => {
+  for (const entry of readdirSync(resolve(directory), { withFileTypes: true })) {
+    const relative = `${directory}/${entry.name}`;
+    if (entry.isDirectory()) collectSources(relative);
+    else if (/\.(?:ts|tsx)$/.test(entry.name)) sourceFiles.push(relative);
+  }
+};
+collectSources("src");
+for (const path of sourceFiles) {
+  const source = read(path);
+  if (source.includes("@/lib/db")) errors.push(`${path} importerar den borttagna legacyadaptern.`);
+  if (source.includes("db.$transaction")) errors.push(`${path} använder en falsk transaktion.`);
+  if (source.includes('select("*")')) errors.push(`${path} använder förbjuden wildcard-projektion.`);
+}
+if (read("scripts/bootstrap-admin.mjs").includes('select("*")')) {
+  errors.push("Bootstrap-skriptet använder förbjuden wildcard-projektion.");
 }
 
 for (const warning of warnings) console.warn(`WARN: ${warning}`);

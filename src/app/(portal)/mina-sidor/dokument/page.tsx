@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
-import { db } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth";
+import { listMyDocuments } from "@/lib/repositories/portal-records";
 
 export const metadata = { title: "Dokument" };
 
@@ -27,18 +27,7 @@ export default async function DocumentsPage() {
   const user = await getCurrentUser();
   if (!user?.personId) redirect("/logga-in");
 
-  // Behörighet: endast dokument kopplade till min person eller mina avtal.
-  const documents = await db.document.findMany({
-    where: {
-      OR: [
-        { personId: user.personId },
-        { contract: { parties: { some: { personId: user.personId } } } },
-      ],
-      archivedAt: null,
-    },
-    include: { contract: { select: { contractNumber: true } } },
-    orderBy: { createdAt: "desc" },
-  });
+  const documents = await listMyDocuments(user.personId);
 
   return (
     <div className="space-y-6">

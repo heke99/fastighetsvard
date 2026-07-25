@@ -1,7 +1,6 @@
-import { db } from "@/lib/db";
 import { withApiAuth, parsePagination, paginatedResponse } from "@/lib/api/helpers";
 import { serializeApplication } from "@/lib/api/serializers";
-import type { Database, ApplicationStatus } from "@/lib/database-types";
+import { listOrganizationRecords } from "@/lib/repositories/api-records";
 
 export const GET = withApiAuth("applications:read", async (req, ctx) => {
   const url = new URL(req.url);
@@ -9,21 +8,18 @@ export const GET = withApiAuth("applications:read", async (req, ctx) => {
   const status = url.searchParams.get("status");
   const listingId = url.searchParams.get("listing_id");
 
-  const where: Database.ApplicationWhereInput = {
+  const { items, total } = await listOrganizationRecords({
+    table: "Application",
+    columns: "id,listingId,status,isInternalTransfer,desiredMoveInDate,submittedAt,createdAt",
     organizationId: ctx.organizationId,
-    ...(status ? { status: status.toUpperCase() as ApplicationStatus } : {}),
-    ...(listingId ? { listingId } : {}),
-  };
-
-  const [items, total] = await Promise.all([
-    db.application.findMany({
-      where,
-      orderBy: { createdAt: "desc" },
-      skip: pagination.skip,
-      take: pagination.take,
-    }),
-    db.application.count({ where }),
-  ]);
+    filters: [
+      ...(status ? [{ column: "status", operator: "eq" as const, value: status.toUpperCase() }] : []),
+      ...(listingId ? [{ column: "listingId", operator: "eq" as const, value: listingId }] : []),
+    ],
+    order: { column: "createdAt", ascending: false },
+    skip: pagination.skip,
+    take: pagination.take,
+  });
 
   return paginatedResponse(items.map(serializeApplication), total, pagination, ctx);
 });

@@ -1,9 +1,9 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { db } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth";
 import { formatSek } from "@/components/ListingCard";
 import { InvoiceStatusBadge } from "@/components/StatusBadges";
+import { listMyInvoices } from "@/lib/repositories/portal-records";
 
 export const metadata = { title: "Mina fakturor" };
 
@@ -11,12 +11,7 @@ export default async function MyInvoicesPage() {
   const user = await getCurrentUser();
   if (!user?.personId) redirect("/logga-in");
 
-  // Tenant-isolering: endast fakturor kopplade till min person.
-  const invoices = await db.invoice.findMany({
-    where: { personId: user.personId },
-    orderBy: { invoiceDate: "desc" },
-    take: 50,
-  });
+  const invoices = await listMyInvoices(user.personId, 50);
 
   const unpaid = invoices.filter((i) =>
     ["SENT", "PARTIALLY_PAID", "OVERDUE", "REMINDED", "COLLECTION"].includes(i.status)

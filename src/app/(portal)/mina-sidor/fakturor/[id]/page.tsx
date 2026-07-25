@@ -1,9 +1,9 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
-import { db } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth";
 import { formatSek } from "@/components/ListingCard";
 import { InvoiceStatusBadge } from "@/components/StatusBadges";
+import { getMyInvoice } from "@/lib/repositories/portal-records";
 
 export const metadata = { title: "Faktura" };
 
@@ -16,17 +16,7 @@ export default async function InvoiceDetailPage({
   if (!user?.personId) redirect("/logga-in");
   const { id } = await params;
 
-  // Tenant-isolering i query: en användare kan aldrig öppna någon annans faktura.
-  const invoice = await db.invoice.findFirst({
-    where: { id, personId: user.personId },
-    include: {
-      lines: { orderBy: { sortOrder: "asc" } },
-      contract: { include: { unit: true } },
-      paymentAllocations: { include: { payment: true } },
-      creditNotes: true,
-      statusHistory: { orderBy: { createdAt: "desc" } },
-    },
-  });
+  const invoice = await getMyInvoice(user.personId, id);
   if (!invoice) notFound();
 
   const remaining = Number(invoice.totalAmount) - Number(invoice.paidAmount);

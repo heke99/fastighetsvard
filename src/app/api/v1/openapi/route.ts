@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { getBranding } from "@/lib/branding";
 
 /** GET /api/v1/openapi – OpenAPI 3.0-dokumentation för API:t. */
 
@@ -28,10 +29,11 @@ const errorResponse = {
   },
 };
 
+const brand = getBranding();
 const spec = {
   openapi: "3.0.3",
   info: {
-    title: "Östgöta El Teknik Fastighets-API",
+    title: `${brand.brandName} Fastighets-API`,
     version: "1.0.0",
     description:
       "REST API för externa system (bokföring m.m.). Autentisering via API-nyckel som Bearer-token. " +

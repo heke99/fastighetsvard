@@ -6,6 +6,7 @@ export async function createManagedAuthUser(input: {
   password: string;
   firstName?: string;
   lastName?: string;
+  claimMode?: "staff_invitation" | "contractor_invitation" | "bootstrap";
 }) {
   const admin = createAdminClient();
   const { data, error } = await admin.auth.admin.createUser({
@@ -15,6 +16,7 @@ export async function createManagedAuthUser(input: {
     user_metadata: {
       first_name: input.firstName ?? "",
       last_name: input.lastName ?? "",
+      claim_mode: input.claimMode ?? "staff_invitation",
     },
   });
   if (error || !data.user) throw new Error(error?.message ?? "Kunde inte skapa Supabase Auth-användare.");

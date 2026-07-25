@@ -1,5 +1,4 @@
-supabase/migrations/20260719192014_initial.sql
-supabase/migrations/20260720000600_repair_identity_properties.sql
-supabase/migrations/20260720000700_repair_applications_contracts.sql
-supabase/migrations/20260720000800_repair_billing_integrations.sql
-supabase/migrations/20260720000900_repair_maintenance_platform.sql
+# Borttagna legacyfiler i leveransen 2026-07-25
+src/lib/db.ts
+src/lib/database-schema.json
+src/lib/counters.ts

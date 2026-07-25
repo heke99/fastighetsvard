@@ -4,12 +4,15 @@ import { redirect } from "next/navigation";
 import { z } from "zod";
 import { login, getClientIp, AuthError } from "@/lib/auth";
 import { registerAccount, activateInvitation } from "@/lib/services/accounts";
-import { db } from "@/lib/db";
 import { audit } from "@/lib/audit";
 import { getAppUrl } from "@/lib/app-url";
 import { sendPasswordResetEmail } from "@/lib/email";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
+import {
+  findUserByAuthId,
+  findUserForPasswordReset,
+} from "@/lib/repositories/account-lookups";
 
 export interface AuthFormState {
   status: "idle" | "error" | "success";
@@ -87,7 +90,7 @@ export async function requestPasswordResetAction(_prev: AuthFormState, formData:
   const email = String(formData.get("email") ?? "").toLowerCase().trim();
   if (!email) return { status: "error", message: "Ange din e-postadress." };
 
-  const profile = await db.user.findUnique({ where: { email } });
+  const profile = await findUserForPasswordReset(email);
   if (profile) {
     const admin = createAdminClient();
     const redirectTo = `${getAppUrl()}/auth/callback?next=/aterstall-losenord`;
@@ -119,7 +122,7 @@ export async function resetPasswordAction(_prev: AuthFormState, formData: FormDa
   const { error } = await supabase.auth.updateUser({ password });
   if (error) return { status: "error", message: error.message };
 
-  const profile = await db.user.findUnique({ where: { authUserId: current.user.id } });
+  const profile = await findUserByAuthId(current.user.id);
   if (profile) {
     await audit({
       organizationId: profile.organizationId,

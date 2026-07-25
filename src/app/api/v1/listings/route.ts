@@ -1,7 +1,6 @@
-import { db } from "@/lib/db";
 import { withApiAuth, parsePagination, paginatedResponse } from "@/lib/api/helpers";
 import { serializeListing } from "@/lib/api/serializers";
-import type { Database, ListingStatus, ListingCategory } from "@/lib/database-types";
+import { listOrganizationRecords } from "@/lib/repositories/api-records";
 
 export const GET = withApiAuth("listings:read", async (req, ctx) => {
   const url = new URL(req.url);
@@ -9,21 +8,18 @@ export const GET = withApiAuth("listings:read", async (req, ctx) => {
   const status = url.searchParams.get("status");
   const category = url.searchParams.get("category");
 
-  const where: Database.ListingWhereInput = {
+  const { items, total } = await listOrganizationRecords({
+    table: "Listing",
+    columns: "id,unitId,title,slug,category,status,publishedAt,applicationDeadline,moveInDate,rent,price,createdAt",
     organizationId: ctx.organizationId,
-    ...(status ? { status: status.toUpperCase() as ListingStatus } : {}),
-    ...(category ? { category: category.toUpperCase() as ListingCategory } : {}),
-  };
-
-  const [items, total] = await Promise.all([
-    db.listing.findMany({
-      where,
-      orderBy: { createdAt: "desc" },
-      skip: pagination.skip,
-      take: pagination.take,
-    }),
-    db.listing.count({ where }),
-  ]);
+    filters: [
+      ...(status ? [{ column: "status", operator: "eq" as const, value: status.toUpperCase() }] : []),
+      ...(category ? [{ column: "category", operator: "eq" as const, value: category.toUpperCase() }] : []),
+    ],
+    order: { column: "createdAt", ascending: false },
+    skip: pagination.skip,
+    take: pagination.take,
+  });
 
   return paginatedResponse(items.map(serializeListing), total, pagination, ctx);
 });

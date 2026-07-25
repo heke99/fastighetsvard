@@ -1,8 +1,8 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { db } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth";
 import { ListingCard, type ListingWithUnit } from "@/components/ListingCard";
+import { listFavoritePublicListings } from "@/lib/repositories/public-catalog";
 
 export const metadata = { title: "Mina favoriter" };
 
@@ -10,17 +10,7 @@ export default async function FavoritesPage() {
   const user = await getCurrentUser();
   if (!user?.personId) redirect("/logga-in");
 
-  const favorites = await db.favorite.findMany({
-    where: { personId: user.personId },
-    include: {
-      listing: {
-        include: {
-          unit: { include: { media: { where: { kind: "IMAGE" }, take: 1, orderBy: { sortOrder: "asc" } } } },
-        },
-      },
-    },
-    orderBy: { createdAt: "desc" },
-  });
+  const favorites = await listFavoritePublicListings(user.personId);
 
   return (
     <div className="space-y-6">
@@ -35,8 +25,8 @@ export default async function FavoritesPage() {
         </div>
       ) : (
         <div className="grid gap-5 sm:grid-cols-2">
-          {favorites.map((f) => (
-            <ListingCard key={f.id} listing={f.listing as ListingWithUnit} isFavorite />
+          {favorites.map((listing) => (
+            <ListingCard key={listing.id} listing={listing as ListingWithUnit} isFavorite />
           ))}
         </div>
       )}

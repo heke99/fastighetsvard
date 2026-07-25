@@ -1,0 +1,13 @@
+---
+description: Preserve canonical architecture and prevent parallel implementations
+alwaysApply: true
+---
+
+Locate the existing canonical owner and trace the complete call path before
+implementation. Check database functions, repositories, services, APIs, events,
+authorization, organization and transaction boundaries.
+
+Do not create duplicate domain models, validation, authorization, calculation,
+status logic or local fallbacks. Do not replace a transaction with sequential
+requests. Do not silently change public contracts. When duplicates exist,
+choose the canonical owner, migrate callers, add tests and remove the old path.

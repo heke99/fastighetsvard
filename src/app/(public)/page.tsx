@@ -1,66 +1,36 @@
 import Link from "next/link";
-import { db } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth";
+import { getBranding } from "@/lib/branding";
 import { ListingCard, type ListingWithUnit } from "@/components/ListingCard";
+import {
+  listFavoriteListingIds,
+  listUpcomingUnits,
+  searchPublicListings,
+} from "@/lib/repositories/public-catalog";
 
 export const dynamic = "force-dynamic";
 
 async function getHomeData(personId: string | null) {
-  const [rentals, sales, commercial, parking, latest, upcoming, featured, favorites] =
+  const [rentals, sales, commercial, latest, upcoming, featured, favoriteIds] =
     await Promise.all([
-      db.listing.findMany({
-        where: { status: "PUBLISHED", category: "RENTAL" },
-        include: { unit: { include: { media: { where: { kind: "IMAGE" }, take: 1, orderBy: { sortOrder: "asc" } } } } },
-        orderBy: { publishedAt: "desc" },
-        take: 6,
-      }),
-      db.listing.findMany({
-        where: { status: "PUBLISHED", category: "SALE" },
-        include: { unit: { include: { media: { where: { kind: "IMAGE" }, take: 1, orderBy: { sortOrder: "asc" } } } } },
-        orderBy: { publishedAt: "desc" },
-        take: 3,
-      }),
-      db.listing.findMany({
-        where: { status: "PUBLISHED", category: "COMMERCIAL" },
-        include: { unit: { include: { media: { where: { kind: "IMAGE" }, take: 1, orderBy: { sortOrder: "asc" } } } } },
-        orderBy: { publishedAt: "desc" },
-        take: 3,
-      }),
-      db.listing.findMany({
-        where: { status: "PUBLISHED", category: "PARKING" },
-        include: { unit: { include: { media: { where: { kind: "IMAGE" }, take: 1, orderBy: { sortOrder: "asc" } } } } },
-        orderBy: { publishedAt: "desc" },
-        take: 3,
-      }),
-      db.listing.findMany({
-        where: { status: "PUBLISHED" },
-        include: { unit: { include: { media: { where: { kind: "IMAGE" }, take: 1, orderBy: { sortOrder: "asc" } } } } },
-        orderBy: { publishedAt: "desc" },
-        take: 3,
-      }),
-      db.unit.findMany({
-        where: { status: "UPCOMING" },
-        orderBy: { availableFrom: "asc" },
-        take: 4,
-      }),
-      db.listing.findMany({
-        where: { status: "PUBLISHED", featured: true },
-        include: { unit: { include: { media: { where: { kind: "IMAGE" }, take: 1, orderBy: { sortOrder: "asc" } } } } },
-        take: 3,
-      }),
+      searchPublicListings({ category: "RENTAL", perPage: 6 }),
+      searchPublicListings({ category: "SALE", perPage: 3 }),
+      searchPublicListings({ category: "COMMERCIAL", perPage: 3 }),
+      searchPublicListings({ perPage: 3 }),
+      listUpcomingUnits(4),
+      searchPublicListings({ featured: true, perPage: 3 }),
       personId
-        ? db.favorite.findMany({ where: { personId }, select: { listingId: true } })
-        : Promise.resolve([]),
+        ? listFavoriteListingIds(personId)
+        : Promise.resolve(new Set<string>()),
     ]);
   return {
-    rentals,
-    sales,
-    commercial,
-    parking,
-    latest,
+    rentals: rentals.items,
+    sales: sales.items,
+    commercial: commercial.items,
+    latest: latest.items,
     upcoming,
-    featured,
-    favoriteIds: new Set<string>((favorites as any[]).map((f: any) => String(f.listingId))),
+    featured: featured.items,
+    favoriteIds,
   };
 }
 
@@ -100,6 +70,7 @@ function Section({
 }
 
 export default async function HomePage() {
+  const brand = getBranding();
   const user = await getCurrentUser();
   const data = await getHomeData(user?.personId ?? null);
 
@@ -113,7 +84,7 @@ export default async function HomePage() {
               Hitta ditt nästa hem i Östergötland
             </h1>
             <p className="mt-4 text-lg text-brand-100">
-              Östgöta El Teknik hyr ut och säljer lägenheter, lokaler och
+              {brand.brandName} hyr ut och förmedlar lägenheter, lokaler och
               parkeringsplatser. Sök bland våra publicerade objekt eller skapa
               en bevakning så hör vi av oss.
             </p>
@@ -267,11 +238,12 @@ export default async function HomePage() {
         <div className="mx-auto grid max-w-7xl gap-10 px-4 py-14 sm:px-6 lg:grid-cols-2">
           <div>
             <h2 id="om-oss" className="text-2xl font-bold text-stone-900">
-              Om Östgöta El Teknik
+              Om {brand.brandName}
             </h2>
             <p className="mt-4 leading-relaxed text-stone-600">
-              Östgöta El Teknik är ett familjeägt fastighetsbolag med rötterna i
-              elteknikbranschen. Vi äger och förvaltar bostäder, lokaler i Linköping, Norrköping och Motala – alltid med fokus
+              {brand.brandName} är varumärket för {brand.legalName}s
+              fastigheter. Vi förvaltar bostäder och lokaler i Linköping,
+              Norrköping och Motala – alltid med fokus
               på trygghet, energieffektivitet och personlig service.
             </p>
             <p className="mt-3 leading-relaxed text-stone-600">

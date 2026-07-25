@@ -21,11 +21,13 @@ Därutöver krävs riktiga parallella tester för ansökan, visningskapacitet, e
 
 ## Resultat i denna arbetsmiljö
 
-- `node scripts/lint.mjs`: godkänd med varning om kvarvarande legacy-adapter.
+- `npm run lint`: godkänd; 29 migrationer och adapterregler statiskt verifierade.
 - `node scripts/verify-concurrency-primitives.mjs`: godkänd statisk kontroll.
-- TypeScript syntaxtranspilering: godkänd för 160 `.ts/.tsx`-filer.
-- Funktions-/grant-signaturkontroll: 38 funktioner, 34 grants, 0 mismatchar.
-- `npm ci`: fastnade utan output och avbröts; dependencies kunde därför inte installeras.
-- `tsc --noEmit`: kördes men kan inte ge giltigt resultat utan dependencies; rapporterade huvudsakligen saknade moduler/typer.
-- Supabase reset/schema/RLS: ej körbart eftersom Supabase CLI, Docker och psql saknas.
-- Vitest/build/E2E: ej körbara utan dependencies.
+- `npm run typecheck`: godkänd.
+- `npm test`: 40 av 40 tester i 6 filer godkända.
+- `npm run build`: godkänd med Next.js 15.5.20.
+- Supabase reset/schema/RLS: inte körda; Docker/PostgreSQL saknas.
+- Verklig concurrency, E2E, providers och deployment: inte körda.
+
+Kontrollerna kördes på Node 24.14.0/npm 11.9.0, inte projektets låsta Node
+22.16.0/npm 10.9.2. Releasegrinden ska därför upprepas på målversionerna.

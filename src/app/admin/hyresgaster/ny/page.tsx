@@ -1,10 +1,10 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { db } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth";
 import { hasPermission } from "@/lib/permissions";
 import { ActionForm } from "@/components/admin/ActionForm";
 import { registerExistingTenantAction } from "../../actions";
+import { listUnitsWithoutActiveContracts } from "@/lib/repositories/admin-records";
 
 export const metadata = { title: "Admin – Lägg till befintlig hyresgäst" };
 
@@ -15,13 +15,7 @@ export default async function NewExistingTenantPage() {
   }
 
   // Objekt utan aktivt avtal kan kopplas till befintlig hyresgäst.
-  const units = await db.unit.findMany({
-    where: {
-      organizationId: user.organizationId,
-      contracts: { none: { status: { in: ["ACTIVE", "SIGNED", "SENT_FOR_SIGNING", "PARTIALLY_SIGNED"] } } },
-    },
-    orderBy: { unitNumber: "asc" },
-  });
+  const units = await listUnitsWithoutActiveContracts(user.organizationId);
 
   return (
     <div className="max-w-3xl space-y-6">

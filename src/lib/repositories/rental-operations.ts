@@ -44,6 +44,16 @@ const DOMAIN_ERROR_MESSAGES: Record<string, string> = {
   auth_email_not_verified: "E-postadressen är inte verifierad.",
   invitation_email_mismatch: "Inbjudan är bunden till en annan e-postadress.",
   user_already_exists: "Det finns redan ett konto för e-postadressen.",
+  dedicated_application_command_required: "Denna ansökningsstatus kräver sitt särskilda arbetsflöde.",
+  dedicated_contract_command_required: "Denna avtalsstatus kräver verifierad signering, aktivering eller uppsägning.",
+  invalid_application_transition: "Ansökningens statusövergång är inte tillåten.",
+  invalid_listing_transition: "Annonsens statusövergång är inte tillåten.",
+  invalid_contract_transition: "Avtalets statusövergång är inte tillåten.",
+  listing_not_publishable: "Annonsen saknar obligatoriskt publiceringsinnehåll.",
+  contract_not_signed: "Endast ett färdigsignerat avtal kan aktiveras.",
+  countersign_or_final_pdf_missing: "Avtalet saknar motunderskrift eller låst slutlig PDF.",
+  signature_or_evidence_chain_invalid: "Avtalets signeringsbevis är inte komplett.",
+  active_reservation_missing: "Avtalet saknar en aktiv reservation.",
 };
 
 function normalizeRpcError(error: { message?: string; details?: string; hint?: string }): Error {
@@ -244,4 +254,101 @@ export async function claimInvitation(input: { tokenHash: string; authUserId: st
     organizationId: result.organizationId,
     invitationId: result.invitationId,
   };
+}
+
+export async function changeRentalApplicationStatus(input: {
+  applicationId: string;
+  expectedStatus: string;
+  toStatus: string;
+  comment?: string;
+}) {
+  const client = await createServerSupabaseClient();
+  return rpc<Record<string, unknown>>(client, "change_application_status", {
+    p_application_id: input.applicationId,
+    p_expected_status: input.expectedStatus,
+    p_to_status: input.toStatus,
+    p_comment: input.comment ?? null,
+  });
+}
+
+export async function changeRentalListingStatus(input: {
+  listingId: string;
+  expectedStatus: string;
+  toStatus: string;
+}) {
+  const client = await createServerSupabaseClient();
+  return rpc<{
+    listingId: string;
+    unitId: string;
+    slug: string;
+    title: string;
+    status: string;
+  }>(client, "change_listing_status", {
+    p_listing_id: input.listingId,
+    p_expected_status: input.expectedStatus,
+    p_to_status: input.toStatus,
+  });
+}
+
+export async function completeRentalUnitListings(input: {
+  unitId: string;
+  reason: string;
+}) {
+  const client = await createServerSupabaseClient();
+  return rpc<number>(client, "complete_unit_listings", {
+    p_unit_id: input.unitId,
+    p_reason: input.reason,
+  });
+}
+
+export async function changeRentalContractStatus(input: {
+  contractId: string;
+  expectedStatus: string;
+  toStatus: string;
+  comment?: string;
+}) {
+  const client = await createServerSupabaseClient();
+  return rpc<{
+    contractId: string;
+    contractNumber: string;
+    unitId: string;
+    status: string;
+  }>(client, "change_contract_status", {
+    p_contract_id: input.contractId,
+    p_expected_status: input.expectedStatus,
+    p_to_status: input.toStatus,
+    p_comment: input.comment ?? null,
+  });
+}
+
+export async function createRentalContractVersion(input: {
+  contractId: string;
+  content: Record<string, unknown>;
+  documentHash: string;
+  expectedContractVersion: number;
+}) {
+  const client = await createServerSupabaseClient();
+  return rpc<Record<string, unknown>>(client, "create_contract_version", {
+    p_contract_id: input.contractId,
+    p_content: input.content,
+    p_document_hash: input.documentHash,
+    p_expected_contract_version: input.expectedContractVersion,
+  });
+}
+
+export async function activateSignedRentalContract(input: {
+  contractId: string;
+  idempotencyKey: string;
+  requestHash: string;
+}) {
+  const client = await createServerSupabaseClient();
+  return rpc<{
+    contractId: string;
+    status: "ACTIVE";
+    moveInCreated: boolean;
+  }>(client, "activate_signed_contract", {
+    p_contract_id: input.contractId,
+    p_idempotency_key: input.idempotencyKey,
+    p_request_hash: input.requestHash,
+  });
 }

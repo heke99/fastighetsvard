@@ -3,7 +3,6 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
-import { db } from "@/lib/db";
 import { requirePermission, AuthError } from "@/lib/auth";
 import { audit } from "@/lib/audit";
 import {
@@ -13,7 +12,7 @@ import {
   previewTenantImport,
   runTenantImport,
 } from "@/lib/services/tenants";
-import { changeListingStatus, slugify, unpublishListingsForUnit } from "@/lib/services/listings";
+import { changeListingStatus, slugify } from "@/lib/services/listings";
 import { changeApplicationStatus, sendOffer } from "@/lib/services/applications";
 import { changeContractStatus } from "@/lib/services/contracts";
 import { changeMaintenanceStatus, createWorkOrder, changeWorkOrderStatus } from "@/lib/services/maintenance";
@@ -21,6 +20,20 @@ import { runSyncJob, resolveReviewItem } from "@/lib/integrations/sync";
 import { redeliver } from "@/lib/services/webhooks";
 import { generateApiKey, generateToken, encryptSecret } from "@/lib/crypto";
 import { createManagedAuthUser, deleteManagedAuthUser } from "@/lib/supabase/users";
+import { provisionStaffUser } from "@/lib/repositories/staff-operations";
+import {
+  createApiKeyRecord,
+  createCustomRole,
+  createIntegrationConnectionRecord,
+  createListingRecord,
+  createPropertyRecord,
+  createUnitRecord,
+  getMaintenanceRequestStatus,
+  isOwnedWebhookDelivery,
+  provisionSupplier,
+  revokeApiKeyRecord,
+  toggleWebhookSubscription,
+} from "@/lib/repositories/admin-operations";
 import type {
   ApplicationStatus, ContractStatus, ListingStatus,
   MaintenanceStatus, WorkOrderStatus, UnitType, ListingCategory,
@@ -60,9 +73,9 @@ export async function createPropertyAction(
   try {
     const user = await requirePermission("properties", "create");
     const data = propertySchema.parse(Object.fromEntries(formData.entries()));
-    const property = await db.property.create({
-      data: {
-        organizationId: user.organizationId!,
+    const property = await createPropertyRecord({
+      organizationId: user.organizationId!,
+      values: {
         name: data.name,
         designation: data.designation || null,
         address: data.address,
@@ -115,22 +128,12 @@ export async function createUnitAction(
   try {
     const user = await requirePermission("units", "create");
     const data = unitSchema.parse(Object.fromEntries(formData.entries()));
-    const property = await db.property.findFirst({
-      where: { id: data.propertyId, organizationId: user.organizationId! },
-    });
-    if (!property) return { status: "error", message: "Fastigheten hittades inte." };
-
-    const existing = await db.unit.findFirst({
-      where: { organizationId: user.organizationId!, unitNumber: data.unitNumber },
-    });
-    if (existing) return { status: "error", message: `Objektsnummer ${data.unitNumber} finns redan.` };
-
     const features = (name: string) => formData.get(name) === "1";
-    const unit = await db.unit.create({
-      data: {
-        organizationId: user.organizationId!,
-        propertyId: property.id,
-        unitNumber: data.unitNumber,
+    const result = await createUnitRecord({
+      organizationId: user.organizationId!,
+      propertyId: data.propertyId,
+      unitNumber: data.unitNumber,
+      values: {
         apartmentNumber: data.apartmentNumber || null,
         type: data.type as UnitType,
         status: "NOT_PUBLISHED",
@@ -156,6 +159,9 @@ export async function createUnitAction(
         petsAllowed: features("petsAllowed"),
       },
     });
+    if (result.status === "property_not_found") return { status: "error", message: "Fastigheten hittades inte." };
+    if (result.status === "unit_exists") return { status: "error", message: `Objektsnummer ${data.unitNumber} finns redan.` };
+    const unit = result.unit;
     await audit({
       organizationId: user.organizationId,
       userId: user.id,
@@ -197,30 +203,19 @@ export async function createListingAction(
   try {
     const user = await requirePermission("listings", "create");
     const data = listingSchema.parse(Object.fromEntries(formData.entries()));
-    const unit = await db.unit.findFirst({
-      where: { id: data.unitId, organizationId: user.organizationId! },
-    });
-    if (!unit) return { status: "error", message: "Objektet hittades inte." };
-
-    const baseSlug = slugify(`${data.title}-${unit.unitNumber}`);
-    let slug = baseSlug;
-    let i = 1;
-    while (await db.listing.findFirst({ where: { organizationId: user.organizationId!, slug } })) {
-      slug = `${baseSlug}-${++i}`;
-    }
-
-    const listing = await db.listing.create({
-      data: {
-        organizationId: user.organizationId!,
-        unitId: unit.id,
+    const baseSlug = slugify(data.title);
+    const result = await createListingRecord({
+      organizationId: user.organizationId!,
+      unitId: data.unitId,
+      baseSlug,
+      values: {
         title: data.title,
-        slug,
         description: data.description,
         category: data.category as ListingCategory,
-        rent: data.rent ? parseFloat(data.rent.replace(",", ".")) : unit.rent,
-        price: data.price ? parseFloat(data.price.replace(",", ".")) : unit.price,
-        moveInDate: data.moveInDate ? new Date(data.moveInDate) : unit.availableFrom,
-        applicationDeadline: data.applicationDeadline ? new Date(data.applicationDeadline) : null,
+        rent: data.rent ? parseFloat(data.rent.replace(",", ".")) : undefined,
+        price: data.price ? parseFloat(data.price.replace(",", ".")) : undefined,
+        moveInDate: data.moveInDate ? new Date(data.moveInDate).toISOString() : undefined,
+        applicationDeadline: data.applicationDeadline ? new Date(data.applicationDeadline).toISOString() : null,
         contactName: data.contactName || null,
         contactEmail: data.contactEmail || null,
         contactPhone: data.contactPhone || null,
@@ -229,13 +224,15 @@ export async function createListingAction(
         seoDescription: data.description.slice(0, 160),
       },
     });
+    if (result.status === "unit_not_found") return { status: "error", message: "Objektet hittades inte." };
+    const listing = result.listing;
     await audit({
       organizationId: user.organizationId,
       userId: user.id,
       action: "create",
       entityType: "listing",
       entityId: listing.id,
-      after: { title: data.title, slug },
+      after: { title: data.title, slug: listing.slug },
     });
     revalidatePath("/admin/annonser");
     return { status: "success", message: `Annonsen skapades (utkast). Publicera den när den är klar.` };
@@ -247,8 +244,9 @@ export async function createListingAction(
 export async function changeListingStatusAction(formData: FormData): Promise<void> {
   const user = await requirePermission("listings", "update");
   const listingId = String(formData.get("listingId"));
+  const expectedStatus = String(formData.get("expectedStatus")) as ListingStatus;
   const toStatus = String(formData.get("toStatus")) as ListingStatus;
-  await changeListingStatus(user.organizationId!, listingId, toStatus, user.id);
+  await changeListingStatus(user.organizationId!, listingId, toStatus, expectedStatus);
   revalidatePath("/admin/annonser");
 }
 
@@ -385,9 +383,10 @@ export async function runImportAction(
 export async function changeApplicationStatusAction(formData: FormData): Promise<void> {
   const user = await requirePermission("applications", "update");
   const applicationId = String(formData.get("applicationId"));
+  const expectedStatus = String(formData.get("expectedStatus")) as ApplicationStatus;
   const toStatus = String(formData.get("toStatus")) as ApplicationStatus;
   await changeApplicationStatus(user.organizationId!, applicationId, toStatus, {
-    actorUserId: user.id,
+    expectedStatus,
   });
   revalidatePath("/admin/ansokningar");
 }
@@ -406,20 +405,12 @@ export async function sendOfferAction(formData: FormData): Promise<void> {
 export async function changeContractStatusAction(formData: FormData): Promise<void> {
   const user = await requirePermission("contracts", "update");
   const contractId = String(formData.get("contractId"));
+  const expectedStatus = String(formData.get("expectedStatus")) as ContractStatus;
   const toStatus = String(formData.get("toStatus")) as ContractStatus;
   await changeContractStatus(user.organizationId!, contractId, toStatus, {
-    actorUserId: user.id,
+    expectedStatus,
+    idempotencyKey: String(formData.get("idempotencyKey") || "") || undefined,
   });
-  // Automatisk avpublicering när objektet blir uthyrt.
-  if (toStatus === "ACTIVE") {
-    const contract = await db.contract.findFirst({
-      where: { id: contractId, organizationId: user.organizationId! },
-    });
-    if (contract) {
-      await db.unit.update({ where: { id: contract.unitId }, data: { status: "RENTED" } });
-      await unpublishListingsForUnit(user.organizationId!, contract.unitId, "Objektet uthyrt");
-    }
-  }
   revalidatePath("/admin/avtal");
 }
 
@@ -468,9 +459,7 @@ export async function createWorkOrderAction(
       user.id
     );
     if (data.requestId) {
-      const request = await db.maintenanceRequest.findFirst({
-        where: { id: data.requestId, organizationId: user.organizationId! },
-      });
+      const request = await getMaintenanceRequestStatus(user.organizationId!, data.requestId);
       if (request && ["RECEIVED", "CONFIRMED", "ASSESSING"].includes(request.status)) {
         await changeMaintenanceStatus(user.organizationId!, data.requestId, "ASSIGNED", {
           actorUserId: user.id,
@@ -513,61 +502,37 @@ export async function createSupplierAction(
   try {
     const user = await requirePermission("suppliers", "create");
     const data = supplierSchema.parse(Object.fromEntries(formData.entries()));
-    const supplier = await db.supplier.create({
-      data: {
-        organizationId: user.organizationId!,
-        name: data.name,
-        orgNumber: data.orgNumber || null,
-        email: data.email || null,
-        phone: data.phone || null,
-        specialty: data.specialty || null,
-      },
-    });
-
     let extra = "";
+    let authUserId: string | undefined;
     if (data.contractorEmail && data.contractorPassword) {
       if (data.contractorPassword.length < 10) {
         return { status: "error", message: "Entreprenörens lösenord måste vara minst 10 tecken." };
       }
-      const contractorRole = await db.role.findFirst({
-        where: { slug: "contractor", organizationId: null },
-      });
       const authUser = await createManagedAuthUser({
         email: data.contractorEmail,
         password: data.contractorPassword,
+        claimMode: "staff_invitation",
       });
-      let contractorUser;
-      try {
-        contractorUser = await db.user.create({
-          data: {
-            authUserId: authUser.id,
-            organizationId: user.organizationId!,
-            email: data.contractorEmail.toLowerCase(),
-            supplierId: supplier.id,
-            emailVerifiedAt: new Date(),
-            isActive: true,
-          },
-        });
-      } catch (error) {
-        await deleteManagedAuthUser(authUser.id);
-        throw error;
-      }
-      if (contractorRole) {
-        await db.userRole.create({
-          data: { userId: contractorUser.id, roleId: contractorRole.id },
-        });
-      }
+      authUserId = authUser.id;
       extra = ` Entreprenörskonto skapat: ${data.contractorEmail}.`;
     }
-
-    await audit({
-      organizationId: user.organizationId,
-      userId: user.id,
-      action: "create",
-      entityType: "supplier",
-      entityId: supplier.id,
-      after: { name: data.name },
-    });
+    let supplier;
+    try {
+      supplier = await provisionSupplier({
+        organizationId: user.organizationId!,
+        actorUserId: user.id,
+        name: data.name,
+        orgNumber: data.orgNumber || undefined,
+        email: data.email || undefined,
+        phone: data.phone || undefined,
+        specialty: data.specialty || undefined,
+        authUserId,
+        contractorEmail: data.contractorEmail || undefined,
+      });
+    } catch (error) {
+      if (authUserId) await deleteManagedAuthUser(authUserId);
+      throw error;
+    }
     revalidatePath("/admin/entreprenorer");
     return { status: "success", message: `Entreprenören ${data.name} skapades.${extra}` };
   } catch (e) {
@@ -600,14 +565,12 @@ export async function createConnectionAction(
         return { status: "error", message: "Credentials måste vara giltig JSON." };
       }
     }
-    const connection = await db.integrationConnection.create({
-      data: {
-        organizationId: user.organizationId!,
-        provider: data.provider,
-        name: data.name,
-        credentialsEncrypted: data.credentials ? encryptSecret(data.credentials) : null,
-        webhookSecret: data.webhookSecret || `whsec_${generateToken(24)}`,
-      },
+    const connection = await createIntegrationConnectionRecord({
+      organizationId: user.organizationId!,
+      provider: data.provider,
+      name: data.name,
+      credentialsEncrypted: data.credentials ? encryptSecret(data.credentials) : null,
+      webhookSecret: data.webhookSecret || `whsec_${generateToken(24)}`,
     });
     await audit({
       organizationId: user.organizationId,
@@ -665,30 +628,16 @@ export async function redeliverWebhookAction(formData: FormData): Promise<void> 
   const user = await requirePermission("webhooks", "update");
   const deliveryId = String(formData.get("deliveryId"));
   // Ägarkontroll sker i redeliver via organizationId på leveransen.
-  const delivery = await db.webhookDelivery.findFirst({
-    where: { id: deliveryId, organizationId: user.organizationId! },
-  });
-  if (delivery) await redeliver(deliveryId, user.id);
+  if (await isOwnedWebhookDelivery(user.organizationId!, deliveryId)) {
+    await redeliver(deliveryId, user.id);
+  }
   revalidatePath("/admin/webhooks");
 }
 
 export async function toggleSubscriptionAction(formData: FormData): Promise<void> {
   const user = await requirePermission("webhooks", "update");
   const subscriptionId = String(formData.get("subscriptionId"));
-  const sub = await db.webhookSubscription.findFirst({
-    where: { id: subscriptionId, organizationId: user.organizationId! },
-  });
-  if (sub) {
-    await db.webhookSubscription.update({
-      where: { id: sub.id },
-      data: {
-        isActive: !sub.isActive,
-        disabledAt: sub.isActive ? new Date() : null,
-        disabledReason: sub.isActive ? "Avstängd manuellt" : null,
-        consecutiveFailures: 0,
-      },
-    });
-  }
+  await toggleWebhookSubscription(user.organizationId!, subscriptionId);
   revalidatePath("/admin/webhooks");
 }
 
@@ -706,17 +655,15 @@ export async function createApiKeyAction(
     const user = await requirePermission("apikeys", "create");
     const data = apiKeySchema.parse(Object.fromEntries(formData.entries()));
     const { key, prefix, hash } = generateApiKey();
-    const apiKey = await db.apiKey.create({
-      data: {
-        organizationId: user.organizationId!,
-        name: data.name,
-        keyPrefix: prefix,
-        keyHash: hash,
-        scopes: data.scopes.split(",").map((s) => s.trim()).filter(Boolean),
-        allowedIps: data.allowedIps
-          ? data.allowedIps.split(",").map((s) => s.trim()).filter(Boolean)
-          : [],
-      },
+    const apiKey = await createApiKeyRecord({
+      organizationId: user.organizationId!,
+      name: data.name,
+      keyPrefix: prefix,
+      keyHash: hash,
+      scopes: data.scopes.split(",").map((s) => s.trim()).filter(Boolean),
+      allowedIps: data.allowedIps
+        ? data.allowedIps.split(",").map((s) => s.trim()).filter(Boolean)
+        : [],
     });
     await audit({
       organizationId: user.organizationId,
@@ -740,14 +687,8 @@ export async function createApiKeyAction(
 export async function revokeApiKeyAction(formData: FormData): Promise<void> {
   const user = await requirePermission("apikeys", "delete");
   const apiKeyId = String(formData.get("apiKeyId"));
-  const key = await db.apiKey.findFirst({
-    where: { id: apiKeyId, organizationId: user.organizationId! },
-  });
+  const key = await revokeApiKeyRecord(user.organizationId!, apiKeyId);
   if (key) {
-    await db.apiKey.update({
-      where: { id: key.id },
-      data: { isActive: false, revokedAt: new Date() },
-    });
     await audit({
       organizationId: user.organizationId,
       userId: user.id,
@@ -779,60 +720,30 @@ export async function createStaffUserAction(
     const user = await requirePermission("users", "create");
     const data = staffUserSchema.parse(Object.fromEntries(formData.entries()));
     const email = data.email.toLowerCase();
-    const exists = await db.user.findUnique({ where: { email } });
-    if (exists) return { status: "error", message: "E-postadressen används redan." };
-
-    const role = await db.role.findFirst({
-      where: { id: data.roleId, OR: [{ organizationId: user.organizationId! }, { organizationId: null }] },
+    const authUser = await createManagedAuthUser({
+      email,
+      password: data.password,
+      firstName: data.firstName,
+      lastName: data.lastName,
+      claimMode: "staff_invitation",
     });
-    if (!role) return { status: "error", message: "Rollen hittades inte." };
-
-    await db.$transaction(async (tx) => {
-      const person = await tx.person.create({
-        data: {
-          organizationId: user.organizationId!,
-          firstName: data.firstName,
-          lastName: data.lastName,
-          email,
-        },
-      });
-      const authUser = await createManagedAuthUser({
+    let provisioned;
+    try {
+      provisioned = await provisionStaffUser({
+        authUserId: authUser.id,
+        organizationId: user.organizationId!,
         email,
-        password: data.password,
         firstName: data.firstName,
         lastName: data.lastName,
+        roleId: data.roleId,
+        actorUserId: user.id,
       });
-      let created;
-      try {
-        created = await tx.user.create({
-          data: {
-            authUserId: authUser.id,
-            organizationId: user.organizationId!,
-            personId: person.id,
-            email,
-            emailVerifiedAt: new Date(),
-            isActive: true,
-          },
-        });
-      } catch (error) {
-        await deleteManagedAuthUser(authUser.id);
-        throw error;
-      }
-      await tx.userRole.create({ data: { userId: created.id, roleId: role.id } });
-      await audit(
-        {
-          organizationId: user.organizationId,
-          userId: user.id,
-          action: "create",
-          entityType: "user",
-          entityId: created.id,
-          after: { email, role: role.slug },
-        },
-        tx
-      );
-    });
+    } catch (error) {
+      await deleteManagedAuthUser(authUser.id);
+      throw error;
+    }
     revalidatePath("/admin/anvandare");
-    return { status: "success", message: `Användaren ${email} skapades med rollen ${role.name}.` };
+    return { status: "success", message: `Användaren ${email} skapades med rollen ${provisioned.roleName}.` };
   } catch (e) {
     return errState(e);
   }
@@ -851,32 +762,14 @@ export async function createRoleAction(
     const user = await requirePermission("roles", "create");
     const data = roleSchema.parse(Object.fromEntries(formData.entries()));
     const slug = slugify(data.name);
-    const exists = await db.role.findFirst({
-      where: { organizationId: user.organizationId!, slug },
+    const role = await createCustomRole({
+      organizationId: user.organizationId!,
+      actorUserId: user.id,
+      name: data.name,
+      slug,
+      permissions: data.permissions.split(",").map((p) => p.trim()).filter(Boolean),
     });
-    if (exists) return { status: "error", message: "En roll med detta namn finns redan." };
-    const role = await db.role.create({
-      data: {
-        organizationId: user.organizationId!,
-        name: data.name,
-        slug,
-        permissions: {
-          create: data.permissions
-            .split(",")
-            .map((p) => p.trim())
-            .filter(Boolean)
-            .map((permission) => ({ permission })),
-        },
-      },
-    });
-    await audit({
-      organizationId: user.organizationId,
-      userId: user.id,
-      action: "create",
-      entityType: "role",
-      entityId: role.id,
-      after: { name: data.name },
-    });
+    if (!role) return { status: "error", message: "En roll med detta namn finns redan." };
     revalidatePath("/admin/anvandare");
     return { status: "success", message: `Rollen ${data.name} skapades.` };
   } catch (e) {

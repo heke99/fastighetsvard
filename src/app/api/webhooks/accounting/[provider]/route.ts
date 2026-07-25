@@ -1,10 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
-import { db } from "@/lib/db";
 import { verifyWebhookSignature } from "@/lib/crypto";
 import { upsertExternalInvoice, upsertExternalPayment } from "@/lib/integrations/sync";
 import { audit } from "@/lib/audit";
 import type { ExternalInvoice, ExternalPayment } from "@/lib/integrations/provider";
-import type { Database } from "@/lib/database-types";
+import {
+  applyInboundContractReference,
+  applyInboundCustomerEvent,
+  createInboundWebhookEvent,
+  findInboundWebhookConnection,
+  finishInboundWebhookEvent,
+} from "@/lib/repositories/inbound-webhook-records";
 
 /**
  * POST /api/webhooks/accounting/{provider}
@@ -48,13 +53,10 @@ export async function POST(
   }
 
   // Hitta anslutningen (per provider). Hemligheten ligger på anslutningen.
-  const connection = await db.integrationConnection.findFirst({
-    where: {
-      provider,
-      isActive: true,
-      ...(envelope.organization_id ? { organizationId: envelope.organization_id } : {}),
-    },
-  });
+  const connection = await findInboundWebhookConnection(
+    provider,
+    envelope.organization_id
+  );
   if (!connection?.webhookSecret) {
     return NextResponse.json(
       { error: { code: "unknown_provider", message: "Ingen aktiv integration för denna provider." } },
@@ -77,30 +79,16 @@ export async function POST(
     );
   }
 
-  // Idempotens: har vi redan sett detta event?
-  const existing = await db.inboundWebhookEvent.findUnique({
-    where: {
-      organizationId_provider_eventId: {
-        organizationId: connection.organizationId,
-        provider,
-        eventId: envelope.id,
-      },
-    },
+  const event = await createInboundWebhookEvent({
+    organizationId: connection.organizationId,
+    provider,
+    eventId: envelope.id,
+    eventType: envelope.type,
+    payload: envelope,
   });
-  if (existing) {
+  if (event.duplicate) {
     return NextResponse.json({ received: true, duplicate: true }, { status: 200 });
   }
-
-  const event = await db.inboundWebhookEvent.create({
-    data: {
-      organizationId: connection.organizationId,
-      provider,
-      eventId: envelope.id,
-      eventType: envelope.type,
-      payload: envelope as unknown as Database.InputJsonValue,
-      signatureValid: true,
-    },
-  });
 
   let processingError: string | null = null;
   try {
@@ -109,10 +97,7 @@ export async function POST(
     processingError = e instanceof Error ? e.message : "Okänt fel";
   }
 
-  await db.inboundWebhookEvent.update({
-    where: { id: event.id },
-    data: { processedAt: new Date(), processingError },
-  });
+  await finishInboundWebhookEvent(connection.organizationId, event.id, processingError);
 
   // 200 även vid processfel: eventet är mottaget och loggat; felet hanteras
   // i granskningskön i stället för att providern ska spamma om.
@@ -150,79 +135,21 @@ async function processInboundEvent(
     // Kunduppdatering: uppdatera endast om säker mappning finns.
     const externalId = String((data as { externalId?: string }).externalId ?? "");
     if (!externalId) throw new Error("customer-event saknar externalId.");
-    const ref = await db.externalReference.findUnique({
-      where: {
-        organizationId_externalSystem_entityType_externalId: {
-          organizationId,
-          externalSystem: provider,
-          entityType: "customer",
-          externalId,
-        },
-      },
+    await applyInboundCustomerEvent({
+      organizationId,
+      provider,
+      externalId,
+      data: data as { phone?: string; address?: string },
     });
-    if (ref?.personId) {
-      const d = data as { email?: string; phone?: string; address?: string };
-      await db.person.update({
-        where: { id: ref.personId },
-        data: {
-          phone: d.phone ?? undefined,
-          address: d.address ?? undefined,
-        },
-      });
-      await db.externalReference.update({
-        where: { id: ref.id },
-        data: { lastSyncedAt: new Date() },
-      });
-    } else {
-      // Okänd kund → granskningskö (skapa aldrig okontrollerade kopior).
-      const existing = await db.syncReviewItem.findFirst({
-        where: {
-          organizationId,
-          externalSystem: provider,
-          entityType: "customer",
-          externalId,
-          status: "PENDING",
-        },
-      });
-      if (!existing) {
-        await db.syncReviewItem.create({
-          data: {
-            organizationId,
-            entityType: "customer",
-            externalSystem: provider,
-            externalId,
-            payload: data as Database.InputJsonValue,
-            reason: "Webhook för okänd kund – kräver manuell matchning.",
-          },
-        });
-      }
-    }
   } else if (type.startsWith("contract_reference.")) {
     const d = data as { externalContractId?: string; contractNumber?: string };
     if (d.externalContractId && d.contractNumber) {
-      const contract = await db.contract.findFirst({
-        where: { organizationId, contractNumber: d.contractNumber },
+      await applyInboundContractReference({
+        organizationId,
+        provider,
+        externalContractId: d.externalContractId,
+        contractNumber: d.contractNumber,
       });
-      if (contract) {
-        await db.externalReference.upsert({
-          where: {
-            organizationId_externalSystem_entityType_externalId: {
-              organizationId,
-              externalSystem: provider,
-              entityType: "contract",
-              externalId: d.externalContractId,
-            },
-          },
-          create: {
-            organizationId,
-            externalSystem: provider,
-            entityType: "contract",
-            externalId: d.externalContractId,
-            contractId: contract.id,
-          },
-          update: { contractId: contract.id },
-        });
-      }
     }
   } else {
     throw new Error(`Okänd eventtyp: ${type}`);
