@@ -23,6 +23,8 @@ const supabase = createClient(url, secret, {
   auth: { persistSession: false, autoRefreshToken: false },
 });
 
+const timestamp = () => new Date().toISOString();
+
 async function one(operation, query) {
   const { data, error } = await query;
   if (error) throw new Error(`${operation}: ${error.message}`);
@@ -51,6 +53,8 @@ if (!organization) {
         orgNumber: "559350-5620",
         email: "info@faddebo.se",
         dataProtectionEmail: "info@faddebo.se",
+        createdAt: timestamp(),
+        updatedAt: timestamp(),
       })
       .select("id,name,legalName,orgNumber")
       .single()
@@ -63,6 +67,7 @@ if (!organization) {
       .update({
         email: "info@faddebo.se",
         dataProtectionEmail: "info@faddebo.se",
+        updatedAt: timestamp(),
       })
       .eq("id", organization.id)
       .select("id,name,legalName,orgNumber")
@@ -88,12 +93,20 @@ const brandValues = {
 if (!existingBrand) {
   await one(
     "Skapa FaddeBo-varumärke",
-    supabase.from("Brand").insert({ id: randomUUID(), ...brandValues })
+    supabase.from("Brand").insert({
+      id: randomUUID(),
+      ...brandValues,
+      createdAt: timestamp(),
+      updatedAt: timestamp(),
+    })
   );
 } else {
   await one(
     "Uppdatera FaddeBo-varumärke",
-    supabase.from("Brand").update(brandValues).eq("id", existingBrand.id)
+    supabase
+      .from("Brand")
+      .update({ ...brandValues, updatedAt: timestamp() })
+      .eq("id", existingBrand.id)
   );
 }
 
@@ -118,6 +131,8 @@ if (!person) {
         lastName,
         email,
         country: "SE",
+        createdAt: timestamp(),
+        updatedAt: timestamp(),
       })
       .select("id,organizationId,firstName,lastName,email")
       .single()
@@ -127,7 +142,7 @@ if (!person) {
     "Uppdatera ägarperson",
     supabase
       .from("Person")
-      .update({ firstName, lastName, email })
+      .update({ firstName, lastName, email, updatedAt: timestamp() })
       .eq("id", person.id)
       .select("id,organizationId,firstName,lastName,email")
       .single()
@@ -184,6 +199,8 @@ if (!profile) {
         email,
         emailVerifiedAt: new Date().toISOString(),
         isActive: true,
+        createdAt: timestamp(),
+        updatedAt: timestamp(),
       })
       .select("id,authUserId")
       .single()
@@ -200,6 +217,7 @@ if (!profile) {
         email,
         emailVerifiedAt: new Date().toISOString(),
         isActive: true,
+        updatedAt: timestamp(),
       })
       .eq("id", profile.id)
       .select("id,authUserId")
@@ -216,7 +234,14 @@ if (!role) {
     "Skapa superadminroll",
     supabase
       .from("Role")
-      .insert({ id: randomUUID(), name: "Ägare / superadmin", slug: "superadmin", isSystem: true })
+      .insert({
+        id: randomUUID(),
+        name: "Ägare / superadmin",
+        slug: "superadmin",
+        isSystem: true,
+        createdAt: timestamp(),
+        updatedAt: timestamp(),
+      })
       .select("id,name,slug")
       .single()
   );
@@ -247,6 +272,7 @@ if (!existingRole) {
       userId: profile.id,
       roleId: role.id,
       propertyId: null,
+      createdAt: timestamp(),
     })
   );
 }
