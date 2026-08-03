@@ -23,8 +23,8 @@ export default function AccessibilityPage() {
         </ul>
         <p>
           Upptäcker du brister i tillgängligheten? Kontakta oss på{" "}
-          <a href="mailto:info@ostgotaelteknik.se" className="text-brand-700 underline">
-            info@ostgotaelteknik.se
+          <a href={`mailto:${branding.supportEmail}`} className="text-brand-700 underline">
+            {branding.supportEmail}
           </a>{" "}
           så åtgärdar vi dem.
         </p>

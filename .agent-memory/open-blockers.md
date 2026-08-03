@@ -40,3 +40,15 @@ Affected flow: release traceability and deployment
 Problem: the supplied archive has no `.git`, remote, branch or commit.  
 Required resolution: apply this source to the canonical clone, inspect its Git
 identity, review the diff, commit and deploy through the approved pipeline.
+
+## BLOCKER-0005
+
+Severity: P0  
+Status: BLOCKED — EXTERNAL AUTH/E-MAIL CONFIGURATION REQUIRED  
+Affected flow: registration confirmation, staff activation and password reset  
+Problem: Supabase Site URL/redirects, custom SMTP and Resend DNS/API credentials
+cannot be proven from source.  
+Required resolution: configure the production-like staging environment per
+`docs/ACCOUNT_AND_EMAIL_SETUP.md` and execute all account flow checks.  
+Acceptance criteria: verified sender identity, successful delivery, valid
+callbacks, expired-link handling and correct role-specific dashboard routing.

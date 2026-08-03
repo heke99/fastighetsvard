@@ -7,26 +7,27 @@ import { Logo } from "./Logo";
 
 interface HeaderUser {
   name: string;
-  isStaff: boolean;
+  isTenant: boolean;
+  dashboardHref: "/admin" | "/entreprenor" | "/mina-sidor";
 }
 
 const publicNav = [
   { href: "/", label: "Startsida" },
   { href: "/lediga-bostader", label: "Lediga bostäder" },
-  { href: "/till-salu", label: "Till salu" },
   { href: "/lokaler", label: "Lokaler" },
-  { href: "/parkering", label: "Parkeringar" },
   { href: "/vara-fastigheter", label: "Våra fastigheter" },
   { href: "/felanmalan", label: "Felanmälan" },
   { href: "/kontakt", label: "Kontakt" },
 ];
 
-const userNav = [
+const portalNav = [
   { href: "/mina-sidor", label: "Mina sidor" },
   { href: "/mina-sidor/ansokningar", label: "Mina ansökningar" },
-  { href: "/mina-sidor/avtal", label: "Mina avtal" },
-  { href: "/mina-sidor/fakturor", label: "Mina fakturor" },
-  { href: "/mina-sidor/felanmalan", label: "Mina felanmälningar" },
+  { href: "/mina-sidor/favoriter", label: "Mina favoriter" },
+  { href: "/mina-sidor/bevakningar", label: "Mina bevakningar" },
+  { href: "/mina-sidor/avtal", label: "Mina avtal", tenantOnly: true },
+  { href: "/mina-sidor/fakturor", label: "Mina fakturor", tenantOnly: true },
+  { href: "/mina-sidor/felanmalan", label: "Mina felanmälningar", tenantOnly: true },
   { href: "/mina-sidor/meddelanden", label: "Meddelanden" },
   { href: "/mina-sidor/profil", label: "Profil" },
 ];
@@ -85,6 +86,13 @@ export function SiteHeader({ user }: { user: HeaderUser | null }) {
 
   const isActive = (href: string) =>
     href === "/" ? pathname === "/" : pathname.startsWith(href);
+  const accountNav = user
+    ? user.dashboardHref === "/admin"
+      ? [{ href: "/admin", label: "Administration" }]
+      : user.dashboardHref === "/entreprenor"
+        ? [{ href: "/entreprenor", label: "Entreprenörsportal" }]
+        : portalNav.filter((item) => !item.tenantOnly || user.isTenant)
+    : [];
 
   return (
     <header className="sticky top-0 z-40 border-b border-stone-200 bg-white/95 backdrop-blur">
@@ -140,7 +148,7 @@ export function SiteHeader({ user }: { user: HeaderUser | null }) {
                   role="menu"
                   className="absolute right-0 mt-2 w-56 rounded-xl border border-stone-200 bg-white py-2 shadow-lg"
                 >
-                  {userNav.map((item) => (
+                  {accountNav.map((item) => (
                     <Link
                       key={item.href}
                       role="menuitem"
@@ -150,15 +158,6 @@ export function SiteHeader({ user }: { user: HeaderUser | null }) {
                       {item.label}
                     </Link>
                   ))}
-                  {user.isStaff && (
-                    <Link
-                      role="menuitem"
-                      href="/admin"
-                      className="block border-t border-stone-100 px-4 py-2 text-sm font-medium text-brand-700 hover:bg-stone-50"
-                    >
-                      Administration
-                    </Link>
-                  )}
                   <form action="/api/auth/logout" method="POST" className="border-t border-stone-100">
                     <button
                       role="menuitem"
@@ -250,7 +249,7 @@ export function SiteHeader({ user }: { user: HeaderUser | null }) {
           <div className="mt-4 border-t border-stone-200 pt-4">
             {user ? (
               <ul className="space-y-1">
-                {userNav.map((item) => (
+                {accountNav.map((item) => (
                   <li key={item.href}>
                     <Link
                       href={item.href}
@@ -260,16 +259,6 @@ export function SiteHeader({ user }: { user: HeaderUser | null }) {
                     </Link>
                   </li>
                 ))}
-                {user.isStaff && (
-                  <li>
-                    <Link
-                      href="/admin"
-                      className="block rounded-md px-3 py-2.5 text-sm font-semibold text-brand-700 hover:bg-stone-50"
-                    >
-                      Administration
-                    </Link>
-                  </li>
-                )}
                 <li>
                   <form action="/api/auth/logout" method="POST">
                     <button

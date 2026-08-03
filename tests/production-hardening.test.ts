@@ -9,7 +9,7 @@ describe("production hardening phase 1", () => {
     const files = readdirSync(resolve("supabase/migrations"))
       .filter((name) => name.endsWith(".sql"))
       .sort();
-    expect(files).toHaveLength(29);
+    expect(files).toHaveLength(30);
     expect(files).not.toContain("20260719192014_initial.sql");
     expect(files.some((name) => name.includes("repair_"))).toBe(false);
     expect(files).toEqual([...files].sort());
@@ -221,4 +221,29 @@ describe("production hardening phase 1", () => {
       .toContain("FUNCTION public.persist_external_invoice");
     expect(read("src/lib/integrations/sync.ts")).not.toContain("@/lib/db");
   });
+  it("hardens FaddeBo account roles, contact addresses and public navigation", () => {
+    const sql = read("supabase/migrations/20260803230000_faddebo_accounts_and_roles.sql");
+    const header = read("src/components/SiteHeader.tsx");
+    const footer = read("src/components/SiteFooter.tsx");
+    const home = read("src/app/(public)/page.tsx");
+    const roleRouting = read("src/lib/role-routing.ts");
+    const adminDashboard = read("src/app/admin/page.tsx");
+    const config = read("next.config.ts");
+
+    expect(sql).toContain("info@faddebo.se");
+    expect(sql).toContain("privileged_role_assignment_denied");
+    expect(sql).toContain("users:create");
+    expect(sql).toContain("Fastighetsvärd / förvaltare");
+    expect(roleRouting).toContain('"property-manager"');
+    expect(roleRouting).toContain('OWNER_ROLE_SLUGS = ["superadmin"]');
+    expect(header).not.toContain('{ href: "/till-salu"');
+    expect(header).not.toContain('{ href: "/parkering"');
+    expect(footer).not.toContain('href="/till-salu"');
+    expect(footer).not.toContain('href="/parkering"');
+    expect(adminDashboard).not.toContain('label: "Till salu"');
+    expect(home).toContain("FaddeBo förvaltar bostäder och lokaler i Vadstena, Boxholm och Skänninge");
+    expect(config).toContain('{ source: "/till-salu", destination: "/lediga-bostader"');
+    expect(config).toContain('{ source: "/parkering", destination: "/lediga-bostader"');
+  });
+
 });

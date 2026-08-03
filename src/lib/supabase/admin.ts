@@ -9,7 +9,7 @@ export function createAdminClient(): SupabaseClient {
   if (!adminClient) {
     adminClient = createClient(getSupabaseUrl(), getSupabaseSecretKey(), {
       auth: { autoRefreshToken: false, persistSession: false, detectSessionInUrl: false },
-      global: { headers: { "X-Client-Info": "ostgota-fastighet-server" } },
+      global: { headers: { "X-Client-Info": "faddebo-server" } },
     });
   }
   return adminClient;

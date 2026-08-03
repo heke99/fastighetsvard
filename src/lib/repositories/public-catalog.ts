@@ -22,6 +22,7 @@ const LISTING_COLUMNS = [
 export interface PublicListingSearchParams {
   q?: string;
   category?: ListingCategory;
+  categories?: ListingCategory[];
   type?: UnitType;
   city?: string;
   area?: string;
@@ -145,6 +146,7 @@ export async function searchPublicListings(params: PublicListingSearchParams) {
     .eq("brandSlug", brandSlug());
 
   if (params.category) query = query.eq("category", params.category);
+  if (params.categories?.length) query = query.in("category", params.categories);
   if (params.type) query = query.eq("unitType", params.type);
   if (params.city) query = query.ilike("city", escapeLike(params.city));
   if (params.area) query = query.ilike("area", `%${escapeLike(params.area)}%`);

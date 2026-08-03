@@ -15,7 +15,7 @@ describe("Supabase-native projekt", () => {
       .filter((name) => name.endsWith(".sql"))
       .sort();
 
-    expect(files.length).toBe(29);
+    expect(files.length).toBe(30);
 
     const sql = files
       .map((file) => readFileSync(resolve(migrationDir, file), "utf8"))

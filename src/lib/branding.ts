@@ -28,7 +28,7 @@ function value(name: string, fallback: string): string {
  * och kan ändras per miljö utan kodändring.
  */
 export function getBranding(): BrandingConfig {
-  const brandName = value("BRAND_NAME", value("BRAND_COMPANY_NAME", "FaddeBo"));
+  const brandName = value("BRAND_NAME", "FaddeBo");
   const legalName = value("BRAND_LEGAL_NAME", "Östgöta El Teknik AB");
   const organizationNumber = value("BRAND_ORGANIZATION_NUMBER", "559350-5620");
   return {
@@ -44,11 +44,11 @@ export function getBranding(): BrandingConfig {
     tagline: value("BRAND_TAGLINE", "Boende nära dig"),
     description: value(
       "BRAND_DESCRIPTION",
-      `${brandName} förvaltar och hyr ut bostäder och lokaler i Östergötland.`
+      `${brandName} förvaltar bostäder och lokaler i Vadstena, Boxholm och Skänninge.`
     ),
-    appUrl: value("APP_URL", "http://faddebo.se"),
+    appUrl: value("APP_URL", "https://faddebo.se"),
     supportEmail: value("SUPPORT_EMAIL", "info@faddebo.se"),
-    privacyEmail: value("PRIVACY_EMAIL", "dataskydd@faddebo.se"),
+    privacyEmail: value("PRIVACY_EMAIL", "info@faddebo.se"),
     leasingEmail: value("LEASING_EMAIL", "info@faddebo.se"),
     faultReportEmail: value("FAULT_REPORT_EMAIL", "felanmalan@faddebo.se"),
     phone: value("BRAND_PHONE", "070-000 00 00"),

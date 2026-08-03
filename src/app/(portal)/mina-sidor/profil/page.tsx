@@ -2,12 +2,14 @@ import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth";
 import { getMyProfile } from "@/lib/repositories/portal-records";
 import { ProfileForm, DataExportButton } from "./forms";
+import { getBranding } from "@/lib/branding";
 
 export const metadata = { title: "Min profil" };
 
 export default async function ProfilePage() {
   const user = await getCurrentUser();
   if (!user) redirect("/logga-in");
+  const brand = getBranding();
 
   const person = user.personId
     ? await getMyProfile(user.personId)
@@ -41,7 +43,7 @@ export default async function ProfilePage() {
         </p>
         <div className="mt-4 flex flex-wrap gap-2">
           <DataExportButton />
-          <a href="mailto:dataskydd@ostgotaelteknik.se?subject=Begäran om rättelse eller radering" className="btn-secondary">
+          <a href={`mailto:${brand.privacyEmail}?subject=Begäran om rättelse eller radering`} className="btn-secondary">
             Begär rättelse eller radering
           </a>
         </div>

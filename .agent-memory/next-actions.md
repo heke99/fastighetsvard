@@ -48,3 +48,16 @@ Goal: run browser and provider release gates.
 Scope: registration, application, offer/reservation, signing/activation,
 portal, notice/move-out, inbound/outbound webhook, outbox worker, accounting
 provider and deployment smoke tests.
+
+## TASK-0006
+
+Priority: P0  
+Status: COMPLETE IN SOURCE; RUNTIME VERIFICATION PENDING  
+Goal: establish owner, fastighetsvärd, applicant and tenant account flows with
+FaddeBo branding and domain e-mail addresses.  
+Completed: centralized role routing, owner bootstrap, staff password setup,
+confirmation resend, password reset confirmation, role-aware dashboards and
+navigation, new logo assets, homepage copy, public route removal and forward
+migration.  
+Next exact step: run the commands and ten runtime checks in
+`docs/ACCOUNT_AND_EMAIL_SETUP.md` against Supabase staging.

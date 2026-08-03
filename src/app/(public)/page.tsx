@@ -11,21 +11,19 @@ import {
 export const dynamic = "force-dynamic";
 
 async function getHomeData(personId: string | null) {
-  const [rentals, sales, commercial, latest, upcoming, featured, favoriteIds] =
+  const [rentals, commercial, latest, upcoming, featured, favoriteIds] =
     await Promise.all([
       searchPublicListings({ category: "RENTAL", perPage: 6 }),
-      searchPublicListings({ category: "SALE", perPage: 3 }),
       searchPublicListings({ category: "COMMERCIAL", perPage: 3 }),
-      searchPublicListings({ perPage: 3 }),
+      searchPublicListings({ categories: ["RENTAL", "COMMERCIAL"], perPage: 3 }),
       listUpcomingUnits(4),
-      searchPublicListings({ featured: true, perPage: 3 }),
+      searchPublicListings({ categories: ["RENTAL", "COMMERCIAL"], featured: true, perPage: 3 }),
       personId
         ? listFavoriteListingIds(personId)
         : Promise.resolve(new Set<string>()),
     ]);
   return {
     rentals: rentals.items,
-    sales: sales.items,
     commercial: commercial.items,
     latest: latest.items,
     upcoming,
@@ -81,13 +79,18 @@ export default async function HomePage() {
         <div className="mx-auto max-w-7xl px-4 py-16 sm:px-6 sm:py-24">
           <div className="max-w-2xl">
             <h1 className="text-3xl font-extrabold leading-tight sm:text-5xl">
-              Hitta ditt nästa hem i Östergötland
+              Trygga bostäder och lokaler nära dig
             </h1>
-            <p className="mt-4 text-lg text-brand-100">
-              {brand.brandName} hyr ut och förmedlar lägenheter, lokaler och
-              parkeringsplatser. Sök bland våra publicerade objekt eller skapa
-              en bevakning så hör vi av oss.
-            </p>
+            <div className="mt-5 space-y-3 text-lg leading-relaxed text-brand-100">
+              <p>
+                FaddeBo förvaltar bostäder och lokaler i Vadstena, Boxholm och Skänninge
+                – alltid med fokus på trygghet, energieffektivitet och personlig service.
+              </p>
+              <p>
+                Som hyresgäst hos oss får du tillgång till Mina sidor där du ser ditt avtal,
+                dina fakturor och kan göra felanmälningar dygnet runt.
+              </p>
+            </div>
           </div>
           <form
             action="/lediga-bostader"
@@ -113,9 +116,6 @@ export default async function HomePage() {
           <div className="mt-6 flex flex-wrap gap-3 text-sm">
             <Link href="/lediga-bostader" className="rounded-full bg-white/10 px-4 py-1.5 font-medium hover:bg-white/20">
               Till uthyrning
-            </Link>
-            <Link href="/till-salu" className="rounded-full bg-white/10 px-4 py-1.5 font-medium hover:bg-white/20">
-              Till salu
             </Link>
             <Link href="/lokaler" className="rounded-full bg-white/10 px-4 py-1.5 font-medium hover:bg-white/20">
               Lokaler
@@ -171,14 +171,6 @@ export default async function HomePage() {
         moreHref="/lediga-bostader"
         moreLabel="Alla lediga bostäder"
         listings={data.rentals as ListingWithUnit[]}
-        favoriteIds={data.favoriteIds}
-      />
-      <Section
-        id="till-salu"
-        title="Till salu"
-        moreHref="/till-salu"
-        moreLabel="Allt till salu"
-        listings={data.sales as ListingWithUnit[]}
         favoriteIds={data.favoriteIds}
       />
       <Section
@@ -241,16 +233,14 @@ export default async function HomePage() {
               Om {brand.brandName}
             </h2>
             <p className="mt-4 leading-relaxed text-stone-600">
-              {brand.brandName} är varumärket för {brand.legalName}s
-              fastigheter. FaddeBo förvaltar bostäder och lokaler i Vadstena, Boxholm och Skänninge  – 
-               alltid med fokus på trygghet, energieffektivitet och personlig service.
-               Som hyresgäst hos oss får du tillgång till Mina sidor där du ser ditt avtal, 
-                dina fakturor och kan göra felanmälningar dygnet runt.
-
+              {brand.brandName} är varumärket för {brand.legalName}s fastigheter.
+              Vi förvaltar bostäder och lokaler i Vadstena, Boxholm och Skänninge
+              med fokus på trygga hem, låg energianvändning och personlig service.
             </p>
             <p className="mt-3 leading-relaxed text-stone-600">
-              Som hyresgäst hos oss får du tillgång till Mina sidor där du ser
-              ditt avtal, dina fakturor och kan göra felanmälningar dygnet runt.
+              På Mina sidor kan hyresgäster se avtal och fakturor, skicka
+              felanmälningar och följa sina ärenden. Bostadssökande kan skapa
+              profil, spara favoriter och följa sina ansökningar.
             </p>
             <Link href="/kontakt" className="btn-primary mt-6">
               Kontakta oss

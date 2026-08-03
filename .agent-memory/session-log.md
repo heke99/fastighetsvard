@@ -112,3 +112,18 @@ PostgreSQL credentials or Git metadata were available.
 In the canonical Git clone on Node 22.16.0/npm 10.9.2, run `supabase start`,
 `npm run db:reset`, `npm run db:verify`, `npm run test:rls` and the real
 parallel suite. Fix the first failure with a new forward migration.
+
+## 2026-08-03 — FaddeBo accounts, dashboards and public branding
+
+Implemented owner/superadmin bootstrap, protected staff provisioning,
+Fastighetsvärd / förvaltare role naming, role-aware login routing and menus,
+applicant/tenant dashboard separation, signup confirmation resend, password
+recovery, FaddeBo contact addresses, logo assets, exact homepage hero copy and
+public removal/redirect of Till salu and Parkeringar. Added migration
+`20260803230000_faddebo_accounts_and_roles.sql`, regression tests and
+`docs/ACCOUNT_AND_EMAIL_SETUP.md`.
+
+Executed: `node --check scripts/bootstrap-admin.mjs` and
+`node scripts/lint.mjs` (passed, 30 migrations). `npm ci` was blocked by an
+internal registry 404 for the locked Zod tarball, so typecheck/tests/build were
+not claimed.

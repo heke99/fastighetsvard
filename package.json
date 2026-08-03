@@ -23,7 +23,8 @@
     "db:verify": "psql \"${SUPABASE_DB_URL:-postgresql://postgres:postgres@127.0.0.1:54322/postgres}\" -v ON_ERROR_STOP=1 -f supabase/tests/verify_schema.sql",
     "vercel-build": "next build",
     "ci": "npm run lint && npm run typecheck && npm run test:unit && npm run build",
-    "bootstrap:admin": "node --env-file=.env.local scripts/bootstrap-admin.mjs"
+    "bootstrap:admin": "node --env-file=.env.local scripts/bootstrap-admin.mjs",
+    "bootstrap:owner": "node --env-file=.env.local scripts/bootstrap-admin.mjs"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.3",

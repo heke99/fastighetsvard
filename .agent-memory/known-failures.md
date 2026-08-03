@@ -27,3 +27,16 @@ Evidence: the CLI attempted to create `/root/.supabase` and failed with EROFS.
 
 Resolution: run in the normal developer/CI environment or set a writable CLI
 config directory; do not weaken application filesystem permissions.
+
+## FAILURE-0004: Internal npm mirror is missing locked Zod tarball
+
+Status: ENVIRONMENTAL / OPEN
+
+Evidence: on 2026-08-03 `npm ci` returned HTTP 404 for
+`zod-3.25.76.tgz` from the configured internal package mirror.
+
+Impact: post-change typecheck, Vitest and Next production build could not be
+executed in this environment. Static project lint and Node syntax check passed.
+
+Resolution: rerun the release gate in normal development/CI with a complete npm
+registry. Do not change dependency versions solely to hide the mirror failure.

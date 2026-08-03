@@ -20,6 +20,13 @@ const contentSecurityPolicy = [
 const nextConfig: NextConfig = {
   experimental: { cpus: 2 },
   poweredByHeader: false,
+  async redirects() {
+    return [
+      { source: "/till-salu", destination: "/lediga-bostader", permanent: true },
+      { source: "/parkering", destination: "/lediga-bostader", permanent: true },
+      { source: "/aterstall-losenord/:token", destination: "/glomt-losenord?utgangen=1", permanent: false },
+    ];
+  },
   async headers() {
     const securityHeaders = [
       { key: "Content-Security-Policy", value: contentSecurityPolicy },

@@ -1,58 +1,75 @@
 # Current State
 
-Last updated: 2026-07-25 16:17 Europe/Stockholm
-Last verified commit: UNVERIFIED — the supplied archive contains no `.git`
-Current branch: UNVERIFIED
-Current phase: Phase 1 — external runtime verification
-Current task: execute the canonical migration chain and security suites in Supabase
+Last updated: 2026-08-03 23:25 Europe/Stockholm  
+Last verified commit: UNVERIFIED — the supplied archive contains no `.git`  
+Current branch: UNVERIFIED  
+Current phase: FaddeBo account, role, brand and public-site rollout  
+Current task: execute migration and verify Auth/e-mail flows in Supabase staging
 
 ## Production status
 
-Not ready. The source/build gate is green, but the database, RLS, Storage,
-real-concurrency, browser-E2E, provider and deployment gates have not run.
+Not ready for production evidence. Account and branding changes are implemented
+in source, but the new migration, Supabase Auth e-mail confirmation, Resend,
+real login flows and deployment have not been exercised in an approved runtime.
 
-## Source and build status
+## Current source status
 
-VERIFIED on Node 24.14.0 and npm 11.9.0, while the repository contract is Node
-22.16.0 and npm 10.9.2:
+STATICALLY VERIFIED in this environment:
 
-- `npm run lint` passed and inspected 29 canonical migrations.
-- `npm run typecheck` passed.
-- `npm test` passed: 40 of 40 tests in 6 files.
-- `npm run build` passed with Next.js 15.5.20 and 32 generated static pages.
-- `npm run test:concurrency` passed its static primitive check only.
-- `src/lib/db.ts`, `src/lib/database-schema.json` and `src/lib/counters.ts`
-  are deleted; no source import, fake `$transaction` or wildcard projection
-  remains.
+- `node scripts/lint.mjs` passed and inspected 30 canonical migrations.
+- `node --check scripts/bootstrap-admin.mjs` passed.
+- owner/superadmin, fastighetsvärd, applicant and tenant routing is centralized
+  in `src/lib/role-routing.ts`;
+- public self-registration remains applicant-only and requires Supabase e-mail
+  confirmation;
+- owner-created staff accounts choose their password through a recovery link;
+- public navigation no longer exposes `/till-salu` or `/parkering`;
+- ordinary contact addresses resolve to `info@faddebo.se`; fault reports resolve
+  to `felanmalan@faddebo.se`;
+- the new logo assets are under `public/brand/` and are used by the shared Logo
+  component and application icons.
+
+NOT RUN after the 2026-08-03 changes:
+
+- dependency installation, typecheck, Vitest and Next production build;
+- migration execution, RLS/DB suites and real browser flows.
+
+Reason: `npm ci` is blocked by the environment's internal npm registry returning
+404 for `zod-3.25.76.tgz`. No source package versions were changed to mask this
+environmental failure.
 
 ## Database status
 
-The ordered source chain contains 29 forward migrations. Applied remote state,
-fresh install, upgrade, DB integration, RLS and Storage behavior are NOT RUN.
+The ordered source chain contains 30 forward migrations. The latest is:
 
-## FaddeBo brand status
+```text
+supabase/migrations/20260803230000_faddebo_accounts_and_roles.sql
+```
 
-STATICALLY VERIFIED. FaddeBo is the customer brand and Östgöta El Teknik AB,
-org.nr 559350-5620, remains the legal entity. The forward Brand migration has
-not been executed against a database in this environment.
+It has not been applied in this environment.
 
-## Active blockers
+## External configuration still required
 
-Missing live database/provider runtime and absent Git metadata.
+- Supabase Site URL and callback URL for `https://faddebo.se`;
+- Email/Password with required e-mail confirmation;
+- custom Supabase SMTP sender `FaddeBo <info@faddebo.se>`;
+- verified Resend domain and production `RESEND_API_KEY`;
+- Vercel environment variables from `.env.example`.
 
 ## Exact resume point
 
-Use Node 22.16.0/npm 10.9.2 in a clone with Git metadata. Start local Supabase
-and run, in order:
+In a normal clone with working npm access and approved Supabase staging:
 
 ```bash
-supabase start
-npm run db:reset
+npm ci
+npm run lint
+npm run typecheck
+npm run test:unit
+npm run build
+supabase db push
 npm run db:verify
 npm run test:rls
-npm run test:concurrency
 ```
 
-Fix the first SQL/runtime failure with a new forward migration; never edit an
-already-installed migration. After the DB gate is green, run `npm run
-test:e2e`, provider/webhook/outbox tests and deployment smoke tests.
+Then follow `docs/ACCOUNT_AND_EMAIL_SETUP.md`, run `npm run bootstrap:owner`,
+and exercise the ten account/e-mail/navigation checks listed in that document.

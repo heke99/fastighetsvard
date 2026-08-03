@@ -1,6 +1,7 @@
 import { sha256 } from "@/lib/crypto";
 import { getInvitationPreview } from "@/lib/repositories/account-lookups";
 import { ActivateForm } from "./ActivateForm";
+import { getBranding } from "@/lib/branding";
 
 export const metadata = { title: "Aktivera konto" };
 export const dynamic = "force-dynamic";
@@ -11,6 +12,7 @@ export default async function ActivatePage({
   params: Promise<{ token: string }>;
 }) {
   const { token } = await params;
+  const brand = getBranding();
   const invitation = await getInvitationPreview(sha256(token));
   const valid =
     invitation &&
@@ -34,8 +36,8 @@ export default async function ActivatePage({
           <p className="font-semibold text-red-700">Inbjudan är ogiltig eller har gått ut.</p>
           <p className="mt-2">
             Kontakta oss på{" "}
-            <a href="mailto:info@faddebo.se" className="text-brand-700 underline">
-              info@faddebo.se
+            <a href={`mailto:${brand.supportEmail}`} className="text-brand-700 underline">
+              {brand.supportEmail}
             </a>{" "}
             så skickar vi en ny inbjudan.
           </p>

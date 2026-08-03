@@ -78,10 +78,10 @@ export default async function ListingDetailPage({
           <li aria-hidden="true">/</li>
           <li>
             <Link
-              href={isSale ? "/till-salu" : listing.category === "COMMERCIAL" ? "/lokaler" : listing.category === "PARKING" ? "/parkering" : "/lediga-bostader"}
+              href={listing.category === "COMMERCIAL" ? "/lokaler" : "/lediga-bostader"}
               className="hover:text-brand-700"
             >
-              {isSale ? "Till salu" : listing.category === "COMMERCIAL" ? "Lokaler" : listing.category === "PARKING" ? "Parkering" : "Lediga bostäder"}
+              {listing.category === "COMMERCIAL" ? "Lokaler" : "Lediga bostäder"}
             </Link>
           </li>
           <li aria-hidden="true">/</li>

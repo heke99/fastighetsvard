@@ -19,8 +19,17 @@ import { changeMaintenanceStatus, createWorkOrder, changeWorkOrderStatus } from 
 import { runSyncJob, resolveReviewItem } from "@/lib/integrations/sync";
 import { redeliver } from "@/lib/services/webhooks";
 import { generateApiKey, generateToken, encryptSecret } from "@/lib/crypto";
-import { createManagedAuthUser, deleteManagedAuthUser } from "@/lib/supabase/users";
-import { provisionStaffUser } from "@/lib/repositories/staff-operations";
+import {
+  createManagedAuthUser,
+  createPasswordSetupLink,
+  deleteManagedAuthUser,
+} from "@/lib/supabase/users";
+import {
+  getStaffRoleForAssignment,
+  provisionStaffUser,
+} from "@/lib/repositories/staff-operations";
+import { sendStaffAccountEmail } from "@/lib/email";
+import { getAppUrl } from "@/lib/app-url";
 import {
   createApiKeyRecord,
   createCustomRole,
@@ -492,7 +501,6 @@ const supplierSchema = z.object({
   phone: z.string().optional(),
   specialty: z.string().optional(),
   contractorEmail: z.string().email("Ogiltig e-post.").optional().or(z.literal("")),
-  contractorPassword: z.string().optional(),
 });
 
 export async function createSupplierAction(
@@ -504,17 +512,13 @@ export async function createSupplierAction(
     const data = supplierSchema.parse(Object.fromEntries(formData.entries()));
     let extra = "";
     let authUserId: string | undefined;
-    if (data.contractorEmail && data.contractorPassword) {
-      if (data.contractorPassword.length < 10) {
-        return { status: "error", message: "Entreprenörens lösenord måste vara minst 10 tecken." };
-      }
+    if (data.contractorEmail) {
       const authUser = await createManagedAuthUser({
         email: data.contractorEmail,
-        password: data.contractorPassword,
-        claimMode: "staff_invitation",
+        password: generateToken(48),
+        claimMode: "contractor_invitation",
       });
       authUserId = authUser.id;
-      extra = ` Entreprenörskonto skapat: ${data.contractorEmail}.`;
     }
     let supplier;
     try {
@@ -532,6 +536,18 @@ export async function createSupplierAction(
     } catch (error) {
       if (authUserId) await deleteManagedAuthUser(authUserId);
       throw error;
+    }
+    if (data.contractorEmail) {
+      try {
+        const passwordUrl = await createPasswordSetupLink(
+          data.contractorEmail,
+          `${getAppUrl()}/auth/callback?next=/aterstall-losenord`
+        );
+        await sendStaffAccountEmail(data.contractorEmail, passwordUrl, "Entreprenör");
+        extra = ` Ett aktiveringsmejl har skickats till ${data.contractorEmail}.`;
+      } catch (error) {
+        extra = ` Portalkontot skapades, men aktiveringsmejlet kunde inte skickas (${error instanceof Error ? error.message : "okänt fel"}). Användaren kan välja Glömt lösenord.`;
+      }
     }
     revalidatePath("/admin/entreprenorer");
     return { status: "success", message: `Entreprenören ${data.name} skapades.${extra}` };
@@ -708,7 +724,6 @@ const staffUserSchema = z.object({
   email: z.string().email("Ogiltig e-post."),
   firstName: z.string().min(1, "Förnamn krävs."),
   lastName: z.string().min(1, "Efternamn krävs."),
-  password: z.string().min(10, "Minst 10 tecken."),
   roleId: z.string().min(1, "Välj roll."),
 });
 
@@ -720,9 +735,13 @@ export async function createStaffUserAction(
     const user = await requirePermission("users", "create");
     const data = staffUserSchema.parse(Object.fromEntries(formData.entries()));
     const email = data.email.toLowerCase();
+    const role = await getStaffRoleForAssignment(data.roleId, user.organizationId!);
+    if (["superadmin", "org-admin"].includes(role.slug) && !user.roleSlugs.includes("superadmin")) {
+      return { status: "error", message: "Endast ägarkontot kan tilldela ägar- eller bolagsadminroll." };
+    }
     const authUser = await createManagedAuthUser({
       email,
-      password: data.password,
+      password: generateToken(48),
       firstName: data.firstName,
       lastName: data.lastName,
       claimMode: "staff_invitation",
@@ -742,8 +761,22 @@ export async function createStaffUserAction(
       await deleteManagedAuthUser(authUser.id);
       throw error;
     }
+
+    let emailStatus = "Ett aktiveringsmejl har skickats.";
+    try {
+      const passwordUrl = await createPasswordSetupLink(
+        email,
+        `${getAppUrl()}/auth/callback?next=/aterstall-losenord`
+      );
+      await sendStaffAccountEmail(email, passwordUrl, provisioned.roleName);
+    } catch (error) {
+      emailStatus = `Kontot skapades, men aktiveringsmejlet kunde inte skickas (${error instanceof Error ? error.message : "okänt fel"}). Användaren kan välja Glömt lösenord på inloggningssidan.`;
+    }
     revalidatePath("/admin/anvandare");
-    return { status: "success", message: `Användaren ${email} skapades med rollen ${provisioned.roleName}.` };
+    return {
+      status: "success",
+      message: `Användaren ${email} skapades med rollen ${provisioned.roleName}. ${emailStatus}`,
+    };
   } catch (e) {
     return errState(e);
   }

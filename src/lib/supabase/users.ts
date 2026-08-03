@@ -27,3 +27,16 @@ export async function deleteManagedAuthUser(userId: string) {
   const admin = createAdminClient();
   await admin.auth.admin.deleteUser(userId);
 }
+
+export async function createPasswordSetupLink(email: string, redirectTo: string) {
+  const admin = createAdminClient();
+  const { data, error } = await admin.auth.admin.generateLink({
+    type: "recovery",
+    email: email.toLowerCase().trim(),
+    options: { redirectTo },
+  });
+  if (error || !data.properties?.action_link) {
+    throw new Error(error?.message ?? "Kunde inte skapa aktiveringslänk.");
+  }
+  return data.properties.action_link;
+}

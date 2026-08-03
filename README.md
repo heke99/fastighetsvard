@@ -59,6 +59,7 @@ docs/                      Arkitektur, deployment, drift och releasegrind
 - [Produktionshärdning och kvarvarande blockerare](docs/PRODUCTION_HARDENING_PHASE1.md)
 - [Databas, RLS och Storage](docs/DATABASE_RLS_STORAGE.md)
 - [Installation och deployment](docs/DEPLOYMENT.md)
+- [Konton, roller och e-post](docs/ACCOUNT_AND_EMAIL_SETUP.md)
 - [Drift, backup och incidenter](docs/OPERATIONS_AND_INCIDENTS.md)
 - [Test- och releasegrind](docs/TEST_AND_RELEASE_GATE.md)
 - [Leveransrapport](DELIVERY_REPORT.md)

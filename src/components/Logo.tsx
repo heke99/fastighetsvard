@@ -1,39 +1,43 @@
+import Image from "next/image";
 import Link from "next/link";
 import { getBranding } from "@/lib/branding";
 
 export function Logo({ variant = "dark" }: { variant?: "dark" | "light" }) {
   const brand = getBranding();
+  const light = variant === "light";
+
   return (
     <Link
       href="/"
-      className="flex items-center gap-2.5 shrink-0"
+      className="flex shrink-0 items-center gap-2.5"
       aria-label={`${brand.brandName} – till startsidan`}
     >
       <span
         aria-hidden="true"
-        className="flex h-9 w-9 items-center justify-center rounded-lg bg-brand-700 text-white"
+        className={`flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-full ${
+          light ? "bg-white p-0.5" : "bg-white"
+        }`}
       >
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-          <path
-            d="M13 2 4.5 13.5h5L9 22l8.5-11.5h-5L13 2Z"
-            fill="currentColor"
-            stroke="currentColor"
-            strokeWidth="1"
-            strokeLinejoin="round"
-          />
-        </svg>
+        <Image
+          src="/brand/faddebo-mark.png"
+          alt=""
+          width={44}
+          height={44}
+          priority
+          className="h-full w-full object-contain"
+        />
       </span>
-      <span className="leading-tight">
+      <span className="leading-none">
         <span
-          className={`block text-base font-bold tracking-tight ${
-            variant === "light" ? "text-white" : "text-stone-900"
+          className={`block font-serif text-[1.12rem] tracking-[0.22em] ${
+            light ? "text-white" : "text-[#153d20]"
           }`}
         >
-          {brand.brandName}
+          FADDEBO
         </span>
         <span
-          className={`block text-[11px] font-medium uppercase tracking-widest ${
-            variant === "light" ? "text-brand-200" : "text-brand-700"
+          className={`mt-1 block text-[9px] font-semibold uppercase tracking-[0.2em] ${
+            light ? "text-brand-200" : "text-brand-700"
           }`}
         >
           {brand.tagline}

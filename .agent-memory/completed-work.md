@@ -32,3 +32,20 @@ VERIFIED on Node 24.14.0/npm 11.9.0:
 
 NOT RUN: database migrations, DB integration, RLS, Storage, real parallel
 transactions, E2E, providers or deployment.
+
+## 2026-08-03 — Account and FaddeBo presentation hardening (source/static)
+
+- centralized owner, staff and applicant dashboard routing;
+- added owner bootstrap and owner-only privileged role assignment;
+- changed staff creation to self-selected password via activation e-mail;
+- added signup confirmation resend and confirmed-password recovery form;
+- separated applicant and tenant portal navigation/dashboard content;
+- aligned support/privacy/leasing to `info@faddebo.se` and fault reporting to
+  `felanmalan@faddebo.se`;
+- installed supplied FaddeBo logo assets and updated shared identity/icons;
+- removed public Till salu/Parkeringar navigation and added redirects;
+- added exact requested homepage copy, migration, tests and setup guide;
+- static lint passed for 30 migrations and bootstrap script parsed successfully.
+
+Runtime Auth/e-mail/database verification remains open and is not counted as
+completed.

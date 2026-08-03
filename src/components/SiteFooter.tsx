@@ -15,7 +15,6 @@ export function SiteFooter() {
           <h2 className="mb-3 text-sm font-semibold uppercase tracking-wider text-white">Utbud</h2>
           <ul className="space-y-2 text-sm">
             <li><Link className="hover:text-white" href="/lediga-bostader">Lediga bostäder</Link></li>
-            <li><Link className="hover:text-white" href="/till-salu">Bostäder till salu</Link></li>
             <li><Link className="hover:text-white" href="/lokaler">Lediga lokaler</Link></li>
             <li><Link className="hover:text-white" href="/vara-fastigheter">Våra fastigheter</Link></li>
           </ul>

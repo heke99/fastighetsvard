@@ -3,8 +3,15 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
+import { hasPermission, type Action, type Resource } from "@/lib/permissions";
 
-const groups: { title: string; items: { href: string; label: string }[] }[] = [
+interface NavItem {
+  href: string;
+  label: string;
+  permission?: { resource: Resource; action: Action };
+}
+
+const groups: { title: string; items: NavItem[] }[] = [
   {
     title: "Översikt",
     items: [{ href: "/admin", label: "Dashboard" }],
@@ -12,54 +19,62 @@ const groups: { title: string; items: { href: string; label: string }[] }[] = [
   {
     title: "Fastigheter",
     items: [
-      { href: "/admin/fastigheter", label: "Fastigheter" },
-      { href: "/admin/objekt", label: "Objekt" },
-      { href: "/admin/annonser", label: "Annonser" },
+      { href: "/admin/fastigheter", label: "Fastigheter", permission: { resource: "properties", action: "read" } },
+      { href: "/admin/objekt", label: "Objekt", permission: { resource: "units", action: "read" } },
+      { href: "/admin/annonser", label: "Annonser", permission: { resource: "listings", action: "read" } },
     ],
   },
   {
     title: "Uthyrning",
     items: [
-      { href: "/admin/hyresgaster", label: "Hyresgäster & personer" },
-      { href: "/admin/ansokningar", label: "Ansökningar" },
-      { href: "/admin/avtal", label: "Avtal" },
-      { href: "/admin/uppsagningar", label: "Uppsägningar" },
+      { href: "/admin/hyresgaster", label: "Hyresgäster & personer", permission: { resource: "persons", action: "read" } },
+      { href: "/admin/ansokningar", label: "Ansökningar", permission: { resource: "applications", action: "read" } },
+      { href: "/admin/avtal", label: "Avtal", permission: { resource: "contracts", action: "read" } },
+      { href: "/admin/uppsagningar", label: "Uppsägningar", permission: { resource: "terminations", action: "read" } },
     ],
   },
   {
     title: "Ekonomi",
     items: [
-      { href: "/admin/fakturor", label: "Fakturor" },
-      { href: "/admin/integrationer", label: "Integrationer & synk" },
+      { href: "/admin/fakturor", label: "Fakturor", permission: { resource: "invoices", action: "read" } },
+      { href: "/admin/integrationer", label: "Integrationer & synk", permission: { resource: "integrations", action: "read" } },
     ],
   },
   {
     title: "Förvaltning",
     items: [
-      { href: "/admin/felanmalan", label: "Felanmälningar" },
-      { href: "/admin/arbetsorder", label: "Arbetsorder" },
-      { href: "/admin/entreprenorer", label: "Entreprenörer" },
+      { href: "/admin/felanmalan", label: "Felanmälningar", permission: { resource: "maintenance", action: "read" } },
+      { href: "/admin/arbetsorder", label: "Arbetsorder", permission: { resource: "workorders", action: "read" } },
+      { href: "/admin/entreprenorer", label: "Entreprenörer", permission: { resource: "suppliers", action: "read" } },
     ],
   },
   {
     title: "System",
     items: [
-      { href: "/admin/webhooks", label: "Webhooks" },
-      { href: "/admin/api-nycklar", label: "API-nycklar" },
-      { href: "/admin/anvandare", label: "Användare & roller" },
-      { href: "/admin/rapporter", label: "Rapporter" },
-      { href: "/admin/revisionslogg", label: "Revisionslogg" },
+      { href: "/admin/webhooks", label: "Webhooks", permission: { resource: "webhooks", action: "read" } },
+      { href: "/admin/api-nycklar", label: "API-nycklar", permission: { resource: "apikeys", action: "read" } },
+      { href: "/admin/anvandare", label: "Användare & roller", permission: { resource: "users", action: "read" } },
+      { href: "/admin/rapporter", label: "Rapporter", permission: { resource: "reports", action: "read" } },
+      { href: "/admin/revisionslogg", label: "Revisionslogg", permission: { resource: "audit", action: "read" } },
     ],
   },
 ];
 
-export function AdminNav() {
+export function AdminNav({ permissions }: { permissions: string[] }) {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
+  const visibleGroups = groups
+    .map((group) => ({
+      ...group,
+      items: group.items.filter(
+        (item) => !item.permission || hasPermission(permissions, item.permission.resource, item.permission.action)
+      ),
+    }))
+    .filter((group) => group.items.length > 0);
 
   const nav = (
     <nav aria-label="Adminmeny" className="w-60 shrink-0 space-y-5 p-4">
-      {groups.map((group) => (
+      {visibleGroups.map((group) => (
         <div key={group.title}>
           <h2 className="mb-1.5 px-2 text-xs font-semibold uppercase tracking-wider text-stone-400">
             {group.title}
@@ -95,7 +110,7 @@ export function AdminNav() {
       <div className="fixed bottom-4 left-4 z-40 lg:hidden">
         <button
           type="button"
-          onClick={() => setOpen((o) => !o)}
+          onClick={() => setOpen((value) => !value)}
           aria-expanded={open}
           className="btn-primary shadow-lg"
         >
@@ -106,7 +121,7 @@ export function AdminNav() {
         <div className="fixed inset-0 z-30 bg-stone-900/40 lg:hidden" onClick={() => setOpen(false)}>
           <div
             className="h-full w-72 overflow-y-auto bg-white shadow-xl"
-            onClick={(e) => e.stopPropagation()}
+            onClick={(event) => event.stopPropagation()}
           >
             {nav}
           </div>

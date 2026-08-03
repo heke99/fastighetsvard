@@ -25,3 +25,15 @@ Status: ACCEPTED
 
 Decision: retain organization keys for security and ownership without adding
 unnecessary marketplace/SaaS tenant complexity.
+
+## ADR-0004: Owner is superadmin; public signup is applicant-only
+
+Status: ACCEPTED
+
+Decision: only `superadmin` is displayed and treated as the owner account. A
+public registration never grants staff privileges. Staff and fastighetsvärd
+accounts are created by an authorized server-side flow, and only superadmin may
+assign `superadmin` or `org-admin`.
+
+Reason: prevents privilege escalation and keeps account behavior consistent
+between login routing, navigation, server permissions and PostgreSQL commands.

@@ -7,6 +7,7 @@ import {
   readCurrentUserContext,
   recordCurrentLogin,
 } from "./repositories/auth-context";
+import { isStaffAccount } from "./role-routing";
 
 export class AuthError extends Error {
   constructor(message: string, public code: string) {
@@ -89,12 +90,7 @@ export async function requirePermission(resource: Resource, action: Action): Pro
 
 export async function requireStaff(): Promise<CurrentUser> {
   const user = await requireUser();
-  const staffRoles = [
-    "superadmin", "org-admin", "property-owner", "property-manager",
-    "caretaker", "leasing-agent", "sales-manager", "finance",
-    "customer-service", "facility-worker", "inspector", "report-viewer",
-  ];
-  if (!user.roleSlugs.some((role) => staffRoles.includes(role))) {
+  if (!isStaffAccount(user.roleSlugs)) {
     throw new AuthError("Behörighet saknas.", "forbidden");
   }
   return user;

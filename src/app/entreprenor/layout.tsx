@@ -2,6 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth";
 import { Logo } from "@/components/Logo";
+import { defaultDashboardForRoles, isContractorAccount } from "@/lib/role-routing";
 
 export const metadata = { title: "Entreprenörsportal" };
 export const dynamic = "force-dynamic";
@@ -10,7 +11,11 @@ export default async function ContractorLayout({ children }: { children: React.R
   const user = await getCurrentUser();
   if (!user) redirect("/logga-in?next=/entreprenor");
   // Endast entreprenörskonton (kopplade till leverantör) släpps in.
-  if (!user.supplierId || !user.roleSlugs.includes("contractor")) redirect("/mina-sidor");
+  if (!isContractorAccount(user.roleSlugs)) {
+    redirect(defaultDashboardForRoles(user.roleSlugs));
+  }
+  // Undvik redirect-loop för ett felkonfigurerat entreprenörskonto.
+  if (!user.supplierId) redirect("/?kontofel=entreprenor-saknar-leverantor");
 
   return (
     <div className="flex min-h-screen flex-col">

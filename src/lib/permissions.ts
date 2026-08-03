@@ -94,7 +94,7 @@ export const SYSTEM_ROLES: {
   },
   {
     slug: "property-manager",
-    name: "Förvaltare",
+    name: "Fastighetsvärd / förvaltare",
     permissions: [
       "persons:*", "properties:*", "buildings:*", "units:*", "listings:*",
       "applications:*", "viewings:*", "offers:*", "contracts:*",

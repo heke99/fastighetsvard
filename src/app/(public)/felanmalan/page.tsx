@@ -1,11 +1,13 @@
 import Link from "next/link";
 import { getCurrentUser } from "@/lib/auth";
+import { getBranding } from "@/lib/branding";
 
 export const metadata = { title: "Felanmälan" };
 export const dynamic = "force-dynamic";
 
 export default async function PublicMaintenancePage() {
   const user = await getCurrentUser();
+  const brand = getBranding();
 
   return (
     <div className="mx-auto max-w-3xl px-4 py-10 sm:px-6">
@@ -19,8 +21,8 @@ export default async function PublicMaintenancePage() {
         <h2 className="font-semibold text-stone-900">Akuta fel</h2>
         <p className="mt-1 text-sm text-stone-600">
           Vid akuta fel som vattenläckor, elavbrott eller inbrott – ring oss direkt
-          på <a href="tel:+4613100000" className="font-semibold text-brand-700">013-10 00 00</a> (kontorstid)
-          eller <a href="tel:+4613100001" className="font-semibold text-brand-700">013-10 00 01</a> (jour, dygnet runt).
+          på <a href={`tel:${brand.phoneHref}`} className="font-semibold text-brand-700">{brand.phone}</a> (kontorstid)
+          eller <a href={`tel:${brand.emergencyPhoneHref}`} className="font-semibold text-brand-700">{brand.emergencyPhone}</a> (jour, dygnet runt).
         </p>
       </div>
 
@@ -49,8 +51,8 @@ export default async function PublicMaintenancePage() {
         <p className="mt-1 text-sm text-stone-600">
           Om du vill anmäla ett fel i en av våra fastigheter utan att vara hyresgäst,
           kontakta oss på{" "}
-          <a href="mailto:felanmalan@ostgotaelteknik.se" className="font-medium text-brand-700 underline">
-            felanmalan@ostgotaelteknik.se
+          <a href={`mailto:${brand.faultReportEmail}`} className="font-medium text-brand-700 underline">
+            {brand.faultReportEmail}
           </a>{" "}
           och beskriv fastighet, plats och fel.
         </p>

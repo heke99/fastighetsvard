@@ -7,8 +7,8 @@ VALUES (
   'Östgöta El Teknik',
   'Östgöta El Teknik AB',
   '559350-5620',
-  'info@ostgotaelteknik.se',
-  'dataskydd@ostgotaelteknik.se',
+  'info@faddebo.se',
+  'info@faddebo.se',
   now()
 )
 ON CONFLICT ("id") DO UPDATE SET
@@ -21,7 +21,7 @@ ON CONFLICT ("id") DO UPDATE SET
 
 UPDATE "Organization"
 SET "legalName" = 'Östgöta El Teknik AB',
-    "dataProtectionEmail" = 'dataskydd@ostgotaelteknik.se',
+    "dataProtectionEmail" = 'info@faddebo.se',
     "updatedAt" = now()
 WHERE "id" = '11111111-1111-4111-8111-111111111111';
 
@@ -35,7 +35,7 @@ VALUES (
   'FaddeBo',
   'faddebo',
   'FaddeBo – ett varumärke inom Östgöta El Teknik AB, org.nr 559350-5620',
-  'info@ostgotaelteknik.se',
+  'info@faddebo.se',
   '/integritetspolicy',
   '/allmanna-villkor',
   true,
@@ -98,7 +98,7 @@ INSERT INTO "RolePermission" ("id","roleId","permission") SELECT 'cc713432-7ece-
 INSERT INTO "RolePermission" ("id","roleId","permission") SELECT '9674dd35-17de-4d5d-a059-f5841802190f',"id",'workorders:read' FROM "Role" WHERE "organizationId" IS NULL AND "slug"='property-owner' ON CONFLICT ("roleId","permission") DO NOTHING;
 INSERT INTO "RolePermission" ("id","roleId","permission") SELECT '7a08d63b-1340-40a7-9a51-bd9bd5ef48a7',"id",'audit:read' FROM "Role" WHERE "organizationId" IS NULL AND "slug"='property-owner' ON CONFLICT ("roleId","permission") DO NOTHING;
 
-INSERT INTO "Role" ("id","organizationId","name","slug","isSystem","updatedAt") VALUES ('d54fc146-d3a2-41be-8e73-e894dc879f5b',NULL,'Förvaltare','property-manager',true,now()) ON CONFLICT ("slug") WHERE "organizationId" IS NULL DO UPDATE SET "name"=EXCLUDED."name","isSystem"=true,"updatedAt"=now();
+INSERT INTO "Role" ("id","organizationId","name","slug","isSystem","updatedAt") VALUES ('d54fc146-d3a2-41be-8e73-e894dc879f5b',NULL,'Fastighetsvärd / förvaltare','property-manager',true,now()) ON CONFLICT ("slug") WHERE "organizationId" IS NULL DO UPDATE SET "name"=EXCLUDED."name","isSystem"=true,"updatedAt"=now();
 INSERT INTO "RolePermission" ("id","roleId","permission") SELECT '15bbaa8f-0012-4d4f-980d-8a7b7169de5e',"id",'persons:*' FROM "Role" WHERE "organizationId" IS NULL AND "slug"='property-manager' ON CONFLICT ("roleId","permission") DO NOTHING;
 INSERT INTO "RolePermission" ("id","roleId","permission") SELECT '7f998223-a7fd-47f1-83ea-24cb551969a1',"id",'properties:*' FROM "Role" WHERE "organizationId" IS NULL AND "slug"='property-manager' ON CONFLICT ("roleId","permission") DO NOTHING;
 INSERT INTO "RolePermission" ("id","roleId","permission") SELECT '924d2749-01c8-4d48-b118-4404aa97cc6f',"id",'buildings:*' FROM "Role" WHERE "organizationId" IS NULL AND "slug"='property-manager' ON CONFLICT ("roleId","permission") DO NOTHING;

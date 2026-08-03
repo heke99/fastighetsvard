@@ -13,6 +13,7 @@ import {
   findUserByAuthId,
   findUserForPasswordReset,
 } from "@/lib/repositories/account-lookups";
+import { defaultDashboardForRoles } from "@/lib/role-routing";
 
 export interface AuthFormState {
   status: "idle" | "error" | "success";
@@ -20,22 +21,24 @@ export interface AuthFormState {
   fieldErrors?: Record<string, string>;
 }
 
-function safeNext(next: unknown): string {
+function safeNext(next: unknown, fallback = "/mina-sidor"): string {
   if (typeof next === "string" && next.startsWith("/") && !next.startsWith("//")) return next;
-  return "/mina-sidor";
+  return fallback;
 }
 
 export async function loginAction(_prev: AuthFormState, formData: FormData): Promise<AuthFormState> {
   const email = String(formData.get("email") ?? "");
   const password = String(formData.get("password") ?? "");
   if (!email || !password) return { status: "error", message: "Ange e-post och lösenord." };
+  let dashboard = "/mina-sidor";
   try {
-    await login(email, password, await getClientIp());
+    const result = await login(email, password, await getClientIp());
+    dashboard = defaultDashboardForRoles(result.user.roleSlugs);
   } catch (error) {
     if (error instanceof AuthError) return { status: "error", message: error.message };
     return { status: "error", message: "Inloggningen misslyckades." };
   }
-  redirect(safeNext(formData.get("next")));
+  redirect(safeNext(formData.get("next"), dashboard));
 }
 
 const registerSchema = z.object({
@@ -113,9 +116,33 @@ export async function requestPasswordResetAction(_prev: AuthFormState, formData:
   return { status: "success", message: "Om e-postadressen finns hos oss har vi skickat en återställningslänk." };
 }
 
+export async function resendConfirmationAction(
+  _prev: AuthFormState,
+  formData: FormData
+): Promise<AuthFormState> {
+  const email = String(formData.get("email") ?? "").toLowerCase().trim();
+  if (!z.string().email().safeParse(email).success) {
+    return { status: "error", message: "Ange en giltig e-postadress." };
+  }
+
+  const supabase = await createServerSupabaseClient();
+  await supabase.auth.resend({
+    type: "signup",
+    email,
+    options: { emailRedirectTo: `${getAppUrl()}/auth/callback?next=/mina-sidor` },
+  });
+
+  return {
+    status: "success",
+    message: "Om kontot väntar på verifiering har vi skickat ett nytt bekräftelsemejl.",
+  };
+}
+
 export async function resetPasswordAction(_prev: AuthFormState, formData: FormData): Promise<AuthFormState> {
   const password = String(formData.get("password") ?? "");
+  const passwordConfirm = String(formData.get("passwordConfirm") ?? "");
   if (password.length < 10) return { status: "error", message: "Lösenordet måste vara minst 10 tecken." };
+  if (password !== passwordConfirm) return { status: "error", message: "Lösenorden stämmer inte överens." };
   const supabase = await createServerSupabaseClient();
   const { data: current } = await supabase.auth.getUser();
   if (!current.user) return { status: "error", message: "Återställningssessionen saknas eller har gått ut." };

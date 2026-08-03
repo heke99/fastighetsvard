@@ -2,3 +2,9 @@
 src/lib/db.ts
 src/lib/database-schema.json
 src/lib/counters.ts
+
+# Borttagna publika legacyroutes i leveransen 2026-08-03
+src/app/(public)/till-salu/page.tsx
+src/app/(public)/parkering/page.tsx
+src/app/(public)/aterstall-losenord/[token]/page.tsx
+src/app/(public)/aterstall-losenord/[token]/ResetPasswordForm.tsx

@@ -17,6 +17,12 @@ export default async function AdminUsersPage() {
 
   const canCreateUser = hasPermission(user.permissions, "users", "create");
   const canCreateRole = hasPermission(user.permissions, "roles", "create");
+  const canAssignAdminRoles = user.roleSlugs.includes("superadmin");
+  const assignableRoles = roles.filter(
+    (role) =>
+      role.slug !== "contractor" &&
+      (canAssignAdminRoles || !["superadmin", "org-admin"].includes(role.slug))
+  );
 
   return (
     <div className="space-y-6">
@@ -69,8 +75,11 @@ export default async function AdminUsersPage() {
       <div className="grid gap-6 lg:grid-cols-2">
         {canCreateUser && (
           <section aria-labelledby="ny-anvandare" className="card p-5">
-            <h2 id="ny-anvandare" className="mb-4 font-semibold text-stone-900">Ny personal-användare</h2>
-            <ActionForm action={createStaffUserAction} submitLabel="Skapa användare">
+            <h2 id="ny-anvandare" className="font-semibold text-stone-900">Ny personal-användare</h2>
+            <p className="mb-4 mt-1 text-sm text-stone-600">
+              Kontot skapas utan delat standardlösenord. Användaren får ett mejl och väljer sitt lösenord själv. Entreprenörskonton skapas under Entreprenörer.
+            </p>
+            <ActionForm action={createStaffUserAction} submitLabel="Skapa och skicka aktiveringsmejl">
               <div className="grid gap-3">
                 <div className="grid grid-cols-2 gap-3">
                   <div>
@@ -87,13 +96,9 @@ export default async function AdminUsersPage() {
                   <input id="email" name="email" type="email" required className="input" />
                 </div>
                 <div>
-                  <label htmlFor="password" className="label">Lösenord (minst 10 tecken)</label>
-                  <input id="password" name="password" type="password" required className="input" />
-                </div>
-                <div>
                   <label htmlFor="roleId" className="label">Roll</label>
                   <select id="roleId" name="roleId" required className="input">
-                    {roles.map((r) => (
+                    {assignableRoles.map((r) => (
                       <option key={r.id} value={r.id}>{r.name}</option>
                     ))}
                   </select>

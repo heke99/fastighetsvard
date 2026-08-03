@@ -11,6 +11,10 @@ export function ResetPasswordForm() {
         <label htmlFor="password" className="label">Nytt lösenord (minst 10 tecken)</label>
         <input id="password" name="password" type="password" autoComplete="new-password" required minLength={10} className="input" />
       </div>
+      <div>
+        <label htmlFor="passwordConfirm" className="label">Upprepa det nya lösenordet</label>
+        <input id="passwordConfirm" name="passwordConfirm" type="password" autoComplete="new-password" required minLength={10} className="input" />
+      </div>
       <button type="submit" disabled={pending} className="btn-primary w-full">{pending ? "Sparar …" : "Spara nytt lösenord"}</button>
     </form>
   );

@@ -1,14 +1,10 @@
 import { SiteHeader } from "@/components/SiteHeader";
 import { SiteFooter } from "@/components/SiteFooter";
 import { getCurrentUser } from "@/lib/auth";
+import { defaultDashboardForRoles, isTenantPerson } from "@/lib/role-routing";
 
 export default async function PublicLayout({ children }: { children: React.ReactNode }) {
   const user = await getCurrentUser();
-  const staffRoles = [
-    "superadmin", "org-admin", "property-owner", "property-manager",
-    "caretaker", "leasing-agent", "sales-manager", "finance",
-    "customer-service", "facility-worker", "inspector", "report-viewer",
-  ];
   return (
     <>
       <SiteHeader
@@ -16,7 +12,8 @@ export default async function PublicLayout({ children }: { children: React.React
           user
             ? {
                 name: user.person ? user.person.firstName : user.email,
-                isStaff: user.roleSlugs.some((r) => staffRoles.includes(r)),
+                isTenant: isTenantPerson(user.person?.roles ?? []),
+                dashboardHref: defaultDashboardForRoles(user.roleSlugs),
               }
             : null
         }

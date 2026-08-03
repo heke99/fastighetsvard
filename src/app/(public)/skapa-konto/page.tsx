@@ -8,9 +8,9 @@ export default function RegisterPage() {
     <div className="mx-auto max-w-md px-4 py-12 sm:px-6">
       <h1 className="text-2xl font-bold text-stone-900">Skapa konto</h1>
       <p className="mt-1 text-stone-500">
-        Med ett konto kan du söka bostäder, spara favoriter och följa dina
-        ansökningar. Är du redan hyresgäst kopplas ditt konto automatiskt till
-        ditt hyresförhållande via din e-postadress.
+        Kontot är för bostadssökande och hyresgäster. Du kan söka bostäder,
+        spara favoriter och följa dina ansökningar. Personal- och
+        fastighetsvärdskonton skapas endast av FaddeBos ägarkonto.
       </p>
       <RegisterForm />
       <p className="mt-6 text-sm text-stone-600">

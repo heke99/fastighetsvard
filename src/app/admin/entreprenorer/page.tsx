@@ -87,17 +87,11 @@ export default async function AdminSuppliersPage() {
                 Skapa portalkonto (valfritt)
               </legend>
               <p className="mb-3 text-xs text-stone-500">
-                Entreprenören ser endast sina egna tilldelade arbetsorder i portalen.
+                Entreprenören ser endast sina egna tilldelade arbetsorder i portalen och väljer lösenord via aktiveringsmejl.
               </p>
-              <div className="grid gap-4 sm:grid-cols-2">
-                <div>
-                  <label htmlFor="contractorEmail" className="label">Inloggnings-e-post</label>
-                  <input id="contractorEmail" name="contractorEmail" type="email" className="input" />
-                </div>
-                <div>
-                  <label htmlFor="contractorPassword" className="label">Lösenord (minst 10 tecken)</label>
-                  <input id="contractorPassword" name="contractorPassword" type="password" className="input" />
-                </div>
+              <div>
+                <label htmlFor="contractorEmail" className="label">Inloggnings-e-post</label>
+                <input id="contractorEmail" name="contractorEmail" type="email" className="input" />
               </div>
             </fieldset>
           </ActionForm>

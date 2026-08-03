@@ -2,6 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth";
 import { formatSek } from "@/components/ListingCard";
+import { isTenantPerson } from "@/lib/role-routing";
 import {
   getMyPortalCounts,
   listMyApplications,
@@ -17,19 +18,24 @@ export default async function PortalOverviewPage() {
   const user = await getCurrentUser();
   if (!user?.personId) redirect("/logga-in?next=/mina-sidor");
   const personId = user.personId;
+  const isTenant = isTenantPerson(user.person?.roles ?? []);
 
   const [activeContracts, invoices, requests, applications, unsignedContracts, counts, upcomingViewings] =
     await Promise.all([
-      listMyContracts({
-        statuses: ["ACTIVE"],
-        roles: ["TENANT", "CO_TENANT"],
-      }),
-      listMyInvoices(personId, 50),
-      listMyMaintenanceRequests(personId),
+      isTenant
+        ? listMyContracts({
+            statuses: ["ACTIVE"],
+            roles: ["TENANT", "CO_TENANT"],
+          })
+        : Promise.resolve([]),
+      isTenant ? listMyInvoices(personId, 50) : Promise.resolve([]),
+      isTenant ? listMyMaintenanceRequests(personId) : Promise.resolve([]),
       listMyApplications({ limit: 50 }),
-      listMyContracts({
-        statuses: ["SENT_FOR_SIGNING", "PARTIALLY_SIGNED"],
-      }),
+      isTenant
+        ? listMyContracts({
+            statuses: ["SENT_FOR_SIGNING", "PARTIALLY_SIGNED"],
+          })
+        : Promise.resolve([]),
       getMyPortalCounts(personId),
       listMyUpcomingViewings(3),
     ]);
@@ -66,8 +72,29 @@ export default async function PortalOverviewPage() {
     <div className="space-y-6">
       <header>
         <h1 className="text-2xl font-bold text-stone-900">Hej {firstName}!</h1>
-        <p className="mt-1 text-stone-500">Här är en översikt över ditt boende och dina ärenden.</p>
+        <p className="mt-1 text-stone-500">
+          {isTenant
+            ? "Här är en översikt över ditt boende, dina fakturor och dina ärenden."
+            : "Här söker du bostad, sparar favoriter och följer dina ansökningar."}
+        </p>
       </header>
+
+      {!isTenant && (
+        <section aria-labelledby="kom-igang" className="card border-l-4 border-l-brand-600 p-5">
+          <h2 id="kom-igang" className="font-semibold text-stone-900">Kom igång som bostadssökande</h2>
+          <div className="mt-4 grid gap-3 sm:grid-cols-3">
+            <Link href="/mina-sidor/profil" className="rounded-lg bg-brand-50 p-3 text-sm font-medium text-brand-800 hover:bg-brand-100">
+              1. Kontrollera din profil
+            </Link>
+            <Link href="/lediga-bostader" className="rounded-lg bg-brand-50 p-3 text-sm font-medium text-brand-800 hover:bg-brand-100">
+              2. Hitta en bostad
+            </Link>
+            <Link href="/mina-sidor/ansokningar" className="rounded-lg bg-brand-50 p-3 text-sm font-medium text-brand-800 hover:bg-brand-100">
+              3. Följ dina ansökningar
+            </Link>
+          </div>
+        </section>
+      )}
 
       {/* Kräver åtgärd */}
       {(pendingOffers.length > 0 || unsignedForPerson.length > 0) && (
@@ -98,39 +125,58 @@ export default async function PortalOverviewPage() {
 
       {/* Nyckeltal */}
       <section aria-label="Sammanfattning" className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <Link href="/mina-sidor/boende" className="card p-4 transition hover:shadow-md">
-          <p className="text-sm text-stone-500">Nuvarande boende</p>
-          <p className="mt-1 text-xl font-bold text-stone-900">
-            {activeContracts.length > 0 ? activeContracts[0].unit.address : "Inget aktivt avtal"}
-          </p>
-          {activeContracts.length > 1 && (
-            <p className="text-xs text-stone-500">+{activeContracts.length - 1} fler avtal</p>
-          )}
-        </Link>
-        <Link href="/mina-sidor/fakturor" className="card p-4 transition hover:shadow-md">
-          <p className="text-sm text-stone-500">Obetalda fakturor</p>
-          <p className={`mt-1 text-xl font-bold ${unpaidInvoices.length > 0 ? "text-red-700" : "text-stone-900"}`}>
-            {unpaidInvoices.length} st
-          </p>
-          {unpaidInvoices[0] && (
-            <p className="text-xs text-stone-500">
-              Nästa förfaller {new Date(unpaidInvoices[0].dueDate).toLocaleDateString("sv-SE")}
-            </p>
-          )}
-        </Link>
-        <Link href="/mina-sidor/felanmalan" className="card p-4 transition hover:shadow-md">
-          <p className="text-sm text-stone-500">Aktiva felanmälningar</p>
-          <p className="mt-1 text-xl font-bold text-stone-900">{activeRequests.length} st</p>
-        </Link>
+        {isTenant ? (
+          <>
+            <Link href="/mina-sidor/boende" className="card p-4 transition hover:shadow-md">
+              <p className="text-sm text-stone-500">Nuvarande boende</p>
+              <p className="mt-1 text-xl font-bold text-stone-900">
+                {activeContracts.length > 0 ? activeContracts[0].unit.address : "Inget aktivt avtal"}
+              </p>
+              {activeContracts.length > 1 && (
+                <p className="text-xs text-stone-500">+{activeContracts.length - 1} fler avtal</p>
+              )}
+            </Link>
+            <Link href="/mina-sidor/fakturor" className="card p-4 transition hover:shadow-md">
+              <p className="text-sm text-stone-500">Obetalda fakturor</p>
+              <p className={`mt-1 text-xl font-bold ${unpaidInvoices.length > 0 ? "text-red-700" : "text-stone-900"}`}>
+                {unpaidInvoices.length} st
+              </p>
+              {unpaidInvoices[0] && (
+                <p className="text-xs text-stone-500">
+                  Nästa förfaller {new Date(unpaidInvoices[0].dueDate).toLocaleDateString("sv-SE")}
+                </p>
+              )}
+            </Link>
+            <Link href="/mina-sidor/felanmalan" className="card p-4 transition hover:shadow-md">
+              <p className="text-sm text-stone-500">Aktiva felanmälningar</p>
+              <p className="mt-1 text-xl font-bold text-stone-900">{activeRequests.length} st</p>
+            </Link>
+          </>
+        ) : (
+          <>
+            <Link href="/mina-sidor/favoriter" className="card p-4 transition hover:shadow-md">
+              <p className="text-sm text-stone-500">Sparade favoriter</p>
+              <p className="mt-1 text-xl font-bold text-stone-900">{favoritesCount} st</p>
+            </Link>
+            <Link href="/mina-sidor/bevakningar" className="card p-4 transition hover:shadow-md">
+              <p className="text-sm text-stone-500">Aktiva bevakningar</p>
+              <p className="mt-1 text-xl font-bold text-stone-900">{savedSearchesCount} st</p>
+            </Link>
+            <Link href="/mina-sidor/meddelanden" className="card p-4 transition hover:shadow-md">
+              <p className="text-sm text-stone-500">Olästa meddelanden</p>
+              <p className="mt-1 text-xl font-bold text-stone-900">{unreadMessages} st</p>
+            </Link>
+          </>
+        )}
         <Link href="/mina-sidor/ansokningar" className="card p-4 transition hover:shadow-md">
           <p className="text-sm text-stone-500">Pågående ansökningar</p>
           <p className="mt-1 text-xl font-bold text-stone-900">{activeApplications.length} st</p>
         </Link>
       </section>
 
-      <div className="grid gap-6 lg:grid-cols-2">
+      <div className={`grid gap-6 ${isTenant ? "lg:grid-cols-2" : ""}`}>
         {/* Nästa faktura */}
-        <section aria-labelledby="fakturor" className="card p-5">
+        {isTenant && <section aria-labelledby="fakturor" className="card p-5">
           <div className="flex items-center justify-between">
             <h2 id="fakturor" className="font-semibold text-stone-900">Fakturor</h2>
             <Link href="/mina-sidor/fakturor" className="text-sm font-medium text-brand-700 hover:underline">Visa alla</Link>
@@ -154,7 +200,7 @@ export default async function PortalOverviewPage() {
               ))}
             </ul>
           )}
-        </section>
+        </section>}
 
         {/* Meddelanden och notiser */}
         <section aria-labelledby="handelser" className="card p-5">
@@ -198,8 +244,12 @@ export default async function PortalOverviewPage() {
 
       {/* Genvägar */}
       <section aria-label="Genvägar" className="grid gap-4 sm:grid-cols-3">
-        <Link href="/mina-sidor/felanmalan/ny" className="btn-primary justify-center">Gör felanmälan</Link>
-        <Link href="/lediga-bostader" className="btn-secondary justify-center">Sök bostad ({favoritesCount} favoriter)</Link>
+        {isTenant ? (
+          <Link href="/mina-sidor/felanmalan/ny" className="btn-primary justify-center">Gör felanmälan</Link>
+        ) : (
+          <Link href="/lediga-bostader" className="btn-primary justify-center">Sök lediga bostäder</Link>
+        )}
+        <Link href="/mina-sidor/favoriter" className="btn-secondary justify-center">Favoriter ({favoritesCount})</Link>
         <Link href="/mina-sidor/bevakningar" className="btn-secondary justify-center">Bevakningar ({savedSearchesCount})</Link>
       </section>
     </div>

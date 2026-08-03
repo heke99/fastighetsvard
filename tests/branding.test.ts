@@ -7,6 +7,11 @@ const original = {
   BRAND_COMPANY_NAME: process.env.BRAND_COMPANY_NAME,
   BRAND_LEGAL_NAME: process.env.BRAND_LEGAL_NAME,
   BRAND_ORGANIZATION_NUMBER: process.env.BRAND_ORGANIZATION_NUMBER,
+  APP_URL: process.env.APP_URL,
+  SUPPORT_EMAIL: process.env.SUPPORT_EMAIL,
+  PRIVACY_EMAIL: process.env.PRIVACY_EMAIL,
+  LEASING_EMAIL: process.env.LEASING_EMAIL,
+  FAULT_REPORT_EMAIL: process.env.FAULT_REPORT_EMAIL,
 };
 
 afterEach(() => {
@@ -23,6 +28,11 @@ describe("FaddeBo identity", () => {
     delete process.env.BRAND_COMPANY_NAME;
     delete process.env.BRAND_LEGAL_NAME;
     delete process.env.BRAND_ORGANIZATION_NUMBER;
+    delete process.env.APP_URL;
+    delete process.env.SUPPORT_EMAIL;
+    delete process.env.PRIVACY_EMAIL;
+    delete process.env.LEASING_EMAIL;
+    delete process.env.FAULT_REPORT_EMAIL;
 
     const brand = getBranding();
     expect(brand.brandName).toBe("FaddeBo");
@@ -31,6 +41,11 @@ describe("FaddeBo identity", () => {
     expect(brand.organizationNumber).toBe("559350-5620");
     expect(brand.legalDisplayName).toContain("FaddeBo");
     expect(brand.legalDisplayName).toContain(brand.legalName);
+    expect(brand.appUrl).toBe("https://faddebo.se");
+    expect(brand.supportEmail).toBe("info@faddebo.se");
+    expect(brand.privacyEmail).toBe("info@faddebo.se");
+    expect(brand.leasingEmail).toBe("info@faddebo.se");
+    expect(brand.faultReportEmail).toBe("felanmalan@faddebo.se");
   });
 
   it("supports configuration without coupling the legal name to the brand", () => {
