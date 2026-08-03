@@ -242,9 +242,11 @@ export default async function HomePage() {
             </h2>
             <p className="mt-4 leading-relaxed text-stone-600">
               {brand.brandName} är varumärket för {brand.legalName}s
-              fastigheter. Vi förvaltar bostäder och lokaler i Linköping,
-              Norrköping och Motala – alltid med fokus
-              på trygghet, energieffektivitet och personlig service.
+              fastigheter. FaddeBo förvaltar bostäder och lokaler i Vadstena, Boxholm och Skänninge  – 
+               alltid med fokus på trygghet, energieffektivitet och personlig service.
+               Som hyresgäst hos oss får du tillgång till Mina sidor där du ser ditt avtal, 
+                dina fakturor och kan göra felanmälningar dygnet runt.
+
             </p>
             <p className="mt-3 leading-relaxed text-stone-600">
               Som hyresgäst hos oss får du tillgång till Mina sidor där du ser

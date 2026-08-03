@@ -46,15 +46,15 @@ export function getBranding(): BrandingConfig {
       "BRAND_DESCRIPTION",
       `${brandName} förvaltar och hyr ut bostäder och lokaler i Östergötland.`
     ),
-    appUrl: value("APP_URL", "http://localhost:3000"),
-    supportEmail: value("SUPPORT_EMAIL", "info@example.se"),
-    privacyEmail: value("PRIVACY_EMAIL", "dataskydd@example.se"),
-    leasingEmail: value("LEASING_EMAIL", "uthyrning@example.se"),
-    faultReportEmail: value("FAULT_REPORT_EMAIL", "felanmalan@example.se"),
+    appUrl: value("APP_URL", "http://faddebo.se"),
+    supportEmail: value("SUPPORT_EMAIL", "info@faddebo.se"),
+    privacyEmail: value("PRIVACY_EMAIL", "dataskydd@faddebo.se"),
+    leasingEmail: value("LEASING_EMAIL", "info@faddebo.se"),
+    faultReportEmail: value("FAULT_REPORT_EMAIL", "felanmalan@faddebo.se"),
     phone: value("BRAND_PHONE", "070-000 00 00"),
     phoneHref: value("BRAND_PHONE_HREF", "+46700000000"),
     emergencyPhone: value("BRAND_EMERGENCY_PHONE", "013-000 00"),
     emergencyPhoneHref: value("BRAND_EMERGENCY_PHONE_HREF", "+461300000"),
-    postalAddress: value("BRAND_POSTAL_ADDRESS", "Adress saknas"),
+    postalAddress: value("BRAND_POSTAL_ADDRESS", "Vadstenagatan 5A, 596 33, Skänninge"),
   };
 }

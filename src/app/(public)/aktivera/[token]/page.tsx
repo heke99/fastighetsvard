@@ -34,8 +34,8 @@ export default async function ActivatePage({
           <p className="font-semibold text-red-700">Inbjudan är ogiltig eller har gått ut.</p>
           <p className="mt-2">
             Kontakta oss på{" "}
-            <a href="mailto:info@ostgotaelteknik.se" className="text-brand-700 underline">
-              info@ostgotaelteknik.se
+            <a href="mailto:info@faddebo.se" className="text-brand-700 underline">
+              info@faddebo.se
             </a>{" "}
             så skickar vi en ny inbjudan.
           </p>

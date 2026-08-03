@@ -14,7 +14,7 @@ export default function ContactPage() {
       <div className="mt-8 grid gap-4 sm:grid-cols-2">
         <div className="card p-5">
           <h2 className="font-semibold text-stone-900">Kundtjänst</h2>
-          <p className="mt-1 text-sm text-stone-600">Vardagar 08–17</p>
+          <p className="mt-1 text-sm text-stone-600">Vardagar 08–11</p>
           <p className="mt-2 text-sm">
             <a href={`tel:${brand.phoneHref}`} className="font-medium text-brand-700">{brand.phone}</a>
           </p>
