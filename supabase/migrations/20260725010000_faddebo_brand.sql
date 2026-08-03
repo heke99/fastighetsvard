@@ -98,7 +98,7 @@ SELECT
   'FaddeBo',
   'faddebo',
   'FaddeBo – ett varumärke inom Östgöta El Teknik AB, org.nr 559350-5620',
-  COALESCE(o."email", 'info@ostgotaelteknik.se'),
+  COALESCE(o."email", 'info@faddebo.se'),
   o."phone",
   '/integritetspolicy',
   '/allmanna-villkor',
