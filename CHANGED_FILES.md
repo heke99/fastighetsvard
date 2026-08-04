@@ -78,6 +78,7 @@ Den tidigare leveransrapporten bevaras under
 - `src/app/admin/AdminNav.tsx`
 - `src/app/admin/layout.tsx`
 - `src/app/admin/page.tsx`
+- `src/app/admin/page.tsx`
 - `src/app/(portal)/mina-sidor/PortalNav.tsx`
 - `src/app/(portal)/mina-sidor/layout.tsx`
 - `src/app/(portal)/mina-sidor/page.tsx`
@@ -143,3 +144,51 @@ Den tidigare leveransrapporten bevaras under
 ## Dokumentation
 
 - `FADDEBO_LOGIN_DASHBOARD_FIX.md`
+
+# Tillägg — roller, hyresgäster, lägenhetsmedia och felanmälan — 2026-08-04
+
+## Roller och behörigheter
+
+- `src/lib/permissions.ts`
+- `src/lib/role-routing.ts`
+- `src/lib/auth.ts`
+- `src/lib/repositories/auth-context.ts`
+- `src/app/admin/layout.tsx`
+- `src/app/admin/page.tsx`
+- `src/app/admin/anvandare/page.tsx`
+- `src/app/admin/hyresgaster/page.tsx`
+- `src/app/admin/actions.ts`
+- `src/lib/repositories/admin-operations.ts`
+- `src/lib/repositories/admin-records.ts`
+- `supabase/migrations/20260804120000_role_context_consistency.sql`
+
+## Objekt och annonsmedia
+
+- `src/app/admin/objekt/page.tsx`
+- `src/app/admin/annonser/page.tsx`
+- `src/lib/repositories/listing-media.ts`
+
+## Felanmälan
+
+- `src/lib/services/maintenance.ts`
+- `src/lib/repositories/maintenance-files.ts`
+- `src/lib/repositories/maintenance-notifications.ts`
+- `src/lib/repositories/portal-records.ts`
+- `src/lib/email.ts`
+- `src/app/admin/felanmalan/page.tsx`
+- `src/app/(portal)/mina-sidor/felanmalan/page.tsx`
+- `src/app/(portal)/mina-sidor/felanmalan/[id]/page.tsx`
+- `src/app/(portal)/mina-sidor/felanmalan/ny/actions.ts`
+- `src/app/(portal)/mina-sidor/felanmalan/ny/MaintenanceForm.tsx`
+
+## Verifiering och projektminne
+
+- `scripts/verify-role-maintenance-consistency.mjs`
+- `scripts/verify-account-lifecycle.mjs`
+- `scripts/verify-login-dashboard.mjs`
+- `tests/permissions.test.ts`
+- `tests/role-routing.test.ts`
+- `tests/supabase-schema.test.ts`
+- `package.json`
+- `FADDEBO_KONSEKVENSRAPPORT.md`
+- `.agent-memory/**` relevanta status-, verifierings- och sessionsfiler

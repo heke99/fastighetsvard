@@ -18,6 +18,7 @@ describe("Supabase-native projekt", () => {
     expect(files.length).toBeGreaterThanOrEqual(35);
     expect(files).toContain("20260804090000_faddebo_account_lifecycle.sql");
     expect(files).toContain("20260804113000_login_dashboard_repair.sql");
+    expect(files).toContain("20260804120000_role_context_consistency.sql");
 
     const sql = files
       .map((file) => readFileSync(resolve(migrationDir, file), "utf8"))
@@ -32,5 +33,6 @@ describe("Supabase-native projekt", () => {
     expect(sql).toContain('FUNCTION public.assert_service_role()');
     expect(sql).toContain('FUNCTION public.record_current_login(p_ip text DEFAULT NULL)');
     expect(sql).toContain('FUNCTION public.admin_dashboard_metrics(');
+    expect(sql).toContain("'roleNames'");
   });
 });

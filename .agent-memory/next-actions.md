@@ -33,7 +33,7 @@ lint/typecheck/40 tests/build pass.
 
 Priority: P0  
 Status: BLOCKED — DATABASE REQUIRED  
-Goal: prove the 29-migration chain and authorization boundaries at runtime.  
+Goal: prove the current 36-migration chain and authorization boundaries at runtime.  
 Exact commands: `supabase start`, `npm run db:reset`, `npm run db:verify`,
 `npm run test:rls`, then real parallel transaction tests.  
 Acceptance: clean install and upgrade, function signatures, negative
@@ -61,3 +61,16 @@ navigation, new logo assets, homepage copy, public route removal and forward
 migration.  
 Next exact step: run the commands and ten runtime checks in
 `docs/ACCOUNT_AND_EMAIL_SETUP.md` against Supabase staging.
+
+## TASK-0007
+
+Priority: P0  
+Status: COMPLETE IN SOURCE; RUNTIME VERIFICATION PENDING  
+Goal: make staff roles, tenant/person views, apartment media and fault reports
+consistent across superadmin, property-manager and tenant portals.  
+Completed: exact role labels/descriptions/permissions, organization-scoped
+session roles, protected custom roles, person/staff role display, co-tenant unit
+views, listing media upload, fault-report attachments, e-mails and portal
+visibility, plus static regression verification.  
+Next exact step: apply `20260804120000_role_context_consistency.sql`, run
+`npm run ci`, then execute `FADDEBO_KONSEKVENSRAPPORT.md` in staging.

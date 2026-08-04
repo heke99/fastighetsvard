@@ -69,7 +69,11 @@ export default async function AdminUnitsPage({
               <tr><td colSpan={7} className="px-4 py-8 text-center text-stone-500">Inga objekt matchade.</td></tr>
             )}
             {units.map((u) => {
-              const tenant = u.contracts[0]?.parties.find((p) => p.role === "TENANT")?.person;
+              const tenants = u.contracts.flatMap((contract) =>
+                contract.parties
+                  .filter((party) => ["TENANT", "CO_TENANT"].includes(party.role) && party.person)
+                  .map((party) => ({ ...party.person, role: party.role }))
+              );
               return (
                 <tr key={u.id} className="hover:bg-stone-50">
                   <td className="px-4 py-3 font-medium text-stone-900">{u.unitNumber}</td>
@@ -83,7 +87,9 @@ export default async function AdminUnitsPage({
                     <span className="badge bg-stone-100 text-stone-700">{statusLabels[u.status]}</span>
                   </td>
                   <td className="px-4 py-3">
-                    {tenant ? `${tenant.firstName} ${tenant.lastName}` : "–"}
+                    {tenants.length > 0
+                      ? tenants.map((tenant) => `${tenant.firstName} ${tenant.lastName}${tenant.role === "CO_TENANT" ? " (medhyresgäst)" : ""}`).join(", ")
+                      : "–"}
                   </td>
                 </tr>
               );
@@ -94,7 +100,10 @@ export default async function AdminUnitsPage({
 
       {canCreate && (
         <section aria-labelledby="nytt-objekt" className="card p-5">
-          <h2 id="nytt-objekt" className="mb-4 font-semibold text-stone-900">Nytt objekt</h2>
+          <h2 id="nytt-objekt" className="font-semibold text-stone-900">Nytt objekt eller lägenhet</h2>
+          <p className="mb-4 mt-1 text-sm text-stone-600">
+            Objektet kopplas alltid till vald fastighet. Hyresgäster visas först när ett aktivt avtal har kopplats till objektet.
+          </p>
           {properties.length === 0 ? (
             <p className="text-sm text-stone-500">Skapa först en fastighet.</p>
           ) : (

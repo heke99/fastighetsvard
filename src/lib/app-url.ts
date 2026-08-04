@@ -1,5 +1,8 @@
 import { cleanEnvValue, normalizeHttpUrl } from "@/lib/env-value";
 
+const CANONICAL_APP_URL = "https://faddebo.se";
+const LOCAL_APP_URL = "http://localhost:3000";
+
 export function getAppUrl(): string {
   const configured = cleanEnvValue(process.env.APP_URL);
   if (configured) return normalizeHttpUrl(configured);
@@ -18,5 +21,8 @@ export function getAppUrl(): string {
     );
   }
 
-  return "http://localhost:3000";
+  // Local utveckling ska fortsätta fungera utan APP_URL. I test, CI och annan
+  // produktionslik miljö används däremot den canonical FaddeBo-adressen så att
+  // aktiverings-, återställnings- och verifieringslänkar aldrig pekar mot localhost.
+  return process.env.NODE_ENV === "development" ? LOCAL_APP_URL : CANONICAL_APP_URL;
 }

@@ -3,8 +3,12 @@ import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth";
 import { formatSek } from "@/components/ListingCard";
 import { getAdminDashboardMetrics } from "@/lib/repositories/admin-records";
-import { hasPermission, type Action, type Resource } from "@/lib/permissions";
-import { isOwnerAccount } from "@/lib/role-routing";
+import {
+  getRoleDisplayNames,
+  hasPermission,
+  type Action,
+  type Resource,
+} from "@/lib/permissions";
 
 export const metadata = { title: "Admin – Dashboard" };
 
@@ -47,16 +51,16 @@ export default async function AdminDashboardPage() {
   const visibleCards = cards.filter((card) =>
     hasPermission(user.permissions, card.permission.resource, card.permission.action)
   );
-  const owner = isOwnerAccount(user.roleSlugs);
+  const roleNames = getRoleDisplayNames(user.roleSlugs, user.roleNames);
 
   return (
     <div className="space-y-6">
       <header className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-bold text-stone-900">
-            {owner ? "Ägarens dashboard" : "Fastighetsvärdens dashboard"}
-          </h1>
-          <p className="mt-1 text-stone-500">Läget just nu i FaddeBos bestånd.</p>
+          <h1 className="text-2xl font-bold text-stone-900">Dashboard</h1>
+          <p className="mt-1 text-stone-500">
+            Inloggad som {roleNames.join(", ") || "personal"}. Läget just nu i FaddeBos bestånd.
+          </p>
         </div>
         <div className="flex gap-2">
           {hasPermission(user.permissions, "contracts", "create") && (

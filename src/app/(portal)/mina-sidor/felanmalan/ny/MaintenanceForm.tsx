@@ -82,6 +82,20 @@ export function MaintenanceForm({
         {state.fieldErrors?.description && <p className="form-error">{state.fieldErrors.description}</p>}
       </div>
 
+      <div>
+        <label htmlFor="attachments" className="label">Bilder eller dokument</label>
+        <input
+          id="attachments"
+          name="attachments"
+          type="file"
+          multiple
+          accept="image/jpeg,image/png,image/webp,application/pdf"
+          className="input"
+        />
+        <p className="mt-1 text-xs text-stone-500">Högst 5 filer. JPG, PNG, WebP eller PDF, maximalt 10 MB per fil.</p>
+        {state.fieldErrors?.attachments && <p className="form-error">{state.fieldErrors.attachments}</p>}
+      </div>
+
       <div className="grid gap-4 sm:grid-cols-2">
         <div>
           <label htmlFor="discoveredAt" className="label">När upptäcktes felet?</label>

@@ -1,5 +1,12 @@
 import { describe, it, expect } from "vitest";
-import { hasPermission, hasApiScope, SYSTEM_ROLES } from "@/lib/permissions";
+import {
+  getPersonRoleLabels,
+  getRoleDisplayNames,
+  hasPermission,
+  hasApiScope,
+  isValidPermission,
+  SYSTEM_ROLES,
+} from "@/lib/permissions";
 
 describe("RBAC-behörigheter", () => {
   it("superadmin (wildcard) har alla behörigheter", () => {
@@ -31,6 +38,19 @@ describe("RBAC-behörigheter", () => {
     expect(hasPermission(finance.permissions, "invoices", "update")).toBe(true);
     expect(hasPermission(finance.permissions, "users", "create")).toBe(false);
     expect(hasPermission(finance.permissions, "roles", "create")).toBe(false);
+  });
+
+  it("visar tydliga canonical rollnamn", () => {
+    expect(getRoleDisplayNames(["superadmin"])).toEqual(["Ägare / superadmin"]);
+    expect(getRoleDisplayNames(["custom"], ["Regional förvaltare"])).toEqual(["Regional förvaltare"]);
+    expect(getPersonRoleLabels(["TENANT", "CO_APPLICANT"])).toEqual(["Hyresgäst", "Medsökande"]);
+  });
+
+  it("avvisar okända behörighetssträngar", () => {
+    expect(isValidPermission("maintenance:update")).toBe(true);
+    expect(isValidPermission("maintenance:*")).toBe(true);
+    expect(isValidPermission("unknown:read")).toBe(false);
+    expect(isValidPermission("maintenance:publish")).toBe(false);
   });
 
   it("API-scopes fungerar med wildcard per resurs", () => {

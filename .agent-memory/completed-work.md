@@ -49,3 +49,23 @@ transactions, E2E, providers or deployment.
 
 Runtime Auth/e-mail/database verification remains open and is not counted as
 completed.
+
+## 2026-08-04 — Roles, tenants, listing media and fault reports (source/static)
+
+- synchronized 13 system-role names, descriptions and exact permissions between
+  TypeScript and PostgreSQL;
+- exposed exact personal/staff roles in the admin header, user catalog and
+  person/tenant catalog, including inactive portal-account status;
+- made organization-specific custom roles first-class staff roles, required an active same-organization actor with `roles:create`, and blocked non-superadmins from creating wildcard roles in both app and database;
+- organization-scoped role/person data returned by `current_user_context()` and filtered in person-list role hydration;
+- permission-gated tenant import, registration and invitation controls;
+- displayed primary and co-tenants on units from active contracts;
+- added canonical apartment/listing image and floorplan upload through
+  `listing-media` Storage and `UnitMedia`;
+- completed tenant-to-staff fault-report flow with private attachments, portal
+  visibility, shared fault-report e-mail, tenant receipt/status e-mail and
+  post-commit failure isolation;
+- added a 27-check consistency verifier and extended CI wiring/tests.
+
+Executed static gates passed. Dependency-backed typecheck, Vitest, build,
+database, RLS, Storage and provider checks remain pending and are not claimed.

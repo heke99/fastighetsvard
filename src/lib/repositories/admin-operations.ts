@@ -238,6 +238,7 @@ export async function createCustomRole(input: {
   actorUserId: string;
   name: string;
   slug: string;
+  description: string;
   permissions: string[];
 }) {
   const { data, error } = await createAdminClient().rpc("create_custom_role", {
@@ -245,10 +246,20 @@ export async function createCustomRole(input: {
     p_actor_user_id: input.actorUserId,
     p_name: input.name,
     p_slug: input.slug,
+    p_description: input.description,
     p_permissions: input.permissions,
   });
   if (error) {
     if (error.message.includes("role_slug_exists")) return null;
+    if (error.message.includes("role_actor_forbidden")) {
+      throw new Error("Du saknar behörighet att skapa roller.");
+    }
+    if (error.message.includes("privileged_role_assignment_denied")) {
+      throw new Error("Endast ägarkontot kan skapa en roll med fullständig åtkomst.");
+    }
+    if (error.message.includes("invalid_permission")) {
+      throw new Error("Rollen innehåller en ogiltig behörighet.");
+    }
     fail("Skapa roll", error);
   }
   return data as { roleId: string };

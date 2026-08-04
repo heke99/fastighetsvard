@@ -9,6 +9,23 @@ import { listAdminMaintenance } from "@/lib/repositories/admin-records";
 
 export const metadata = { title: "Admin – Felanmälningar" };
 
+const statusActionLabels: Record<string, string> = {
+  CONFIRMED: "Bekräfta",
+  ASSESSING: "Starta bedömning",
+  NEEDS_INFO: "Begär komplettering",
+  ASSIGNED: "Tilldela",
+  BOOKED: "Markera bokad",
+  IN_PROGRESS: "Starta arbete",
+  WAITING_TENANT: "Väntar på hyresgäst",
+  WAITING_CONTRACTOR: "Väntar på entreprenör",
+  WAITING_MATERIAL: "Väntar på material",
+  DONE: "Markera färdig",
+  QUALITY_CHECK: "Kvalitetskontroll",
+  CLOSED: "Stäng ärendet",
+  REJECTED: "Avvisa",
+  REOPENED: "Återöppna",
+};
+
 export default async function AdminMaintenancePage() {
   const user = await getCurrentUser();
   if (!user?.organizationId || !hasPermission(user.permissions, "maintenance", "read")) {
@@ -37,14 +54,37 @@ export default async function AdminMaintenancePage() {
                     {r.isEmergency && <span className="badge ml-2 bg-red-100 text-red-800">Akut</span>}
                   </h2>
                   <p className="text-sm text-stone-500">
-                    {r.unit ? `${r.unit.unitNumber} · ${r.unit.address}` : "Allmänt utrymme"} · {r.category}
-                    {r.person && ` · Anmäld av ${r.person.firstName} ${r.person.lastName}${r.person.phone ? ` (${r.person.phone})` : ""}`}
+                    {r.unit ? `${r.unit.unitNumber} · ${r.unit.address}, ${r.unit.city}` : "Allmänt utrymme"} · {r.category}
+                  </p>
+                  <p className="mt-1 text-xs text-stone-500">
+                    Inskickad {new Date(r.createdAt).toLocaleString("sv-SE")}
+                    {r.person && ` · ${r.person.firstName} ${r.person.lastName}`}
+                    {r.person?.email && ` · ${r.person.email}`}
+                    {(r.contactPhone || r.person?.phone) && ` · ${r.contactPhone || r.person.phone}`}
                   </p>
                   <p className="mt-1 text-sm text-stone-600">{r.description}</p>
                   <p className="mt-1 text-xs text-stone-400">
                     Huvudnyckel: {r.masterKeyAllowed ? "OK" : "Nej"} · Husdjur: {r.petsInHome ? "Ja" : "Nej"}
                     {r.preferredTime && ` · Önskad tid: ${r.preferredTime}`}
                   </p>
+                  {r.attachments.length > 0 && (
+                    <div className="mt-2 flex flex-wrap gap-2 text-xs">
+                      <span className="font-semibold text-stone-600">Bilagor:</span>
+                      {r.attachments.map((attachment) => attachment.signedUrl ? (
+                        <a
+                          key={attachment.id}
+                          href={attachment.signedUrl}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="font-medium text-brand-700 hover:underline"
+                        >
+                          {attachment.fileName}
+                        </a>
+                      ) : (
+                        <span key={attachment.id} className="text-stone-400">{attachment.fileName}</span>
+                      ))}
+                    </div>
+                  )}
                   {r.workOrders.length > 0 && (
                     <p className="mt-1 text-xs text-stone-500">
                       Arbetsorder: {r.workOrders.map((wo) => `#${wo.orderNumber} (${wo.status})`).join(", ")}
@@ -61,7 +101,7 @@ export default async function AdminMaintenancePage() {
                       <input type="hidden" name="requestId" value={r.id} />
                       <input type="hidden" name="toStatus" value={next} />
                       <button type="submit" className="rounded border border-stone-300 px-2 py-1 text-xs font-medium text-stone-700 hover:bg-stone-100">
-                        → {next}
+                        {statusActionLabels[next] ?? next}
                       </button>
                     </form>
                   ))}

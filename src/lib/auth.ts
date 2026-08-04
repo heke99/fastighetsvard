@@ -86,6 +86,7 @@ export interface CurrentUser {
   supplierId: string | null;
   permissions: string[];
   roleSlugs: string[];
+  roleNames: string[];
   person: {
     id: string;
     firstName: string;

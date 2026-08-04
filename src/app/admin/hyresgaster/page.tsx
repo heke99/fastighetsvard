@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth";
-import { hasPermission } from "@/lib/permissions";
+import { getPersonRoleLabels, hasPermission } from "@/lib/permissions";
 import { sendInvitationAction } from "../actions";
 import { listAdminPersons } from "@/lib/repositories/admin-records";
 
@@ -20,18 +20,17 @@ export default async function AdminTenantsPage({
 
   const persons = await listAdminPersons(user.organizationId, q);
 
-  const roleLabels: Record<string, string> = {
-    TENANT: "Hyresgäst", APPLICANT: "Sökande", CO_APPLICANT: "Medsökande",
-    GUARANTOR: "Borgensman", BUYER: "Köpare", CONTACT: "Kontakt", HOUSEHOLD_MEMBER: "Hushållsmedlem",
-  };
+  const canImport = hasPermission(user.permissions, "imports", "create");
+  const canCreateTenant = hasPermission(user.permissions, "contracts", "create");
+  const canInvite = hasPermission(user.permissions, "persons", "update");
 
   return (
     <div className="space-y-6">
       <header className="flex flex-wrap items-center justify-between gap-3">
         <h1 className="text-2xl font-bold text-stone-900">Hyresgäster & personer</h1>
-        <div className="flex gap-2">
-          <Link href="/admin/hyresgaster/import" className="btn-secondary">CSV-import</Link>
-          <Link href="/admin/hyresgaster/ny" className="btn-primary">Lägg till befintlig hyresgäst</Link>
+        <div className="flex flex-wrap gap-2">
+          {canImport && <Link href="/admin/hyresgaster/import" className="btn-secondary">CSV-import</Link>}
+          {canCreateTenant && <Link href="/admin/hyresgaster/ny" className="btn-primary">Lägg till befintlig hyresgäst</Link>}
         </div>
       </header>
 
@@ -48,7 +47,8 @@ export default async function AdminTenantsPage({
             <tr className="border-b border-stone-200 text-left text-xs uppercase tracking-wide text-stone-500">
               <th scope="col" className="px-4 py-3">Namn</th>
               <th scope="col" className="px-4 py-3">E-post</th>
-              <th scope="col" className="px-4 py-3">Roller</th>
+              <th scope="col" className="px-4 py-3">Personroll</th>
+              <th scope="col" className="px-4 py-3">Personalroll</th>
               <th scope="col" className="px-4 py-3">Aktivt boende</th>
               <th scope="col" className="px-4 py-3">Externt kund-ID</th>
               <th scope="col" className="px-4 py-3">Mina sidor</th>
@@ -56,7 +56,7 @@ export default async function AdminTenantsPage({
           </thead>
           <tbody className="divide-y divide-stone-100">
             {persons.length === 0 && (
-              <tr><td colSpan={6} className="px-4 py-8 text-center text-stone-500">Inga personer hittades.</td></tr>
+              <tr><td colSpan={7} className="px-4 py-8 text-center text-stone-500">Inga personer hittades.</td></tr>
             )}
             {persons.map((p) => (
               <tr key={p.id} className="hover:bg-stone-50">
@@ -67,9 +67,20 @@ export default async function AdminTenantsPage({
                 <td className="px-4 py-3">{p.email ?? "–"}</td>
                 <td className="px-4 py-3">
                   <div className="flex flex-wrap gap-1">
-                    {p.roles.map((r) => (
-                      <span key={r.id} className="badge bg-stone-100 text-stone-700">{roleLabels[r.role]}</span>
+                    {getPersonRoleLabels(p.roles.map((r) => r.role)).map((role) => (
+                      <span key={role} className="badge bg-stone-100 text-stone-700">{role}</span>
                     ))}
+                    {p.roles.length === 0 && <span className="text-xs text-stone-400">Ingen registrerad</span>}
+                  </div>
+                </td>
+                <td className="px-4 py-3">
+                  <div className="flex flex-wrap gap-1">
+                    {(p.user?.staffRoles ?? []).map((staffRole) => (
+                      <span key={staffRole.id} className="badge bg-brand-50 text-brand-800">
+                        {staffRole.role?.name ?? "Borttagen roll"}
+                      </span>
+                    ))}
+                    {(p.user?.staffRoles ?? []).length === 0 && <span className="text-xs text-stone-400">–</span>}
                   </div>
                 </td>
                 <td className="px-4 py-3">
@@ -80,16 +91,20 @@ export default async function AdminTenantsPage({
                 </td>
                 <td className="px-4 py-3">
                   {p.user ? (
-                    <span className="badge bg-brand-100 text-brand-800">Aktivt konto</span>
+                    <span className={`badge ${p.user.isActive ? "bg-brand-100 text-brand-800" : "bg-red-100 text-red-800"}`}>
+                      {p.user.isActive ? "Aktivt konto" : "Avstängt konto"}
+                    </span>
                   ) : p.invitations[0] && !p.invitations[0].acceptedAt && p.invitations[0].expiresAt > new Date() ? (
                     <span className="badge bg-accent-500/20 text-accent-600">Inbjuden</span>
-                  ) : p.email ? (
+                  ) : p.email && canInvite ? (
                     <form action={sendInvitationAction}>
                       <input type="hidden" name="personId" value={p.id} />
                       <button type="submit" className="rounded border border-stone-300 px-2 py-1 text-xs font-medium text-stone-700 hover:bg-stone-100">
                         Bjud in
                       </button>
                     </form>
+                  ) : p.email ? (
+                    <span className="text-xs text-stone-400">Ingen inbjudningsbehörighet</span>
                   ) : (
                     <span className="text-xs text-stone-400">Saknar e-post</span>
                   )}

@@ -64,6 +64,26 @@ export default async function MaintenanceDetailPage({
         </dl>
       </section>
 
+      {request.attachments.length > 0 && (
+        <section aria-labelledby="bilagor" className="card p-5">
+          <h2 id="bilagor" className="font-semibold text-stone-900">Bilagor</h2>
+          <ul className="mt-3 space-y-2 text-sm">
+            {request.attachments.map((attachment) => (
+              <li key={attachment.id} className="flex flex-wrap items-center justify-between gap-2 rounded-lg bg-stone-50 p-3">
+                <span className="font-medium text-stone-800">{attachment.fileName}</span>
+                {attachment.signedUrl ? (
+                  <a href={attachment.signedUrl} target="_blank" rel="noreferrer" className="font-semibold text-brand-700 hover:underline">
+                    Öppna bilaga
+                  </a>
+                ) : (
+                  <span className="text-xs text-stone-400">Länken kunde inte skapas</span>
+                )}
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+
       {request.comments.length > 0 && (
         <section aria-labelledby="kommentarer" className="card p-5">
           <h2 id="kommentarer" className="font-semibold text-stone-900">Meddelanden i ärendet</h2>

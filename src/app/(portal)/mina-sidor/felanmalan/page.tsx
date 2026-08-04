@@ -6,21 +6,36 @@ import { listMyMaintenanceRequests } from "@/lib/repositories/portal-records";
 
 export const metadata = { title: "Mina felanmälningar" };
 
-export default async function MyMaintenancePage() {
+export default async function MyMaintenancePage({
+  searchParams,
+}: {
+  searchParams: Promise<{ created?: string; attachments?: string }>;
+}) {
   const user = await getCurrentUser();
   if (!user?.personId) redirect("/logga-in");
 
-  const requests = await listMyMaintenanceRequests(user.personId);
+  const [requests, query] = await Promise.all([
+    listMyMaintenanceRequests(user.personId),
+    searchParams,
+  ]);
 
   return (
     <div className="space-y-6">
       <header className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="text-2xl font-bold text-stone-900">Mina felanmälningar</h1>
-          <p className="mt-1 text-stone-500">Följ status för dina ärenden.</p>
+          <p className="mt-1 text-stone-500">Följ status, meddelanden och bilagor för dina ärenden.</p>
         </div>
         <Link href="/mina-sidor/felanmalan/ny" className="btn-primary">Ny felanmälan</Link>
       </header>
+
+      {query.created && (
+        <div role="status" className="rounded-lg border border-brand-200 bg-brand-50 p-4 text-sm text-brand-900">
+          Felanmälan #{query.created} är registrerad, synlig för ansvarig personal och e-postavisering har initierats.
+          {query.attachments === "partial" && " Några bilagor kunde inte laddas upp."}
+          {query.attachments === "failed" && " Bilagorna kunde inte laddas upp, men själva felanmälan är sparad."}
+        </div>
+      )}
 
       {requests.length === 0 ? (
         <div className="card p-10 text-center">

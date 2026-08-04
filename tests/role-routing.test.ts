@@ -20,6 +20,11 @@ describe("FaddeBo role routing", () => {
     expect(isStaffAccount([])).toBe(false);
   });
 
+  it("routes organization-specific custom roles to administration", () => {
+    expect(defaultDashboardForRoles(["lokal-forvaltare"])).toBe("/admin");
+    expect(isStaffAccount(["lokal-forvaltare"])).toBe(true);
+  });
+
   it("routes contractor accounts to the contractor portal", () => {
     expect(defaultDashboardForRoles(["contractor"])).toBe("/entreprenor");
     expect(isContractorAccount(["contractor"])).toBe(true);

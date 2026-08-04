@@ -166,7 +166,7 @@ check(
 const migrationFiles = readdirSync(resolve(root, "supabase/migrations"))
   .filter((name) => name.endsWith(".sql"))
   .sort();
-check("Migrationskedjan innehåller canonical slutmigration", migrationFiles.at(-1) === "20260804113000_login_dashboard_repair.sql");
+check("Migrationskedjan innehåller canonical slutmigration", migrationFiles.at(-1) === "20260804120000_role_context_consistency.sql");
 
 for (const name of passes) console.log(`PASS  ${name}`);
 if (failures.length) {

@@ -2,6 +2,7 @@ import "server-only";
 import type { PostgrestError } from "@supabase/supabase-js";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
+import { signMaintenanceDocuments } from "@/lib/repositories/maintenance-files";
 
 function fail(operation: string, error: PostgrestError): never {
   throw new Error(`${operation} misslyckades (${error.code}).`);
@@ -284,7 +285,7 @@ export async function getMyMaintenanceRequest(
   if (error) fail("Felanmälan", error);
   if (!request) return null;
 
-  const [commentsResult, historyResult, unit] = await Promise.all([
+  const [commentsResult, historyResult, documentResult, unit] = await Promise.all([
     supabase
       .from("MaintenanceComment")
       .select("id,authorName,body,createdAt")
@@ -296,15 +297,27 @@ export async function getMyMaintenanceRequest(
       .select("id,fromStatus,toStatus,comment,createdAt")
       .eq("requestId", requestId)
       .order("createdAt", { ascending: true }),
+    supabase
+      .from("Document")
+      .select("id,title,fileName,mimeType,sizeBytes,storageKey,createdAt")
+      .eq("maintenanceRequestId", requestId)
+      .eq("personId", personId)
+      .is("archivedAt", null)
+      .order("createdAt", { ascending: true }),
     request.unitId ? getMyRentalUnit(String(request.unitId)) : Promise.resolve(null),
   ]);
   if (commentsResult.error) fail("Felanmälanskommentarer", commentsResult.error);
   if (historyResult.error) fail("Felanmälanshistorik", historyResult.error);
+  if (documentResult.error) fail("Felanmälansbilagor", documentResult.error);
+  const attachments = await signMaintenanceDocuments(
+    (documentResult.data ?? []) as unknown as Record<string, any>[]
+  );
   return {
     ...(request as unknown as Record<string, any>),
     unit,
     comments: commentsResult.data ?? [],
     statusHistory: historyResult.data ?? [],
+    attachments,
   };
 }
 

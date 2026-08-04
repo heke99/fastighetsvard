@@ -40,3 +40,18 @@ executed in this environment. Static project lint and Node syntax check passed.
 
 Resolution: rerun the release gate in normal development/CI with a complete npm
 registry. Do not change dependency versions solely to hide the mirror failure.
+
+## FAILURE-0005: Current role/media/maintenance runtime gate unavailable
+
+Status: ENVIRONMENTAL / OPEN
+
+Evidence: the source archive has no Git metadata, no approved Supabase staging
+credentials and no usable dependency installation in this runtime.
+
+Impact: migration `20260804120000_role_context_consistency.sql`, real role
+sessions, listing-media uploads, private maintenance attachments and Resend
+receipt/internal/status e-mails are source/static verified only.
+
+Resolution: apply the archive to the canonical clone, install locked
+dependencies from a complete registry, push all migrations to staging and run
+the acceptance matrix in `FADDEBO_KONSEKVENSRAPPORT.md`.

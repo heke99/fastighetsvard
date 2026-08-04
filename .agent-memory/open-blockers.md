@@ -52,3 +52,17 @@ Required resolution: configure the production-like staging environment per
 `docs/ACCOUNT_AND_EMAIL_SETUP.md` and execute all account flow checks.  
 Acceptance criteria: verified sender identity, successful delivery, valid
 callbacks, expired-link handling and correct role-specific dashboard routing.
+
+## BLOCKER-0006
+
+Severity: P0  
+Status: BLOCKED — RUNTIME ACCEPTANCE REQUIRED  
+Affected flow: exact staff roles, apartment/listing media and fault reports  
+Problem: the latest migration, Storage uploads and Resend e-mails have not been
+exercised against the target Supabase/Vercel environment.  
+Required resolution: apply all 36 migrations, configure Resend, run the current
+CI gate and complete the role/listing/fault-report acceptance matrix.  
+Acceptance criteria: custom roles route correctly; wildcard protection holds;
+media appears on the public listing; a tenant submission appears in both
+portals with downloadable private attachments; internal, receipt and status
+emails are delivered without duplicate records on provider failure.

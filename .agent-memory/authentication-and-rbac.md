@@ -45,3 +45,15 @@ chooses a password. No shared staff password is displayed or stored.
 
 MFA, support impersonation and privileged-access review remain unverified.
 Sensitive reads and exports require audit evidence.
+
+## 2026-08-04 consistency rules
+
+`current_user_context()` returns both `roleSlugs` and exact `roleNames`. Role,
+permission and linked-person reads are constrained to the user's organization
+(or global system roles). Organization-specific custom roles are staff roles
+and route to `/admin`; `tenant` and `contractor` remain portal-only classes.
+
+Custom roles require a human-readable responsibility description and canonical
+`resource:action` permissions. Only a superadmin may create a role containing
+the global `*` permission. This is enforced in both the server action and the
+service-role-only PostgreSQL function.

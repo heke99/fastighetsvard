@@ -21,6 +21,7 @@ export async function readCurrentUserContext(
     supplierId: value.supplierId ? String(value.supplierId) : null,
     permissions: Array.isArray(value.permissions) ? value.permissions.map(String) : [],
     roleSlugs: Array.isArray(value.roleSlugs) ? value.roleSlugs.map(String) : [],
+    roleNames: Array.isArray(value.roleNames) ? value.roleNames.map(String) : [],
     person: person
       ? {
           id: String(person.id),

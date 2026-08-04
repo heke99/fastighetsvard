@@ -127,3 +127,37 @@ Executed: `node --check scripts/bootstrap-admin.mjs` and
 `node scripts/lint.mjs` (passed, 30 migrations). `npm ci` was blocked by an
 internal registry 404 for the locked Zod tarball, so typecheck/tests/build were
 not claimed.
+
+## 2026-08-04 — Role, tenant, listing-media and maintenance consistency
+
+### Goal
+
+Make the same person, role, apartment and fault-report facts visible and
+behave consistently across tenant, property-manager and superadmin surfaces.
+
+### Changes
+
+Synchronized system roles and permissions; added exact role names to session
+context and person/admin views; made custom roles route to admin; required an active same-organization actor with `roles:create`, protected wildcard roles in app and DB, and filtered person-list roles by organization; added organization-bound listing image/floorplan
+uploads; completed fault-report attachments, e-mail notifications, portal
+visibility and post-commit failure isolation; displayed co-tenants on units.
+
+### Verification performed
+
+- static migration/project lint: PASS, 36 migrations;
+- account verifier: PASS, 16 checks;
+- login/dashboard verifier: PASS, 10 checks;
+- role/tenant/media/maintenance verifier: PASS, 27 checks;
+- TypeScript syntax transpilation: PASS, 27 changed files;
+- TypeScript/SQL system-role permission comparison: PASS, 13 roles exact.
+
+### Not run
+
+Locked dependency install, complete semantic typecheck, Vitest, Next build,
+Supabase migration execution, RLS/Storage and real Resend/browser flows. The
+internal registry returned 404 for locked Zod.
+
+### Exact resume point
+
+Use the canonical Git clone and approved staging environment; run the command
+sequence and acceptance matrix in `FADDEBO_KONSEKVENSRAPPORT.md`.

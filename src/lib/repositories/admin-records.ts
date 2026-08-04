@@ -1,5 +1,6 @@
 import "server-only";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { signMaintenanceDocuments } from "@/lib/repositories/maintenance-files";
 
 type Row = Record<string, any>;
 
@@ -244,7 +245,7 @@ export async function listAdminListings(organizationId: string) {
   const listings = (data ?? []) as unknown as Row[];
   const listingIds = listings.map((row) => String(row.id));
   const unitIds = [...new Set(listings.map((row) => row.unitId).filter(Boolean))];
-  const [unitsResult, applicationsResult, favoritesResult] = await Promise.all([
+  const [unitsResult, applicationsResult, favoritesResult, mediaResult] = await Promise.all([
     unitIds.length
       ? admin.from("Unit").select("id,unitNumber,address,city").eq("organizationId", organizationId).in("id", unitIds)
       : Promise.resolve({ data: [], error: null }),
@@ -254,12 +255,20 @@ export async function listAdminListings(organizationId: string) {
     listingIds.length
       ? admin.from("Favorite").select("id,listingId").eq("organizationId", organizationId).in("listingId", listingIds).limit(5000)
       : Promise.resolve({ data: [], error: null }),
+    unitIds.length
+      ? admin.from("UnitMedia").select("id,unitId,kind,url,caption,sortOrder").in("unitId", unitIds).order("sortOrder", { ascending: true }).limit(5000)
+      : Promise.resolve({ data: [], error: null }),
   ]);
   if (unitsResult.error) fail("Annonsens objekt", unitsResult.error);
   if (applicationsResult.error) fail("Annonsansökningar", applicationsResult.error);
   if (favoritesResult.error) fail("Annonsfavoriter", favoritesResult.error);
+  if (mediaResult.error) fail("Annonsmedia", mediaResult.error);
+  const mediaByUnit = groupBy((mediaResult.data ?? []) as unknown as Row[], "unitId");
   const unitMap = new Map<string, Row>(
-    ((unitsResult.data ?? []) as unknown as Row[]).map((row) => [String(row.id), row] as const)
+    ((unitsResult.data ?? []) as unknown as Row[]).map((row) => [
+      String(row.id),
+      { ...row, media: mediaByUnit.get(String(row.id)) ?? [] },
+    ] as const)
   );
   const applications = groupBy((applicationsResult.data ?? []) as unknown as Row[], "listingId");
   const favorites = groupBy((favoritesResult.data ?? []) as unknown as Row[], "listingId");
@@ -452,20 +461,30 @@ export async function listAdminMaintenance(organizationId: string) {
   const ids = requests.map((row) => String(row.id));
   const unitIds = [...new Set(requests.map((row) => row.unitId).filter(Boolean))];
   const personIds = [...new Set(requests.map((row) => row.personId).filter(Boolean))];
-  const [unitResult, personResult, workOrderResult] = await Promise.all([
+  const [unitResult, personResult, workOrderResult, documentResult] = await Promise.all([
     unitIds.length
-      ? admin.from("Unit").select("id,address,unitNumber").eq("organizationId", organizationId).in("id", unitIds)
+      ? admin.from("Unit").select("id,address,city,unitNumber").eq("organizationId", organizationId).in("id", unitIds)
       : Promise.resolve({ data: [], error: null }),
     personIds.length
-      ? admin.from("Person").select("id,firstName,lastName,phone").eq("organizationId", organizationId).in("id", personIds)
+      ? admin.from("Person").select("id,firstName,lastName,email,phone").eq("organizationId", organizationId).in("id", personIds)
       : Promise.resolve({ data: [], error: null }),
     ids.length
       ? admin.from("WorkOrder").select("id,requestId,orderNumber,status").eq("organizationId", organizationId).in("requestId", ids).limit(1000)
+      : Promise.resolve({ data: [], error: null }),
+    ids.length
+      ? admin
+          .from("Document")
+          .select("id,maintenanceRequestId,title,fileName,mimeType,sizeBytes,storageKey,createdAt")
+          .eq("organizationId", organizationId)
+          .in("maintenanceRequestId", ids)
+          .is("archivedAt", null)
+          .limit(1000)
       : Promise.resolve({ data: [], error: null }),
   ]);
   if (unitResult.error) fail("Felanmälansobjekt", unitResult.error);
   if (personResult.error) fail("Felanmälanspersoner", personResult.error);
   if (workOrderResult.error) fail("Felanmälansarbetsorder", workOrderResult.error);
+  if (documentResult.error) fail("Felanmälansbilagor", documentResult.error);
   const units = new Map<string, Row>(
     ((unitResult.data ?? []) as unknown as Row[]).map((row) => [String(row.id), row] as const)
   );
@@ -473,12 +492,17 @@ export async function listAdminMaintenance(organizationId: string) {
     ((personResult.data ?? []) as unknown as Row[]).map((row) => [String(row.id), row] as const)
   );
   const workOrders = groupBy((workOrderResult.data ?? []) as unknown as Row[], "requestId");
+  const signedDocuments = await signMaintenanceDocuments(
+    (documentResult.data ?? []) as unknown as Row[]
+  );
+  const documents = groupBy(signedDocuments, "maintenanceRequestId");
   return {
     requests: requests.map((request) => ({
       ...request,
       unit: units.get(String(request.unitId)) ?? null,
       person: persons.get(String(request.personId)) ?? null,
       workOrders: workOrders.get(String(request.id)) ?? [],
+      attachments: documents.get(String(request.id)) ?? [],
     })) as Row[],
     suppliers,
   };
@@ -620,7 +644,7 @@ export async function listAdminPersons(organizationId: string, search?: string) 
   if (personIds.length === 0) return [];
   const [roleResult, userResult, invitationResult, referenceResult, partyResult] = await Promise.all([
     admin.from("PersonRole").select("id,personId,role").in("personId", personIds).limit(2000),
-    admin.from("User").select("id,personId,lastLoginAt").eq("organizationId", organizationId).in("personId", personIds).limit(500),
+    admin.from("User").select("id,personId,lastLoginAt,isActive").eq("organizationId", organizationId).in("personId", personIds).limit(500),
     admin.from("Invitation").select("id,personId,expiresAt,acceptedAt,createdAt").eq("organizationId", organizationId).in("personId", personIds).order("createdAt", { ascending: false }).limit(2000),
     admin.from("ExternalReference").select("id,personId,externalSystem,externalId").eq("organizationId", organizationId).eq("entityType", "customer").in("personId", personIds).limit(2000),
     admin.from("ContractParty").select("id,personId,contractId,role").in("personId", personIds).in("role", ["TENANT", "CO_TENANT"]).limit(2000),
@@ -664,8 +688,34 @@ export async function listAdminPersons(organizationId: string, search?: string) 
   const invitationGroups = groupBy(invitations, "personId");
   const references = groupBy((referenceResult.data ?? []) as unknown as Row[], "personId");
   const partyGroups = groupBy(hydratedParties, "personId");
+  const userRows = (userResult.data ?? []) as unknown as Row[];
+  const userIds = userRows.map((row) => String(row.id));
+  const { data: userRoleData, error: userRoleError } = userIds.length
+    ? await admin.from("UserRole").select("id,userId,roleId").in("userId", userIds).limit(2000)
+    : { data: [], error: null };
+  if (userRoleError) fail("Personernas personalroller", userRoleError);
+  const userRoleRows = (userRoleData ?? []) as unknown as Row[];
+  const staffRoleIds = [...new Set(userRoleRows.map((row) => row.roleId).filter(Boolean))];
+  const { data: staffRoleData, error: staffRoleError } = staffRoleIds.length
+    ? await admin.from("Role").select("id,organizationId,name,slug").in("id", staffRoleIds).limit(500)
+    : { data: [], error: null };
+  if (staffRoleError) fail("Personernas rollnamn", staffRoleError);
+  const scopedStaffRoles = ((staffRoleData ?? []) as unknown as Row[]).filter(
+    (row) => row.organizationId === null || String(row.organizationId) === organizationId
+  );
+  const staffRoleMap = new Map<string, Row>(
+    scopedStaffRoles.map((row) => [String(row.id), row] as const)
+  );
+  const hydratedUserRoles = userRoleRows.map((row) => ({
+    ...row,
+    role: staffRoleMap.get(String(row.roleId)) ?? null,
+  })) as Row[];
+  const staffRolesByUser = groupBy(hydratedUserRoles, "userId");
   const users = new Map<string, Row>(
-    ((userResult.data ?? []) as unknown as Row[]).map((row) => [String(row.personId), row] as const)
+    userRows.map((row) => [
+      String(row.personId),
+      { ...row, staffRoles: staffRolesByUser.get(String(row.id)) ?? [] },
+    ] as const)
   );
   return persons.map((person) => ({
     ...person,
@@ -954,9 +1004,12 @@ export async function listAdminUsersAndRoles(organizationId: string) {
   const personIds = [...new Set(users.map((row) => row.personId).filter(Boolean))];
   const supplierIds = [...new Set(users.map((row) => row.supplierId).filter(Boolean))];
   const roleIds = roles.map((row) => String(row.id));
-  const [personResult, supplierResult, userRoleResult, permissionResult] = await Promise.all([
+  const [personResult, personRoleResult, supplierResult, userRoleResult, permissionResult] = await Promise.all([
     personIds.length
       ? admin.from("Person").select("id,firstName,lastName").eq("organizationId", organizationId).in("id", personIds)
+      : Promise.resolve({ data: [], error: null }),
+    personIds.length
+      ? admin.from("PersonRole").select("id,personId,role").in("personId", personIds).limit(2000)
       : Promise.resolve({ data: [], error: null }),
     supplierIds.length
       ? admin.from("Supplier").select("id,name").eq("organizationId", organizationId).in("id", supplierIds)
@@ -969,11 +1022,16 @@ export async function listAdminUsersAndRoles(organizationId: string) {
       : Promise.resolve({ data: [], error: null }),
   ]);
   if (personResult.error) fail("Adminanvändarnas personer", personResult.error);
+  if (personRoleResult.error) fail("Adminanvändarnas personroller", personRoleResult.error);
   if (supplierResult.error) fail("Adminanvändarnas entreprenörer", supplierResult.error);
   if (userRoleResult.error) fail("Användarroller", userRoleResult.error);
   if (permissionResult.error) fail("Rollbehörigheter", permissionResult.error);
+  const personRoles = groupBy((personRoleResult.data ?? []) as unknown as Row[], "personId");
   const persons = new Map<string, Row>(
-    ((personResult.data ?? []) as unknown as Row[]).map((row) => [String(row.id), row] as const)
+    ((personResult.data ?? []) as unknown as Row[]).map((row) => [
+      String(row.id),
+      { ...row, roles: personRoles.get(String(row.id)) ?? [] },
+    ] as const)
   );
   const suppliers = new Map<string, Row>(
     ((supplierResult.data ?? []) as unknown as Row[]).map((row) => [String(row.id), row] as const)

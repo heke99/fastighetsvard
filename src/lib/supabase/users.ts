@@ -2,6 +2,26 @@ import "server-only";
 import { getAppUrl } from "@/lib/app-url";
 import { createAdminClient } from "./admin";
 
+async function findManagedAuthUserByEmail(email: string) {
+  const admin = createAdminClient();
+  const normalizedEmail = email.toLowerCase().trim();
+  const perPage = 1000;
+
+  for (let page = 1; ; page += 1) {
+    const { data, error } = await admin.auth.admin.listUsers({ page, perPage });
+    if (error) {
+      throw new Error(`Supabase Auth-användare kunde inte verifieras: ${error.message}`);
+    }
+
+    const match = data.users.find(
+      (user) => user.email?.toLowerCase().trim() === normalizedEmail
+    );
+    if (match) return match;
+
+    if (data.users.length < perPage) return null;
+  }
+}
+
 export async function inviteManagedAuthUser(input: {
   email: string;
   firstName?: string;
@@ -11,6 +31,12 @@ export async function inviteManagedAuthUser(input: {
 }) {
   const admin = createAdminClient();
   const email = input.email.toLowerCase().trim();
+  const existingAuthUser = await findManagedAuthUserByEmail(email);
+
+  if (existingAuthUser) {
+    throw new Error("E-postadressen har redan ett Supabase Auth-konto.");
+  }
+
   const { data, error } = await admin.auth.admin.inviteUserByEmail(email, {
     redirectTo: `${getAppUrl()}/aterstall-losenord`,
     data: {

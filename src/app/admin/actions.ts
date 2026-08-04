@@ -4,6 +4,13 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { requirePermission, AuthError } from "@/lib/auth";
+import { isValidPermission } from "@/lib/permissions";
+import {
+  getOwnedListingForMedia,
+  readListingMedia,
+  uploadListingMedia,
+  validateListingMedia,
+} from "@/lib/repositories/listing-media";
 import { audit } from "@/lib/audit";
 import {
   registerExistingTenant,
@@ -208,6 +215,9 @@ export async function createListingAction(
 ): Promise<AdminFormState> {
   try {
     const user = await requirePermission("listings", "create");
+    const media = readListingMedia(formData);
+    const mediaError = validateListingMedia(media);
+    if (mediaError) return { status: "error", message: mediaError };
     const data = listingSchema.parse(Object.fromEntries(formData.entries()));
     const baseSlug = slugify(data.title);
     const result = await createListingRecord({
@@ -232,16 +242,98 @@ export async function createListingAction(
     });
     if (result.status === "unit_not_found") return { status: "error", message: "Objektet hittades inte." };
     const listing = result.listing;
+    let mediaResult: { uploaded: number; failed: string[] } = { uploaded: 0, failed: [] };
+    try {
+      mediaResult = await uploadListingMedia({
+        organizationId: user.organizationId!,
+        unitId: data.unitId,
+        media,
+      });
+    } catch (error) {
+      console.error("FaddeBo listing media upload failed after listing creation", error);
+      mediaResult = { uploaded: 0, failed: media.map(({ file }) => file.name) };
+    }
     await audit({
       organizationId: user.organizationId,
       userId: user.id,
       action: "create",
       entityType: "listing",
       entityId: listing.id,
-      after: { title: data.title, slug: listing.slug },
+      after: {
+        title: data.title,
+        slug: listing.slug,
+        uploadedMedia: mediaResult.uploaded,
+        failedMedia: mediaResult.failed,
+      },
     });
     revalidatePath("/admin/annonser");
-    return { status: "success", message: `Annonsen skapades (utkast). Publicera den när den är klar.` };
+    revalidatePath(`/annons/${listing.slug}`);
+    const mediaMessage =
+      mediaResult.failed.length > 0
+        ? ` ${mediaResult.uploaded} filer sparades, men ${mediaResult.failed.length} kunde inte laddas upp.`
+        : mediaResult.uploaded > 0
+          ? ` ${mediaResult.uploaded} bilder/planritningar laddades upp.`
+          : "";
+    return {
+      status: "success",
+      message: `Annonsen skapades (utkast). Publicera den när den är klar.${mediaMessage}`,
+    };
+  } catch (e) {
+    return errState(e);
+  }
+}
+
+
+export async function uploadListingMediaAction(
+  _prev: AdminFormState,
+  formData: FormData
+): Promise<AdminFormState> {
+  try {
+    const user = await requirePermission("listings", "update");
+    const listingId = String(formData.get("listingId") ?? "");
+    const unitId = String(formData.get("unitId") ?? "");
+    if (!listingId || !unitId) return { status: "error", message: "Annons eller objekt saknas." };
+
+    const listing = await getOwnedListingForMedia({
+      organizationId: user.organizationId!,
+      listingId,
+      unitId,
+    });
+    if (!listing) return { status: "error", message: "Annonsen hittades inte." };
+
+    const media = readListingMedia(formData);
+    if (media.length === 0) return { status: "error", message: "Välj minst en bild eller planritning." };
+    const mediaError = validateListingMedia(media);
+    if (mediaError) return { status: "error", message: mediaError };
+
+    const result = await uploadListingMedia({
+      organizationId: user.organizationId!,
+      unitId,
+      media,
+    });
+    try {
+      await audit({
+        organizationId: user.organizationId,
+        userId: user.id,
+        action: "listing_media_upload",
+        entityType: "listing",
+        entityId: listingId,
+        after: { uploaded: result.uploaded, failed: result.failed },
+      });
+    } catch (auditError) {
+      console.error("FaddeBo listing media audit failed after upload", auditError);
+    }
+    revalidatePath("/admin/annonser");
+    revalidatePath(`/annons/${listing.slug}`);
+    if (result.uploaded === 0) {
+      return { status: "error", message: "Ingen fil kunde laddas upp." };
+    }
+    return {
+      status: "success",
+      message: result.failed.length > 0
+        ? `${result.uploaded} filer laddades upp. ${result.failed.length} filer misslyckades.`
+        : `${result.uploaded} filer laddades upp och visas på objektets annonser.`,
+    };
   } catch (e) {
     return errState(e);
   }
@@ -764,6 +856,7 @@ export async function createStaffUserAction(
 
 const roleSchema = z.object({
   name: z.string().min(1, "Namn krävs."),
+  description: z.string().min(5, "Beskriv vad rollen ansvarar för."),
   permissions: z.string().min(1, "Ange minst en behörighet."),
 });
 
@@ -775,12 +868,29 @@ export async function createRoleAction(
     const user = await requirePermission("roles", "create");
     const data = roleSchema.parse(Object.fromEntries(formData.entries()));
     const slug = slugify(data.name);
+    const permissions = [...new Set(
+      data.permissions.split(",").map((permission) => permission.trim()).filter(Boolean)
+    )];
+    const invalidPermissions = permissions.filter((permission) => !isValidPermission(permission));
+    if (invalidPermissions.length > 0) {
+      return {
+        status: "error",
+        message: `Ogiltiga behörigheter: ${invalidPermissions.join(", ")}.`,
+      };
+    }
+    if (permissions.includes("*") && !user.roleSlugs.includes("superadmin")) {
+      return {
+        status: "error",
+        message: "Endast ägarkontot kan skapa en roll med fullständig åtkomst.",
+      };
+    }
     const role = await createCustomRole({
       organizationId: user.organizationId!,
       actorUserId: user.id,
       name: data.name,
       slug,
-      permissions: data.permissions.split(",").map((p) => p.trim()).filter(Boolean),
+      description: data.description,
+      permissions,
     });
     if (!role) return { status: "error", message: "En roll med detta namn finns redan." };
     revalidatePath("/admin/anvandare");

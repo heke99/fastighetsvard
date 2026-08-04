@@ -3,7 +3,11 @@ import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth";
 import { hasPermission } from "@/lib/permissions";
 import { ActionForm } from "@/components/admin/ActionForm";
-import { createListingAction, changeListingStatusAction } from "../actions";
+import {
+  createListingAction,
+  changeListingStatusAction,
+  uploadListingMediaAction,
+} from "../actions";
 import { listingTransitions } from "@/lib/state-machines";
 import { listAdminListings } from "@/lib/repositories/admin-records";
 
@@ -40,12 +44,13 @@ export default async function AdminListingsPage() {
               <th scope="col" className="px-4 py-3">Status</th>
               <th scope="col" className="px-4 py-3 text-right">Ansökn.</th>
               <th scope="col" className="px-4 py-3 text-right">Favoriter</th>
+              <th scope="col" className="px-4 py-3 text-right">Media</th>
               <th scope="col" className="px-4 py-3">Åtgärder</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-stone-100">
             {listings.length === 0 && (
-              <tr><td colSpan={7} className="px-4 py-8 text-center text-stone-500">Inga annonser ännu.</td></tr>
+              <tr><td colSpan={8} className="px-4 py-8 text-center text-stone-500">Inga annonser ännu.</td></tr>
             )}
             {listings.map((l) => (
               <tr key={l.id} className="hover:bg-stone-50">
@@ -61,9 +66,11 @@ export default async function AdminListingsPage() {
                 </td>
                 <td className="px-4 py-3 text-right">{l._count.applications}</td>
                 <td className="px-4 py-3 text-right">{l._count.favorites}</td>
+                <td className="px-4 py-3 text-right">{l.unit.media.length}</td>
                 <td className="px-4 py-3">
                   {canUpdate && (
-                    <div className="flex flex-wrap gap-1.5">
+                    <div className="space-y-2">
+                      <div className="flex flex-wrap gap-1.5">
                       {(listingTransitions[l.status] ?? []).map((next) => (
                         <form key={next} action={changeListingStatusAction}>
                           <input type="hidden" name="listingId" value={l.id} />
@@ -74,6 +81,24 @@ export default async function AdminListingsPage() {
                           </button>
                         </form>
                       ))}
+                      </div>
+                      <details>
+                        <summary className="cursor-pointer text-xs font-semibold text-brand-700">Lägg till media</summary>
+                        <div className="mt-2 min-w-[260px]">
+                          <ActionForm action={uploadListingMediaAction} submitLabel="Ladda upp">
+                            <input type="hidden" name="listingId" value={l.id} />
+                            <input type="hidden" name="unitId" value={l.unitId} />
+                            <div>
+                              <label htmlFor={`images-${l.id}`} className="label">Bilder</label>
+                              <input id={`images-${l.id}`} name="images" type="file" accept="image/jpeg,image/png,image/webp,image/avif" multiple className="input" />
+                            </div>
+                            <div>
+                              <label htmlFor={`floorplans-${l.id}`} className="label">Planritningar</label>
+                              <input id={`floorplans-${l.id}`} name="floorplans" type="file" accept="image/jpeg,image/png,image/webp,image/avif" multiple className="input" />
+                            </div>
+                          </ActionForm>
+                        </div>
+                      </details>
                     </div>
                   )}
                 </td>
@@ -140,6 +165,17 @@ export default async function AdminListingsPage() {
                   <label htmlFor="contactEmail" className="label">Kontakt-e-post</label>
                   <input id="contactEmail" name="contactEmail" type="email" className="input" />
                 </div>
+                <div>
+                  <label htmlFor="images" className="label">Bilder på objektet</label>
+                  <input id="images" name="images" type="file" accept="image/jpeg,image/png,image/webp,image/avif" multiple className="input" />
+                </div>
+                <div>
+                  <label htmlFor="floorplans" className="label">Planritningar</label>
+                  <input id="floorplans" name="floorplans" type="file" accept="image/jpeg,image/png,image/webp,image/avif" multiple className="input" />
+                </div>
+                <p className="sm:col-span-2 text-xs text-stone-500">
+                  Högst 12 filer per uppladdning och 15 MB per fil. Media kopplas till objektet och visas på dess publika annonser.
+                </p>
               </div>
               <label className="flex items-center gap-2 text-sm text-stone-700">
                 <input type="checkbox" name="featured" value="1" className="h-4 w-4 rounded border-stone-300 text-brand-700" />

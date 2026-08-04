@@ -25,7 +25,10 @@ export function hasAnyRole(roleSlugs: string[], acceptedRoles: readonly string[]
 }
 
 export function isStaffAccount(roleSlugs: string[]): boolean {
-  return hasAnyRole(roleSlugs, STAFF_ROLE_SLUGS);
+  if (hasAnyRole(roleSlugs, STAFF_ROLE_SLUGS)) return true;
+  // Organization-specific custom roles are staff roles as well. Explicit
+  // portal-only roles must never be promoted into administration.
+  return roleSlugs.some((role) => role !== "contractor" && role !== "tenant");
 }
 
 export function isOwnerAccount(roleSlugs: string[]): boolean {

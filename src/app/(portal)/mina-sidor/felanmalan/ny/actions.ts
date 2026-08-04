@@ -5,6 +5,11 @@ import { z } from "zod";
 import { getCurrentUser } from "@/lib/auth";
 import { createMaintenanceRequest } from "@/lib/services/maintenance";
 import { getMyRentalUnit } from "@/lib/repositories/portal-records";
+import {
+  readMaintenanceFiles,
+  uploadMaintenanceFiles,
+  validateMaintenanceFiles,
+} from "@/lib/repositories/maintenance-files";
 
 export interface MaintenanceFormState {
   status: "idle" | "error";
@@ -33,6 +38,16 @@ export async function createMaintenanceAction(
   const user = await getCurrentUser();
   if (!user?.personId || !user.organizationId) redirect("/logga-in");
 
+  const attachments = readMaintenanceFiles(formData);
+  const attachmentError = validateMaintenanceFiles(attachments);
+  if (attachmentError) {
+    return {
+      status: "error",
+      message: "Kontrollera bilagorna.",
+      fieldErrors: { attachments: attachmentError },
+    };
+  }
+
   const parsed = schema.safeParse(Object.fromEntries(formData.entries()));
   if (!parsed.success) {
     const fieldErrors: Record<string, string> = {};
@@ -44,7 +59,6 @@ export async function createMaintenanceAction(
   let unitId: string | undefined;
   let propertyId: string | undefined;
   if (data.unitId !== "common") {
-    // Behörighetskontroll: endast objekt personen har avtal på.
     const unit = await getMyRentalUnit(data.unitId);
     if (!unit) {
       return {
@@ -57,8 +71,9 @@ export async function createMaintenanceAction(
     propertyId = String(unit.propertyId);
   }
 
+  let request: Record<string, any>;
   try {
-    await createMaintenanceRequest(
+    request = await createMaintenanceRequest(
       user.organizationId,
       {
         unitId,
@@ -80,5 +95,25 @@ export async function createMaintenanceAction(
   } catch (e) {
     return { status: "error", message: e instanceof Error ? e.message : "Kunde inte skapa felanmälan." };
   }
-  redirect("/mina-sidor/felanmalan");
+
+  let attachmentStatus = attachments.length > 0 ? "uploaded" : "none";
+  if (attachments.length > 0) {
+    try {
+      const result = await uploadMaintenanceFiles({
+        organizationId: user.organizationId,
+        personId: user.personId,
+        requestId: String(request.id),
+        propertyId,
+        unitId,
+        uploadedByUserId: user.id,
+        files: attachments,
+      });
+      if (result.failed.length > 0) attachmentStatus = result.uploaded > 0 ? "partial" : "failed";
+    } catch (error) {
+      console.error("FaddeBo maintenance attachment upload failed", error);
+      attachmentStatus = "failed";
+    }
+  }
+
+  redirect(`/mina-sidor/felanmalan?created=${encodeURIComponent(String(request.requestNumber))}&attachments=${attachmentStatus}`);
 }
