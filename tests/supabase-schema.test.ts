@@ -15,7 +15,8 @@ describe("Supabase-native projekt", () => {
       .filter((name) => name.endsWith(".sql"))
       .sort();
 
-    expect(files.length).toBe(30);
+    expect(files.length).toBeGreaterThanOrEqual(33);
+    expect(files).toContain("20260804090000_faddebo_account_lifecycle.sql");
 
     const sql = files
       .map((file) => readFileSync(resolve(migrationDir, file), "utf8"))

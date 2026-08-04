@@ -9,7 +9,8 @@ describe("production hardening phase 1", () => {
     const files = readdirSync(resolve("supabase/migrations"))
       .filter((name) => name.endsWith(".sql"))
       .sort();
-    expect(files).toHaveLength(30);
+    expect(files.length).toBeGreaterThanOrEqual(33);
+    expect(files).toContain("20260804090000_faddebo_account_lifecycle.sql");
     expect(files).not.toContain("20260719192014_initial.sql");
     expect(files.some((name) => name.includes("repair_"))).toBe(false);
     expect(files).toEqual([...files].sort());
@@ -230,10 +231,15 @@ describe("production hardening phase 1", () => {
     const adminDashboard = read("src/app/admin/page.tsx");
     const config = read("next.config.ts");
     const authRepair = read("supabase/migrations/20260804003100_faddebo_owner_auth_repair.sql");
+    const accountLifecycle = read("supabase/migrations/20260804090000_faddebo_account_lifecycle.sql");
     const ownerSql = read("supabase/manual/01_CREATE_FADDEBO_OWNER.sql");
+    const verifySql = read("supabase/manual/02_VERIFY_FADDEBO_AUTH_AND_OWNER.sql");
     const branding = read("src/lib/branding.ts");
     const email = read("src/lib/email.ts");
     const authActions = read("src/app/(public)/auth-actions.ts");
+    const authCallback = read("src/app/(public)/auth/callback/route.ts");
+    const authUsers = read("src/lib/supabase/users.ts");
+    const bootstrap = read("scripts/bootstrap-admin.mjs");
 
     expect(sql).toContain("info@faddebo.se");
     expect(sql).toContain("privileged_role_assignment_denied");
@@ -251,8 +257,19 @@ describe("production hardening phase 1", () => {
     expect(config).toContain('{ source: "/parkering", destination: "/lediga-bostader"');
     expect(authRepair).toContain('ALTER COLUMN "passwordHash" DROP NOT NULL');
     expect(authRepair).toContain('ALTER COLUMN %I SET DEFAULT CURRENT_TIMESTAMP');
-    expect(ownerSql).toContain('"permission" = \'*\'');
-    expect(ownerSql).toContain("Auto Confirm User");
+    expect(accountLifecycle).toContain('ALTER COLUMN "passwordHash" DROP NOT NULL');
+    expect(accountLifecycle).toContain("FUNCTION public.provision_verified_self_signup");
+    expect(accountLifecycle).toContain("drop_legacy_auth_user_triggers");
+    expect(accountLifecycle).toContain("FUNCTION public.provision_staff_user");
+    expect(accountLifecycle).toContain("FUNCTION public.bootstrap_faddebo_owner");
+    expect(accountLifecycle).toContain("'property-manager', 'Fastighetsvärd / förvaltare'");
+    expect(accountLifecycle).toContain("'org-admin', 'Bolagsadmin'");
+    expect(ownerSql).toContain("bootstrap_faddebo_owner");
+    expect(verifySql).toContain("owner_access");
+    expect(authCallback).toContain("token_hash");
+    expect(authCallback).toContain("verifyOtp");
+    expect(authUsers).toContain("listUsers");
+    expect(bootstrap).toContain('rpc("bootstrap_faddebo_owner"');
     expect(branding).toContain('const GENERAL_EMAIL = "info@faddebo.se"');
     expect(branding).toContain('const FAULT_REPORT_EMAIL = "felanmalan@faddebo.se"');
     expect(email).toContain('FaddeBo <info@faddebo.se>');

@@ -30,6 +30,19 @@ export async function getInvitationPreview(tokenHash: string) {
   };
 }
 
+
+export async function findExistingAccountIdentity(email: string) {
+  const admin = createAdminClient();
+  const normalized = email.toLowerCase().trim();
+  const [{ data: user, error: userError }, { data: person, error: personError }] = await Promise.all([
+    admin.from("User").select("id").ilike("email", normalized).maybeSingle(),
+    admin.from("Person").select("id").ilike("email", normalized).limit(1).maybeSingle(),
+  ]);
+  if (userError) failure("Kontokontroll", userError.code);
+  if (personError) failure("Personkontroll", personError.code);
+  return { hasUser: Boolean(user), hasPerson: Boolean(person) };
+}
+
 export async function findUserForPasswordReset(email: string) {
   const admin = createAdminClient();
   const { data, error } = await admin

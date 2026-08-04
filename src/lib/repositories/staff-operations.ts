@@ -40,7 +40,7 @@ export async function provisionStaffUser(input: {
   });
   if (error) {
     const combined = `${error.message} ${error.details ?? ""}`;
-    if (combined.includes("user_already_exists")) {
+    if (combined.includes("user_already_exists") || combined.includes("person_already_exists")) {
       throw new Error("E-postadressen används redan.");
     }
     if (combined.includes("role_not_found")) throw new Error("Rollen hittades inte.");

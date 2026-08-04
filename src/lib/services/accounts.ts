@@ -4,6 +4,7 @@ import { claimInvitation } from "@/lib/repositories/rental-operations";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import {
+  findExistingAccountIdentity,
   getDefaultOrganizationRecord,
   getInvitationClaimDetails,
 } from "@/lib/repositories/account-lookups";
@@ -37,6 +38,13 @@ async function signIn(email: string, password: string) {
  */
 export async function registerAccount(input: RegisterInput) {
   const email = input.email.toLowerCase().trim();
+  const existing = await findExistingAccountIdentity(email);
+  if (existing.hasUser || existing.hasPerson) {
+    throw new Error(
+      "E-postadressen är redan kopplad till ett konto eller en inbjudan. Välj Glömt lösenord eller kontakta info@faddebo.se."
+    );
+  }
+
   const supabase = await createServerSupabaseClient();
   const { data, error } = await supabase.auth.signUp({
     email,
@@ -54,14 +62,10 @@ export async function registerAccount(input: RegisterInput) {
 
   if (error) throw new Error(error.message || "Kunde inte skapa konto.");
   if (!data.user) throw new Error("Kunde inte skapa konto.");
-  if (data.session) {
-    // E-postverifiering ska vara aktiverad i Supabase. En oväntad direkt session
-    // får inte användas som appkonto innan databastriggern har verifierat användaren.
-    await supabase.auth.signOut();
-    throw new Error("E-postverifiering är inte aktiverad i Supabase-projektet. Registreringen stoppades.");
-  }
-
-  return { authUserId: data.user.id, verificationPending: true as const };
+  return {
+    authUserId: data.user.id,
+    verificationPending: !data.session,
+  };
 }
 
 /**

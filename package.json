@@ -24,7 +24,8 @@
     "vercel-build": "next build",
     "ci": "npm run lint && npm run typecheck && npm run test:unit && npm run build",
     "bootstrap:admin": "node --env-file=.env.local scripts/bootstrap-admin.mjs",
-    "bootstrap:owner": "node --env-file=.env.local scripts/bootstrap-admin.mjs"
+    "bootstrap:owner": "node --env-file=.env.local scripts/bootstrap-admin.mjs",
+    "verify:accounts": "node scripts/verify-account-lifecycle.mjs"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.3",

@@ -30,6 +30,7 @@ import {
 } from "@/lib/repositories/staff-operations";
 import { sendStaffAccountEmail } from "@/lib/email";
 import { getAppUrl } from "@/lib/app-url";
+import { findExistingAccountIdentity } from "@/lib/repositories/account-lookups";
 import {
   createApiKeyRecord,
   createCustomRole,
@@ -512,13 +513,19 @@ export async function createSupplierAction(
     const data = supplierSchema.parse(Object.fromEntries(formData.entries()));
     let extra = "";
     let authUserId: string | undefined;
+    let authUserCreated = false;
     if (data.contractorEmail) {
-      const authUser = await createManagedAuthUser({
+      const existing = await findExistingAccountIdentity(data.contractorEmail);
+      if (existing.hasUser || existing.hasPerson) {
+        return { status: "error", message: "Entreprenörens e-postadress används redan i FaddeBo." };
+      }
+      const authResult = await createManagedAuthUser({
         email: data.contractorEmail,
         password: generateToken(48),
         claimMode: "contractor_invitation",
       });
-      authUserId = authUser.id;
+      authUserId = authResult.user.id;
+      authUserCreated = authResult.created;
     }
     let supplier;
     try {
@@ -534,7 +541,9 @@ export async function createSupplierAction(
         contractorEmail: data.contractorEmail || undefined,
       });
     } catch (error) {
-      if (authUserId) await deleteManagedAuthUser(authUserId);
+      if (authUserId && authUserCreated) {
+        await deleteManagedAuthUser(authUserId).catch(() => undefined);
+      }
       throw error;
     }
     if (data.contractorEmail) {
@@ -734,12 +743,16 @@ export async function createStaffUserAction(
   try {
     const user = await requirePermission("users", "create");
     const data = staffUserSchema.parse(Object.fromEntries(formData.entries()));
-    const email = data.email.toLowerCase();
+    const email = data.email.toLowerCase().trim();
+    const existing = await findExistingAccountIdentity(email);
+    if (existing.hasUser || existing.hasPerson) {
+      return { status: "error", message: "E-postadressen används redan i FaddeBo." };
+    }
     const role = await getStaffRoleForAssignment(data.roleId, user.organizationId!);
     if (["superadmin", "org-admin"].includes(role.slug) && !user.roleSlugs.includes("superadmin")) {
       return { status: "error", message: "Endast ägarkontot kan tilldela ägar- eller bolagsadminroll." };
     }
-    const authUser = await createManagedAuthUser({
+    const authResult = await createManagedAuthUser({
       email,
       password: generateToken(48),
       firstName: data.firstName,
@@ -749,7 +762,7 @@ export async function createStaffUserAction(
     let provisioned;
     try {
       provisioned = await provisionStaffUser({
-        authUserId: authUser.id,
+        authUserId: authResult.user.id,
         organizationId: user.organizationId!,
         email,
         firstName: data.firstName,
@@ -758,7 +771,9 @@ export async function createStaffUserAction(
         actorUserId: user.id,
       });
     } catch (error) {
-      await deleteManagedAuthUser(authUser.id);
+      if (authResult.created) {
+        await deleteManagedAuthUser(authResult.user.id).catch(() => undefined);
+      }
       throw error;
     }
 
