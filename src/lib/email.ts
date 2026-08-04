@@ -30,15 +30,18 @@ function actionButton(url: string, label: string): string {
 
 export async function sendEmail(input: SendEmailInput): Promise<void> {
   const apiKey = process.env.RESEND_API_KEY?.trim();
-  const from = process.env.EMAIL_FROM?.trim();
+  const configuredFrom = process.env.EMAIL_FROM?.trim();
+  const from = configuredFrom?.toLowerCase().includes("info@faddebo.se")
+    ? configuredFrom
+    : "FaddeBo <info@faddebo.se>";
 
-  if (!apiKey || !from) {
+  if (!apiKey) {
     if (process.env.NODE_ENV !== "production" || process.env.EMAIL_LOG_LINKS === "true") {
       console.info(`[email-disabled] to=${input.to} subject=${input.subject}`);
       if (input.text) console.info(input.text);
       return;
     }
-    throw new Error("RESEND_API_KEY eller EMAIL_FROM saknas i produktion.");
+    throw new Error("RESEND_API_KEY saknas i produktion.");
   }
 
   const response = await fetch("https://api.resend.com/emails", {

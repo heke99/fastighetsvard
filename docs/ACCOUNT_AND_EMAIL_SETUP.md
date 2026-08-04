@@ -20,6 +20,7 @@ Kör samtliga canonical migrationer, inklusive:
 
 ```text
 supabase/migrations/20260803230000_faddebo_accounts_and_roles.sql
+supabase/migrations/20260804003100_faddebo_owner_auth_repair.sql
 ```
 
 Migrationen:
@@ -39,6 +40,22 @@ supabase db reset
 ```
 
 ## 2. Skapa första ägarkontot
+
+### Rekommenderat: Supabase SQL Editor
+
+Denna väg kräver inte `supabase link`:
+
+1. Kör hela `supabase/manual/00_REPAIR_FADDEBO_AUTH_SCHEMA.sql` i **SQL Editor**.
+2. Öppna **Authentication → Users → Add user**.
+3. Skapa ägaren och välj **Auto Confirm User**.
+4. Öppna `supabase/manual/01_CREATE_FADDEBO_OWNER.sql`.
+5. Ändra `v_owner_email`, `v_owner_first_name` och `v_owner_last_name`.
+6. Kör hela ägarfilen i **SQL Editor**.
+7. Kontrollera att verifieringsraden visar `role_slug = superadmin` och `permission = *`.
+
+SQL-filen reparerar även äldre databaser där `Organization.updatedAt` saknar default eller där `User.passwordHash` fortfarande är obligatoriskt.
+
+### Reserv: terminalbootstrap
 
 Lägg följande endast tillfälligt i `.env.local`:
 
@@ -107,7 +124,7 @@ FAULT_REPORT_EMAIL="felanmalan@faddebo.se"
 APP_URL="https://faddebo.se"
 ```
 
-Resend används av applikationen för personalaktivering, återställning av lösenord och andra systemmejl. Supabase SMTP används för Supabase egna registreringsbekräftelser.
+Resend används av applikationen för personalaktivering, återställning av lösenord och andra systemmejl. Om `RESEND_API_KEY` saknas använder glömt-lösenord-flödet Supabase Auth SMTP som reserv. Supabase SMTP används dessutom för registreringsbekräftelser och omsändning av bekräftelsemejl. `https://faddebo.se/auth/callback` måste finnas i Supabases Redirect URLs.
 
 ## 6. Kontrollflöden före publicering
 

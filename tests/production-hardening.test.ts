@@ -229,6 +229,11 @@ describe("production hardening phase 1", () => {
     const roleRouting = read("src/lib/role-routing.ts");
     const adminDashboard = read("src/app/admin/page.tsx");
     const config = read("next.config.ts");
+    const authRepair = read("supabase/migrations/20260804003100_faddebo_owner_auth_repair.sql");
+    const ownerSql = read("supabase/manual/01_CREATE_FADDEBO_OWNER.sql");
+    const branding = read("src/lib/branding.ts");
+    const email = read("src/lib/email.ts");
+    const authActions = read("src/app/(public)/auth-actions.ts");
 
     expect(sql).toContain("info@faddebo.se");
     expect(sql).toContain("privileged_role_assignment_denied");
@@ -244,6 +249,14 @@ describe("production hardening phase 1", () => {
     expect(home).toContain("FaddeBo förvaltar bostäder och lokaler i Vadstena, Boxholm och Skänninge");
     expect(config).toContain('{ source: "/till-salu", destination: "/lediga-bostader"');
     expect(config).toContain('{ source: "/parkering", destination: "/lediga-bostader"');
+    expect(authRepair).toContain('ALTER COLUMN "passwordHash" DROP NOT NULL');
+    expect(authRepair).toContain('ALTER COLUMN %I SET DEFAULT CURRENT_TIMESTAMP');
+    expect(ownerSql).toContain('"permission" = \'*\'');
+    expect(ownerSql).toContain("Auto Confirm User");
+    expect(branding).toContain('const GENERAL_EMAIL = "info@faddebo.se"');
+    expect(branding).toContain('const FAULT_REPORT_EMAIL = "felanmalan@faddebo.se"');
+    expect(email).toContain('FaddeBo <info@faddebo.se>');
+    expect(authActions).toContain("resetPasswordForEmail");
   });
 
 });

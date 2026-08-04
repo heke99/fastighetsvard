@@ -30,7 +30,7 @@ SET
   "dataProtectionEmail" = CASE
     WHEN "id" = '11111111-1111-4111-8111-111111111111'
       OR lower(trim("name")) IN ('östgöta el teknik', 'östgöta el teknik ab')
-      THEN COALESCE("dataProtectionEmail", 'dataskydd@ostgotaelteknik.se')
+      THEN COALESCE("dataProtectionEmail", 'info@faddebo.se')
     ELSE "dataProtectionEmail"
   END;
 

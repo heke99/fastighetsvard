@@ -95,22 +95,50 @@ export async function requestPasswordResetAction(_prev: AuthFormState, formData:
 
   const profile = await findUserForPasswordReset(email);
   if (profile) {
-    const admin = createAdminClient();
     const redirectTo = `${getAppUrl()}/auth/callback?next=/aterstall-losenord`;
-    const { data, error } = await admin.auth.admin.generateLink({
-      type: "recovery",
-      email,
-      options: { redirectTo },
-    });
-    if (!error && data.properties?.action_link) {
-      await sendPasswordResetEmail(email, data.properties.action_link);
-      await audit({
-        organizationId: profile.organizationId,
-        userId: profile.id,
-        action: "password_reset_requested",
-        entityType: "user",
-        entityId: profile.id,
-      });
+    let dispatched = false;
+
+    try {
+      if (process.env.RESEND_API_KEY?.trim()) {
+        try {
+          const admin = createAdminClient();
+          const { data, error } = await admin.auth.admin.generateLink({
+            type: "recovery",
+            email,
+            options: { redirectTo },
+          });
+          if (error || !data.properties?.action_link) {
+            throw new Error(error?.message ?? "Återställningslänken kunde inte skapas.");
+          }
+          await sendPasswordResetEmail(email, data.properties.action_link);
+          dispatched = true;
+        } catch (resendError) {
+          console.error("FaddeBo Resend password reset failed; trying Supabase SMTP", resendError);
+        }
+      }
+
+      if (!dispatched) {
+        // Supabase Auth SMTP is both the no-Resend path and a delivery fallback
+        // when Resend is temporarily unavailable or misconfigured.
+        const supabase = await createServerSupabaseClient();
+        const { error } = await supabase.auth.resetPasswordForEmail(email, { redirectTo });
+        if (error) throw new Error(error.message);
+        dispatched = true;
+      }
+
+      if (dispatched) {
+        await audit({
+          organizationId: profile.organizationId,
+          userId: profile.id,
+          action: "password_reset_requested",
+          entityType: "user",
+          entityId: profile.id,
+        });
+      }
+    } catch (error) {
+      // Keep the public response non-enumerating, but preserve an operational
+      // error in server logs so a missing SMTP/Resend setup is visible.
+      console.error("FaddeBo password reset dispatch failed", error);
     }
   }
   return { status: "success", message: "Om e-postadressen finns hos oss har vi skickat en återställningslänk." };

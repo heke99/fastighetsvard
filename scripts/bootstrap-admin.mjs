@@ -23,7 +23,7 @@ const supabase = createClient(url, secret, {
   auth: { persistSession: false, autoRefreshToken: false },
 });
 
-const timestamp = () => new Date().toISOString();
+const now = () => new Date().toISOString();
 
 async function one(operation, query) {
   const { data, error } = await query;
@@ -53,8 +53,8 @@ if (!organization) {
         orgNumber: "559350-5620",
         email: "info@faddebo.se",
         dataProtectionEmail: "info@faddebo.se",
-        createdAt: timestamp(),
-        updatedAt: timestamp(),
+        createdAt: now(),
+        updatedAt: now(),
       })
       .select("id,name,legalName,orgNumber")
       .single()
@@ -67,13 +67,23 @@ if (!organization) {
       .update({
         email: "info@faddebo.se",
         dataProtectionEmail: "info@faddebo.se",
-        updatedAt: timestamp(),
+        updatedAt: now(),
       })
       .eq("id", organization.id)
       .select("id,name,legalName,orgNumber")
       .single()
   );
 }
+
+await one(
+  "Avmarkera andra primära varumärken",
+  supabase
+    .from("Brand")
+    .update({ isPrimary: false, updatedAt: now() })
+    .eq("organizationId", organization.id)
+    .neq("slug", "faddebo")
+    .eq("isPrimary", true)
+);
 
 const existingBrand = await one(
   "Läs FaddeBo-varumärke",
@@ -89,24 +99,17 @@ const brandValues = {
   termsUrl: "/allmanna-villkor",
   isPrimary: true,
   status: "ACTIVE",
+  updatedAt: now(),
 };
 if (!existingBrand) {
   await one(
     "Skapa FaddeBo-varumärke",
-    supabase.from("Brand").insert({
-      id: randomUUID(),
-      ...brandValues,
-      createdAt: timestamp(),
-      updatedAt: timestamp(),
-    })
+    supabase.from("Brand").insert({ id: randomUUID(), createdAt: now(), ...brandValues })
   );
 } else {
   await one(
     "Uppdatera FaddeBo-varumärke",
-    supabase
-      .from("Brand")
-      .update({ ...brandValues, updatedAt: timestamp() })
-      .eq("id", existingBrand.id)
+    supabase.from("Brand").update(brandValues).eq("id", existingBrand.id)
   );
 }
 
@@ -131,8 +134,8 @@ if (!person) {
         lastName,
         email,
         country: "SE",
-        createdAt: timestamp(),
-        updatedAt: timestamp(),
+        createdAt: now(),
+        updatedAt: now(),
       })
       .select("id,organizationId,firstName,lastName,email")
       .single()
@@ -142,12 +145,17 @@ if (!person) {
     "Uppdatera ägarperson",
     supabase
       .from("Person")
-      .update({ firstName, lastName, email, updatedAt: timestamp() })
+      .update({ firstName, lastName, email, updatedAt: now() })
       .eq("id", person.id)
       .select("id,organizationId,firstName,lastName,email")
       .single()
   );
 }
+
+await one(
+  "Ta bort sökanderoll från ägaren",
+  supabase.from("PersonRole").delete().eq("personId", person.id).eq("role", "APPLICANT")
+);
 
 let authUser;
 const { data: linkData, error: linkError } = await supabase.auth.admin.generateLink({
@@ -187,24 +195,38 @@ if (!profile) {
   );
 }
 if (!profile) {
-  profile = await one(
-    "Skapa ägarprofil",
-    supabase
+  const profileValues = {
+    id: randomUUID(),
+    authUserId: authUser.id,
+    organizationId: organization.id,
+    personId: person.id,
+    email,
+    emailVerifiedAt: now(),
+    isActive: true,
+    createdAt: now(),
+    updatedAt: now(),
+  };
+
+  let profileResult = await supabase
+    .from("User")
+    .insert(profileValues)
+    .select("id,authUserId")
+    .single();
+
+  // Legacy Prisma databases can still have a required passwordHash column.
+  // Passwords are managed by Supabase Auth, so this sentinel is never read.
+  if (profileResult.error?.message?.includes("passwordHash")) {
+    profileResult = await supabase
       .from("User")
-      .insert({
-        id: randomUUID(),
-        authUserId: authUser.id,
-        organizationId: organization.id,
-        personId: person.id,
-        email,
-        emailVerifiedAt: new Date().toISOString(),
-        isActive: true,
-        createdAt: timestamp(),
-        updatedAt: timestamp(),
-      })
+      .insert({ ...profileValues, passwordHash: "SUPABASE_AUTH_MANAGED" })
       .select("id,authUserId")
-      .single()
-  );
+      .single();
+  }
+
+  if (profileResult.error) {
+    throw new Error(`Skapa ägarprofil: ${profileResult.error.message}`);
+  }
+  profile = profileResult.data;
 } else {
   profile = await one(
     "Uppdatera ägarprofil",
@@ -215,9 +237,9 @@ if (!profile) {
         organizationId: organization.id,
         personId: person.id,
         email,
-        emailVerifiedAt: new Date().toISOString(),
+        emailVerifiedAt: now(),
         isActive: true,
-        updatedAt: timestamp(),
+        updatedAt: now(),
       })
       .eq("id", profile.id)
       .select("id,authUserId")
@@ -234,14 +256,7 @@ if (!role) {
     "Skapa superadminroll",
     supabase
       .from("Role")
-      .insert({
-        id: randomUUID(),
-        name: "Ägare / superadmin",
-        slug: "superadmin",
-        isSystem: true,
-        createdAt: timestamp(),
-        updatedAt: timestamp(),
-      })
+      .insert({ id: randomUUID(), name: "Ägare / superadmin", slug: "superadmin", isSystem: true, createdAt: now(), updatedAt: now() })
       .select("id,name,slug")
       .single()
   );
@@ -272,7 +287,7 @@ if (!existingRole) {
       userId: profile.id,
       roleId: role.id,
       propertyId: null,
-      createdAt: timestamp(),
+      createdAt: now(),
     })
   );
 }

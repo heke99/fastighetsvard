@@ -40,7 +40,10 @@ export async function findUserForPasswordReset(email: string) {
     .maybeSingle();
   if (error) failure("Kontouppslag", error.code);
   return data
-    ? { id: String(data.id), organizationId: String(data.organizationId) }
+    ? {
+        id: String(data.id),
+        organizationId: data.organizationId ? String(data.organizationId) : null,
+      }
     : null;
 }
 
@@ -53,7 +56,10 @@ export async function findUserByAuthId(authUserId: string) {
     .maybeSingle();
   if (error) failure("Auth-kontouppslag", error.code);
   return data
-    ? { id: String(data.id), organizationId: String(data.organizationId) }
+    ? {
+        id: String(data.id),
+        organizationId: data.organizationId ? String(data.organizationId) : null,
+      }
     : null;
 }
 

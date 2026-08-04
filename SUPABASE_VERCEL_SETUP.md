@@ -37,14 +37,29 @@ openssl rand -base64 32
 
 ## 3. Applicera databasen
 
+### Alternativ A – Supabase CLI
+
 ```bash
 npm ci
 npx supabase login
-npm run supabase:link -- --project-ref DIN_PROJECT_REF
-npm run db:push
+npx supabase link --project-ref DIN_PROJECT_REF
+npx supabase db push
 ```
 
-`supabase/migrations/20260719192014_initial.sql` skapar:
+Om du får `Cannot find project ref` är projektet inte länkat. Kör kommandot ovan med project ref från Supabase Project Settings.
+
+### Alternativ B – SQL Editor utan länkning
+
+För att reparera kontoschemat och skapa den första ägaren behöver du inte länka CLI:n. Använd dessa två filer i **Supabase Dashboard → SQL Editor**:
+
+```text
+supabase/manual/00_REPAIR_FADDEBO_AUTH_SCHEMA.sql
+supabase/manual/01_CREATE_FADDEBO_OWNER.sql
+```
+
+Kör först `00_REPAIR_FADDEBO_AUTH_SCHEMA.sql`. Skapa därefter Auth-användaren under **Authentication → Users → Add user**, välj **Auto Confirm User**, och kör slutligen `01_CREATE_FADDEBO_OWNER.sql` med samma e-post i `v_owner_email`.
+
+Canonical migrationerna skapar:
 
 - hela fastighetsmodellen
 - constraints och index
@@ -59,20 +74,29 @@ systemroller men inga demokonton eller standardlösenord.
 
 ## 4. Skapa första superadmin
 
-Fyll tillfälligt i:
+Rekommenderad väg är SQL-filen:
+
+```text
+supabase/manual/00_REPAIR_FADDEBO_AUTH_SCHEMA.sql
+supabase/manual/01_CREATE_FADDEBO_OWNER.sql
+```
+
+Den reparerar både äldre `updatedAt`-defaultvärden och en eventuell legacy-kolumn `User.passwordHash`, därefter kopplas den bekräftade Auth-användaren till rollen `superadmin` med behörigheten `*`.
+
+Terminalbootstrap finns kvar som reserv:
 
 ```env
-BOOTSTRAP_ADMIN_EMAIL=admin@ostgotaelteknik.se
-BOOTSTRAP_ADMIN_PASSWORD=ett-mycket-starkt-lösenord
+BOOTSTRAP_OWNER_EMAIL=info@faddebo.se
+BOOTSTRAP_OWNER_PASSWORD=ett-mycket-starkt-lösenord
+BOOTSTRAP_OWNER_FIRST_NAME=Förnamn
+BOOTSTRAP_OWNER_LAST_NAME=Efternamn
 ```
-
-Kör:
 
 ```bash
-npm run bootstrap:admin
+npm run bootstrap:owner
 ```
 
-Ta sedan bort bootstrap-lösenordet ur filen.
+Ta bort bootstrapvariablerna efter verifierad inloggning.
 
 ## 5. Supabase Auth-inställningar
 
@@ -83,8 +107,7 @@ I **Authentication → URL Configuration**:
 - Redirect URL produktion: `https://DIN-DOMAN.SE/auth/callback`
 - Lägg även till Vercels preview-domän om preview-inloggning ska fungera
 
-Aktivera e-post/lösenord som provider. Plattformen skickar egna
-återställningsmejl via Resend men använder Supabase Auth-länken och sessionen.
+Aktivera e-post/lösenord som provider. Lägg till `https://faddebo.se/auth/callback` som tillåten redirect. Glömt lösenord använder Resend när `RESEND_API_KEY` finns och faller annars tillbaka till Supabase Auth SMTP. Minst en av dessa leveransvägar måste därför vara korrekt konfigurerad.
 
 ## 6. Vercel Environment Variables
 
@@ -98,8 +121,11 @@ APP_URL=https://DIN-DOMAN.SE
 APP_ENCRYPTION_KEY=...
 CRON_SECRET=...
 RESEND_API_KEY=re_...
-EMAIL_FROM=FaddeBo <noreply@DIN-VERIFIERADE-DOMAN.SE>
+EMAIL_FROM=FaddeBo <info@faddebo.se>
 SUPPORT_EMAIL=info@faddebo.se
+PRIVACY_EMAIL=info@faddebo.se
+LEASING_EMAIL=info@faddebo.se
+FAULT_REPORT_EMAIL=felanmalan@faddebo.se
 EMAIL_LOG_LINKS=false
 ```
 

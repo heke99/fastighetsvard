@@ -23,9 +23,12 @@ function value(name: string, fallback: string): string {
   return process.env[name]?.trim() || fallback;
 }
 
+const GENERAL_EMAIL = "info@faddebo.se";
+const FAULT_REPORT_EMAIL = "felanmalan@faddebo.se";
+
 /**
- * Icke-hemlig white-label-konfiguration. Värdena läses på servern/build-steget
- * och kan ändras per miljö utan kodändring.
+ * Icke-hemlig FaddeBo-konfiguration. Juridiska uppgifter kan konfigureras per
+ * miljö, medan kontaktadresserna är låsta till den canonical faddebo.se-domänen.
  */
 export function getBranding(): BrandingConfig {
   const brandName = value("BRAND_NAME", "FaddeBo");
@@ -47,10 +50,12 @@ export function getBranding(): BrandingConfig {
       `${brandName} förvaltar bostäder och lokaler i Vadstena, Boxholm och Skänninge.`
     ),
     appUrl: value("APP_URL", "https://faddebo.se"),
-    supportEmail: value("SUPPORT_EMAIL", "info@faddebo.se"),
-    privacyEmail: value("PRIVACY_EMAIL", "info@faddebo.se"),
-    leasingEmail: value("LEASING_EMAIL", "info@faddebo.se"),
-    faultReportEmail: value("FAULT_REPORT_EMAIL", "felanmalan@faddebo.se"),
+    // FaddeBo is a single-brand installation. Contact addresses are canonical
+    // constants so stale Vercel variables cannot reintroduce the old domain.
+    supportEmail: GENERAL_EMAIL,
+    privacyEmail: GENERAL_EMAIL,
+    leasingEmail: GENERAL_EMAIL,
+    faultReportEmail: FAULT_REPORT_EMAIL,
     phone: value("BRAND_PHONE", "070-000 00 00"),
     phoneHref: value("BRAND_PHONE_HREF", "+46700000000"),
     emergencyPhone: value("BRAND_EMERGENCY_PHONE", "013-000 00"),
