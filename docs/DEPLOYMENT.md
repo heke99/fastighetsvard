@@ -45,15 +45,18 @@ Kör först `supabase/manual/20260724_preflight_backfill_report.sql` mot befintl
 
 ## Vercel
 
-Sätt alla relevanta värden från `.env.example` separat för Preview och Production. Serverhemligheter får aldrig ha prefixet `NEXT_PUBLIC_`.
+Sätt alla relevanta värden från `.env.example` separat för Preview och Production. Klistra in värdena utan omgivande citattecken i Vercel. Serverhemligheter får aldrig ha prefixet `NEXT_PUBLIC_`. Konfigurera dessutom Custom SMTP och FaddeBo-mallarna enligt `SUPABASE_SMTP_AND_AUTH.md`.
 
 ```bash
 npx vercel link
 npx vercel env add NEXT_PUBLIC_SUPABASE_URL production
 npx vercel env add NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY production
 npx vercel env add SUPABASE_SECRET_KEY production
+npx vercel env add SUPABASE_PROJECT_REF production
+npx vercel env add APP_URL production
 npx vercel env add APP_ENCRYPTION_KEY production
 npx vercel env add SIGNING_OTP_PEPPER production
 npx vercel env add CRON_SECRET production
+npm run verify:auth
 npx vercel deploy --prod
 ```

@@ -1,3 +1,6 @@
+import { getAppUrl } from "@/lib/app-url";
+import { cleanEnvValue } from "@/lib/env-value";
+
 export interface BrandingConfig {
   brandName: string;
   brandSlug: string;
@@ -20,7 +23,7 @@ export interface BrandingConfig {
 }
 
 function value(name: string, fallback: string): string {
-  return process.env[name]?.trim() || fallback;
+  return cleanEnvValue(process.env[name]) ?? fallback;
 }
 
 const GENERAL_EMAIL = "info@faddebo.se";
@@ -49,7 +52,7 @@ export function getBranding(): BrandingConfig {
       "BRAND_DESCRIPTION",
       `${brandName} förvaltar bostäder och lokaler i Vadstena, Boxholm och Skänninge.`
     ),
-    appUrl: value("APP_URL", "https://faddebo.se"),
+    appUrl: getAppUrl(),
     // FaddeBo is a single-brand installation. Contact addresses are canonical
     // constants so stale Vercel variables cannot reintroduce the old domain.
     supportEmail: GENERAL_EMAIL,

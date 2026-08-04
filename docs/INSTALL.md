@@ -15,7 +15,7 @@ cp .env.example .env.local
 ```
 
 Fyll i `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` och
-`SUPABASE_SECRET_KEY`.
+`SUPABASE_SECRET_KEY`. Kontrollera att alla värden tillhör samma Supabase-projekt med `npm run verify:auth`.
 
 ## Databas
 
@@ -24,6 +24,8 @@ npx supabase login
 npm run supabase:link -- --project-ref DIN_PROJECT_REF
 npm run db:push
 ```
+
+Auth-mejl och SMTP konfigureras enligt `docs/SUPABASE_SMTP_AND_AUTH.md`.
 
 ## Första administratör
 

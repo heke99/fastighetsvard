@@ -6,8 +6,6 @@ import { login, getClientIp, AuthError } from "@/lib/auth";
 import { registerAccount, activateInvitation } from "@/lib/services/accounts";
 import { audit } from "@/lib/audit";
 import { getAppUrl } from "@/lib/app-url";
-import { sendPasswordResetEmail } from "@/lib/email";
-import { createAdminClient } from "@/lib/supabase/admin";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import {
   findUserByAuthId,
@@ -61,20 +59,18 @@ export async function registerAction(_prev: AuthFormState, formData: FormData): 
   if (parsed.data.password !== parsed.data.passwordConfirm) {
     return { status: "error", message: "Kontrollera fälten nedan.", fieldErrors: { passwordConfirm: "Lösenorden stämmer inte överens." } };
   }
-  let verificationPending = true;
   try {
-    const result = await registerAccount({
+    await registerAccount({
       firstName: parsed.data.firstName,
       lastName: parsed.data.lastName,
       email: parsed.data.email,
       phone: parsed.data.phone,
       password: parsed.data.password,
     });
-    verificationPending = result.verificationPending;
   } catch (error) {
     return { status: "error", message: error instanceof Error ? error.message : "Registreringen misslyckades." };
   }
-  redirect(verificationPending ? "/logga-in?verifiering=skickad" : "/mina-sidor?konto=skapat");
+  redirect("/logga-in?verifiering=skickad");
 }
 
 export async function activateAction(_prev: AuthFormState, formData: FormData): Promise<AuthFormState> {
@@ -96,38 +92,14 @@ export async function requestPasswordResetAction(_prev: AuthFormState, formData:
   if (!email) return { status: "error", message: "Ange din e-postadress." };
 
   const profile = await findUserForPasswordReset(email);
-  const redirectTo = `${getAppUrl()}/auth/callback?next=/aterstall-losenord`;
-  let dispatched = false;
-
-  try {
-    if (process.env.RESEND_API_KEY?.trim()) {
-      try {
-        const admin = createAdminClient();
-        const { data, error } = await admin.auth.admin.generateLink({
-          type: "recovery",
-          email,
-          options: { redirectTo },
-        });
-        if (error || !data.properties?.action_link) {
-          throw new Error(error?.message ?? "Återställningslänken kunde inte skapas.");
-        }
-        await sendPasswordResetEmail(email, data.properties.action_link);
-        dispatched = true;
-      } catch (resendError) {
-        console.error("FaddeBo Resend password reset failed; trying Supabase SMTP", resendError);
-      }
-    }
-
-    if (!dispatched) {
-      // This also covers orphaned Auth users left by an earlier failed profile
-      // provisioning. Public output stays non-enumerating.
+  if (profile) {
+    try {
       const supabase = await createServerSupabaseClient();
-      const { error } = await supabase.auth.resetPasswordForEmail(email, { redirectTo });
+      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: `${getAppUrl()}/aterstall-losenord`,
+      });
       if (error) throw new Error(error.message);
-      dispatched = true;
-    }
 
-    if (dispatched && profile) {
       await audit({
         organizationId: profile.organizationId,
         userId: profile.id,
@@ -135,12 +107,16 @@ export async function requestPasswordResetAction(_prev: AuthFormState, formData:
         entityType: "user",
         entityId: profile.id,
       });
+    } catch (error) {
+      // Behåll ett icke-uppräknande publikt svar, men logga SMTP/Auth-felet.
+      console.error("FaddeBo password reset dispatch failed", error);
     }
-  } catch (error) {
-    console.error("FaddeBo password reset dispatch failed", error);
   }
 
-  return { status: "success", message: "Om e-postadressen finns hos oss har vi skickat en återställningslänk." };
+  return {
+    status: "success",
+    message: "Om e-postadressen finns hos oss har vi skickat en återställningslänk.",
+  };
 }
 
 export async function resendConfirmationAction(

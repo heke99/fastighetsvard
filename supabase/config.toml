@@ -1,4 +1,4 @@
-project_id = "ostgota-fastighetsplattform"
+project_id = "faddebo"
 
 [api]
 enabled = true
@@ -19,7 +19,7 @@ port = 54323
 [auth]
 enabled = true
 site_url = "http://localhost:3000"
-additional_redirect_urls = ["http://localhost:3000/auth/callback"]
+additional_redirect_urls = ["http://localhost:3000/auth/callback", "http://localhost:3000/auth/confirm", "http://localhost:3000/aterstall-losenord"]
 jwt_expiry = 3600
 enable_signup = true
 
@@ -29,3 +29,25 @@ file_size_limit = "50MiB"
 
 [analytics]
 enabled = false
+
+# Branded Supabase Auth e-mails for local CLI development. Hosted projects use
+# the same files by copying them into Authentication → Email Templates.
+[auth.email.template.confirmation]
+subject = "Bekräfta ditt FaddeBo-konto"
+content_path = "./supabase/templates/confirmation.html"
+
+[auth.email.template.invite]
+subject = "Aktivera ditt FaddeBo-konto"
+content_path = "./supabase/templates/invite.html"
+
+[auth.email.template.recovery]
+subject = "Återställ ditt lösenord hos FaddeBo"
+content_path = "./supabase/templates/recovery.html"
+
+[auth.email.template.magic_link]
+subject = "Din inloggningslänk till FaddeBo"
+content_path = "./supabase/templates/magic_link.html"
+
+[auth.email.template.email_change]
+subject = "Bekräfta din nya e-postadress hos FaddeBo"
+content_path = "./supabase/templates/email_change.html"

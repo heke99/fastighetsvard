@@ -1,4 +1,5 @@
 import { getBranding } from "@/lib/branding";
+import { cleanEnvValue } from "@/lib/env-value";
 
 interface SendEmailInput {
   to: string;
@@ -29,8 +30,8 @@ function actionButton(url: string, label: string): string {
 }
 
 export async function sendEmail(input: SendEmailInput): Promise<void> {
-  const apiKey = process.env.RESEND_API_KEY?.trim();
-  const configuredFrom = process.env.EMAIL_FROM?.trim();
+  const apiKey = cleanEnvValue(process.env.RESEND_API_KEY);
+  const configuredFrom = cleanEnvValue(process.env.EMAIL_FROM);
   const from = configuredFrom?.toLowerCase().includes("info@faddebo.se")
     ? configuredFrom
     : "FaddeBo <info@faddebo.se>";

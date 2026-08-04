@@ -8,6 +8,7 @@ import {
   recordCurrentLogin,
 } from "./repositories/auth-context";
 import { isStaffAccount } from "./role-routing";
+import { reconcileVerifiedAuthUser } from "./repositories/auth-reconciliation";
 
 export class AuthError extends Error {
   constructor(message: string, public code: string) {
@@ -18,21 +19,54 @@ export class AuthError extends Error {
 
 export async function login(email: string, password: string, ip?: string) {
   const supabase = await createServerSupabaseClient();
+  const normalizedEmail = email.toLowerCase().trim();
   const { data, error } = await supabase.auth.signInWithPassword({
-    email: email.toLowerCase().trim(),
+    email: normalizedEmail,
     password,
   });
+
   if (error || !data.user) {
+    const message = error?.message?.toLowerCase() ?? "";
+    if (message.includes("email not confirmed")) {
+      throw new AuthError(
+        "Bekräfta din e-postadress innan du loggar in.",
+        "email_not_confirmed"
+      );
+    }
     throw new AuthError("Fel e-post eller lösenord.", "invalid_credentials");
   }
 
-  const profile = await readCurrentUserContext(supabase);
-  if (!profile) {
+  let profile;
+  try {
+    profile = await readCurrentUserContext(supabase);
+    if (!profile && (await reconcileVerifiedAuthUser(data.user.id))) {
+      profile = await readCurrentUserContext(supabase);
+    }
+  } catch (profileError) {
+    console.error("FaddeBo login profile lookup failed", profileError);
     await supabase.auth.signOut();
-    throw new AuthError("Kontot är inaktiverat.", "inactive");
+    throw new AuthError(
+      "Kontot kunde inte kopplas till FaddeBo. Kontrollera Supabase-projektet och databasens migrationer.",
+      "profile_lookup_failed"
+    );
   }
 
-  await recordCurrentLogin(supabase, ip);
+  if (!profile) {
+    await supabase.auth.signOut();
+    throw new AuthError(
+      "Kontot saknar en aktiv FaddeBo-profil. Bekräfta e-posten eller kontakta administratören.",
+      "inactive"
+    );
+  }
+
+  // Senast-inloggad och revisionsspår får aldrig göra en i övrigt giltig
+  // inloggning obrukbar. Logga felet och låt sessionen fortsätta.
+  try {
+    await recordCurrentLogin(supabase, ip);
+  } catch (auditError) {
+    console.error("FaddeBo login audit update failed", auditError);
+  }
+
   return { user: profile, session: data.session };
 }
 
@@ -66,7 +100,12 @@ export const getCurrentUser = cache(async (): Promise<CurrentUser | null> => {
   const { data, error } = await supabase.auth.getUser();
   if (error || !data.user) return null;
 
-  return readCurrentUserContext(supabase);
+  try {
+    return await readCurrentUserContext(supabase);
+  } catch (error) {
+    console.error("FaddeBo current user context failed", error);
+    return null;
+  }
 });
 
 export async function logout() {

@@ -58,4 +58,12 @@ describe("FaddeBo identity", () => {
     expect(brand.legalName).toBe("Juridiskt Testbolag AB");
     expect(brand.legalDisplayName).toContain("556000-0000");
   });
+
+  it("normalizes quoted Vercel URL values", () => {
+    process.env.APP_URL = '"https://faddebo.se"';
+    const brand = getBranding();
+    expect(brand.appUrl).toBe("https://faddebo.se");
+    expect(() => new URL(brand.appUrl)).not.toThrow();
+  });
+
 });

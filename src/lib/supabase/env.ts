@@ -1,23 +1,30 @@
-function required(name: string, value: string | undefined): string {
-  if (!value) throw new Error(`Miljövariabeln ${name} saknas.`);
-  return value;
-}
+import { cleanEnvValue, normalizeHttpUrl, requireEnvValue } from "@/lib/env-value";
 
 export function getSupabaseUrl(): string {
-  return required("NEXT_PUBLIC_SUPABASE_URL", process.env.NEXT_PUBLIC_SUPABASE_URL);
+  return normalizeHttpUrl(
+    requireEnvValue("NEXT_PUBLIC_SUPABASE_URL", process.env.NEXT_PUBLIC_SUPABASE_URL)
+  );
 }
 
 export function getSupabasePublishableKey(): string {
-  return required(
+  return requireEnvValue(
     "NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY",
-    process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ??
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+    cleanEnvValue(process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY) ??
+      cleanEnvValue(process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY)
   );
 }
 
 export function getSupabaseSecretKey(): string {
-  return required(
+  return requireEnvValue(
     "SUPABASE_SECRET_KEY",
-    process.env.SUPABASE_SECRET_KEY ?? process.env.SUPABASE_SERVICE_ROLE_KEY
+    cleanEnvValue(process.env.SUPABASE_SECRET_KEY) ??
+      cleanEnvValue(process.env.SUPABASE_SERVICE_ROLE_KEY)
+  );
+}
+
+export function hasSupabaseSecretKey(): boolean {
+  return Boolean(
+    cleanEnvValue(process.env.SUPABASE_SECRET_KEY) ??
+      cleanEnvValue(process.env.SUPABASE_SERVICE_ROLE_KEY)
   );
 }

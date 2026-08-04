@@ -20,17 +20,13 @@ import { runSyncJob, resolveReviewItem } from "@/lib/integrations/sync";
 import { redeliver } from "@/lib/services/webhooks";
 import { generateApiKey, generateToken, encryptSecret } from "@/lib/crypto";
 import {
-  createManagedAuthUser,
-  createPasswordSetupLink,
+  inviteManagedAuthUser,
   deleteManagedAuthUser,
 } from "@/lib/supabase/users";
 import {
   getStaffRoleForAssignment,
   provisionStaffUser,
 } from "@/lib/repositories/staff-operations";
-import { sendStaffAccountEmail } from "@/lib/email";
-import { getAppUrl } from "@/lib/app-url";
-import { findExistingAccountIdentity } from "@/lib/repositories/account-lookups";
 import {
   createApiKeyRecord,
   createCustomRole,
@@ -513,19 +509,13 @@ export async function createSupplierAction(
     const data = supplierSchema.parse(Object.fromEntries(formData.entries()));
     let extra = "";
     let authUserId: string | undefined;
-    let authUserCreated = false;
     if (data.contractorEmail) {
-      const existing = await findExistingAccountIdentity(data.contractorEmail);
-      if (existing.hasUser || existing.hasPerson) {
-        return { status: "error", message: "Entreprenörens e-postadress används redan i FaddeBo." };
-      }
-      const authResult = await createManagedAuthUser({
+      const authUser = await inviteManagedAuthUser({
         email: data.contractorEmail,
-        password: generateToken(48),
+        roleName: "Entreprenör",
         claimMode: "contractor_invitation",
       });
-      authUserId = authResult.user.id;
-      authUserCreated = authResult.created;
+      authUserId = authUser.id;
     }
     let supplier;
     try {
@@ -541,22 +531,11 @@ export async function createSupplierAction(
         contractorEmail: data.contractorEmail || undefined,
       });
     } catch (error) {
-      if (authUserId && authUserCreated) {
-        await deleteManagedAuthUser(authUserId).catch(() => undefined);
-      }
+      if (authUserId) await deleteManagedAuthUser(authUserId);
       throw error;
     }
     if (data.contractorEmail) {
-      try {
-        const passwordUrl = await createPasswordSetupLink(
-          data.contractorEmail,
-          `${getAppUrl()}/auth/callback?next=/aterstall-losenord`
-        );
-        await sendStaffAccountEmail(data.contractorEmail, passwordUrl, "Entreprenör");
-        extra = ` Ett aktiveringsmejl har skickats till ${data.contractorEmail}.`;
-      } catch (error) {
-        extra = ` Portalkontot skapades, men aktiveringsmejlet kunde inte skickas (${error instanceof Error ? error.message : "okänt fel"}). Användaren kan välja Glömt lösenord.`;
-      }
+      extra = ` Supabase har skickat ett FaddeBo-formgivet aktiveringsmejl via den konfigurerade SMTP-servern till ${data.contractorEmail}.`;
     }
     revalidatePath("/admin/entreprenorer");
     return { status: "success", message: `Entreprenören ${data.name} skapades.${extra}` };
@@ -743,26 +722,22 @@ export async function createStaffUserAction(
   try {
     const user = await requirePermission("users", "create");
     const data = staffUserSchema.parse(Object.fromEntries(formData.entries()));
-    const email = data.email.toLowerCase().trim();
-    const existing = await findExistingAccountIdentity(email);
-    if (existing.hasUser || existing.hasPerson) {
-      return { status: "error", message: "E-postadressen används redan i FaddeBo." };
-    }
+    const email = data.email.toLowerCase();
     const role = await getStaffRoleForAssignment(data.roleId, user.organizationId!);
     if (["superadmin", "org-admin"].includes(role.slug) && !user.roleSlugs.includes("superadmin")) {
       return { status: "error", message: "Endast ägarkontot kan tilldela ägar- eller bolagsadminroll." };
     }
-    const authResult = await createManagedAuthUser({
+    const authUser = await inviteManagedAuthUser({
       email,
-      password: generateToken(48),
       firstName: data.firstName,
       lastName: data.lastName,
+      roleName: role.name,
       claimMode: "staff_invitation",
     });
     let provisioned;
     try {
       provisioned = await provisionStaffUser({
-        authUserId: authResult.user.id,
+        authUserId: authUser.id,
         organizationId: user.organizationId!,
         email,
         firstName: data.firstName,
@@ -771,22 +746,12 @@ export async function createStaffUserAction(
         actorUserId: user.id,
       });
     } catch (error) {
-      if (authResult.created) {
-        await deleteManagedAuthUser(authResult.user.id).catch(() => undefined);
-      }
+      await deleteManagedAuthUser(authUser.id);
       throw error;
     }
 
-    let emailStatus = "Ett aktiveringsmejl har skickats.";
-    try {
-      const passwordUrl = await createPasswordSetupLink(
-        email,
-        `${getAppUrl()}/auth/callback?next=/aterstall-losenord`
-      );
-      await sendStaffAccountEmail(email, passwordUrl, provisioned.roleName);
-    } catch (error) {
-      emailStatus = `Kontot skapades, men aktiveringsmejlet kunde inte skickas (${error instanceof Error ? error.message : "okänt fel"}). Användaren kan välja Glömt lösenord på inloggningssidan.`;
-    }
+    const emailStatus =
+      "Supabase har skickat ett FaddeBo-formgivet aktiveringsmejl via den konfigurerade SMTP-servern.";
     revalidatePath("/admin/anvandare");
     return {
       status: "success",
