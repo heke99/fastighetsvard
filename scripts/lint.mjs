@@ -48,6 +48,19 @@ for (const [kind, pattern] of [
 }
 
 const migrationSql = migrationFiles.map((name) => read(`supabase/migrations/${name}`)).join("\n");
+const publicFunctionDefinitions = new Set(
+  [...migrationSql.matchAll(/CREATE(?: OR REPLACE)? FUNCTION\s+public\.([A-Za-z0-9_]+)\s*\(/gi)]
+    .map((match) => match[1].toLowerCase())
+);
+const publicFunctionCalls = new Set(
+  [...migrationSql.matchAll(/public\.([A-Za-z0-9_]+)\s*\(/gi)]
+    .map((match) => match[1].toLowerCase())
+);
+for (const functionName of [...publicFunctionCalls].sort()) {
+  if (!publicFunctionDefinitions.has(functionName)) {
+    errors.push(`Migrationskedjan anropar odefinierad public-funktion: ${functionName}`);
+  }
+}
 for (const required of [
   "submit_rental_application",
   "send_rental_offer",

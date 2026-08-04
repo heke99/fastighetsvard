@@ -677,13 +677,135 @@ export async function listAdminPersons(organizationId: string, search?: string) 
   })) as Row[];
 }
 
+async function countAdminRows(
+  table: string,
+  organizationId: string,
+  configure?: (query: any) => any
+): Promise<number> {
+  const admin = createAdminClient();
+  let query: any = admin
+    .from(table)
+    .select("id", { count: "exact", head: true })
+    .eq("organizationId", organizationId);
+  if (configure) query = configure(query);
+  const { count, error } = await query;
+  if (error) fail(`Dashboardmått: ${table}`, error);
+  return count ?? 0;
+}
+
+async function sumPaidInvoiceAmount(organizationId: string): Promise<number> {
+  const admin = createAdminClient();
+  const pageSize = 1000;
+  let offset = 0;
+  let total = 0;
+
+  for (;;) {
+    const { data, error } = await admin
+      .from("Invoice")
+      .select("paidAmount")
+      .eq("organizationId", organizationId)
+      .eq("isCreditNote", false)
+      .range(offset, offset + pageSize - 1);
+    if (error) fail("Dashboardmått: betalda belopp", error);
+
+    const rows = (data ?? []) as Array<{ paidAmount: number | string | null }>;
+    total += rows.reduce((sum, row) => sum + Number(row.paidAmount ?? 0), 0);
+    if (rows.length < pageSize) return total;
+    offset += pageSize;
+  }
+}
+
+async function getAdminDashboardMetricsFallback(
+  organizationId: string,
+  now = new Date()
+): Promise<Record<string, number>> {
+  const today = now.toISOString().slice(0, 10);
+  const inThirtyDays = new Date(now);
+  inThirtyDays.setUTCDate(inThirtyDays.getUTCDate() + 30);
+  const endDate = inThirtyDays.toISOString().slice(0, 10);
+
+  const [
+    totalUnits,
+    rentedUnits,
+    availableUnits,
+    upcomingUnits,
+    forSaleUnits,
+    publishedListings,
+    activeApplications,
+    contractsAwaitingSignature,
+    overdueInvoices,
+    activeMaintenanceRequests,
+    urgentWorkOrders,
+    upcomingMoveIns,
+    upcomingMoveOuts,
+    failedWebhooks,
+    pendingReviewItems,
+    failedSyncJobs,
+    paidAmount,
+  ] = await Promise.all([
+    countAdminRows("Unit", organizationId),
+    countAdminRows("Unit", organizationId, (query) => query.eq("status", "RENTED")),
+    countAdminRows("Unit", organizationId, (query) => query.in("status", ["PUBLISHED", "APPLICATION_OPEN"])),
+    countAdminRows("Unit", organizationId, (query) => query.eq("status", "UPCOMING")),
+    countAdminRows("Unit", organizationId, (query) => query.in("status", ["FOR_SALE", "BIDDING"])),
+    countAdminRows("Listing", organizationId, (query) => query.eq("status", "PUBLISHED")),
+    countAdminRows("Application", organizationId, (query) => query.not("status", "in", "(CLOSED,WITHDRAWN,DECLINED)")),
+    countAdminRows("Contract", organizationId, (query) => query.in("status", ["SENT_FOR_SIGNING", "PARTIALLY_SIGNED"])),
+    countAdminRows("Invoice", organizationId, (query) => query.in("status", ["OVERDUE", "REMINDED", "COLLECTION"])),
+    countAdminRows("MaintenanceRequest", organizationId, (query) => query.not("status", "in", "(CLOSED,REJECTED)")),
+    countAdminRows("WorkOrder", organizationId, (query) => query
+      .eq("priority", "URGENT")
+      .not("status", "in", "(DONE,APPROVED,INVOICED,CANCELLED)")),
+    countAdminRows("Contract", organizationId, (query) => query
+      .in("status", ["SIGNED", "ACTIVE"])
+      .gte("startDate", today)
+      .lte("startDate", endDate)),
+    countAdminRows("Termination", organizationId, (query) => query
+      .gte("effectiveEndDate", today)
+      .lte("effectiveEndDate", endDate)
+      .neq("status", "CANCELLED")),
+    countAdminRows("WebhookDelivery", organizationId, (query) => query.in("status", ["FAILED", "DEAD_LETTER"])),
+    countAdminRows("SyncReviewItem", organizationId, (query) => query.eq("status", "PENDING")),
+    countAdminRows("IntegrationSyncJob", organizationId, (query) => query.eq("status", "FAILED")),
+    sumPaidInvoiceAmount(organizationId),
+  ]);
+
+  return {
+    totalUnits,
+    rentedUnits,
+    availableUnits,
+    upcomingUnits,
+    forSaleUnits,
+    publishedListings,
+    activeApplications,
+    contractsAwaitingSignature,
+    overdueInvoices,
+    activeMaintenanceRequests,
+    urgentWorkOrders,
+    upcomingMoveIns,
+    upcomingMoveOuts,
+    failedWebhooks,
+    pendingReviewItems,
+    failedSyncJobs,
+    paidAmount,
+  };
+}
+
 export async function getAdminDashboardMetrics(organizationId: string) {
+  const now = new Date();
   const { data, error } = await createAdminClient().rpc("admin_dashboard_metrics", {
     p_organization_id: organizationId,
-    p_now: new Date().toISOString(),
+    p_now: now.toISOString(),
   });
-  if (error) fail("Dashboardmått", error);
-  return data as Record<string, number>;
+  if (!error && data && typeof data === "object" && !Array.isArray(data)) {
+    return data as Record<string, number>;
+  }
+
+  console.error("FaddeBo dashboard metrics RPC failed; using canonical query fallback", {
+    code: error?.code,
+    message: error?.message,
+  });
+  return getAdminDashboardMetricsFallback(organizationId, now);
 }
 
 export async function getAdminReportMetrics(organizationId: string) {

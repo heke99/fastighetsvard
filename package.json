@@ -22,10 +22,12 @@
     "db:seed": "supabase db reset",
     "db:verify": "psql \"${SUPABASE_DB_URL:-postgresql://postgres:postgres@127.0.0.1:54322/postgres}\" -v ON_ERROR_STOP=1 -f supabase/tests/verify_schema.sql",
     "vercel-build": "next build",
-    "ci": "npm run lint && npm run typecheck && npm run test:unit && npm run build",
+    "ci": "npm run lint && npm run verify:accounts && npm run verify:login-dashboard && npm run typecheck && npm run test:unit && npm run build",
     "bootstrap:admin": "node --env-file=.env.local scripts/bootstrap-admin.mjs",
     "bootstrap:owner": "node --env-file=.env.local scripts/bootstrap-admin.mjs",
-    "verify:auth": "node --env-file=.env.local scripts/verify-auth-config.mjs"
+    "verify:auth": "node --env-file=.env.local scripts/verify-auth-config.mjs",
+    "verify:accounts": "node scripts/verify-account-lifecycle.mjs",
+    "verify:login-dashboard": "node scripts/verify-login-dashboard.mjs"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.3",

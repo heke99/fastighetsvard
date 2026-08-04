@@ -77,11 +77,11 @@ check(
   containsAll("src/lib/services/accounts.ts", ["auth.signUp", 'claim_mode: "self_signup"', "verificationPending"])
 );
 check(
-  "Glömt lösenord har Resend och Supabase SMTP-reserv",
+  "Glömt lösenord använder Supabase Auth och konfigurerad SMTP",
   containsAll("src/app/(public)/auth-actions.ts", [
-    "generateLink",
     "resetPasswordForEmail",
-    "sendPasswordResetEmail",
+    "redirectTo",
+    "password_reset_requested",
   ])
 );
 check(
@@ -93,12 +93,16 @@ check(
   ])
 );
 check(
-  "Admin kan skapa personal med roll och aktiveringsmejl",
+  "Admin kan skapa personal med roll och Supabase SMTP-inbjudan",
   containsAll("src/app/admin/actions.ts", [
     "createStaffUserAction",
+    "inviteManagedAuthUser",
     "provisionStaffUser",
-    "createPasswordSetupLink",
-    "sendStaffAccountEmail",
+    "staff_invitation",
+  ]) && containsAll("src/lib/supabase/users.ts", [
+    "inviteUserByEmail",
+    "redirectTo",
+    "claim_mode",
   ]) && containsAll("src/app/admin/anvandare/page.tsx", [
     "canAssignAdminRoles",
     '!["superadmin", "org-admin"].includes(role.slug)',
@@ -138,10 +142,31 @@ for (const item of visibleRoots) {
 const legacyEmailFiles = visibleFiles.filter((path) => read(path).toLowerCase().includes("info@ostgotaelteknik.se"));
 check("Gammal kontaktadress saknas i aktiv kod och dokumentation", legacyEmailFiles.length === 0, legacyEmailFiles.join(", "));
 
+
+const loginDashboardMigration = "supabase/migrations/20260804113000_login_dashboard_repair.sql";
+check("Login- och dashboardreparation finns", existsSync(resolve(root, loginDashboardMigration)));
+check(
+  "Login- och dashboardreparation innehåller service-role-skydd och feltålig audit",
+  containsAll(loginDashboardMigration, [
+    "FUNCTION public.assert_service_role",
+    "FUNCTION public.record_current_login",
+    "FaddeBo login audit insert skipped",
+    "FUNCTION public.admin_dashboard_metrics",
+  ])
+);
+check(
+  "Admin-dashboard har exakt fallback om metrics-RPC fallerar",
+  containsAll("src/lib/repositories/admin-records.ts", [
+    "getAdminDashboardMetricsFallback",
+    "sumPaidInvoiceAmount",
+    "using canonical query fallback",
+  ])
+);
+
 const migrationFiles = readdirSync(resolve(root, "supabase/migrations"))
   .filter((name) => name.endsWith(".sql"))
   .sort();
-check("Migrationskedjan innehåller canonical slutmigration", migrationFiles.at(-1) === "20260804090000_faddebo_account_lifecycle.sql");
+check("Migrationskedjan innehåller canonical slutmigration", migrationFiles.at(-1) === "20260804113000_login_dashboard_repair.sql");
 
 for (const name of passes) console.log(`PASS  ${name}`);
 if (failures.length) {

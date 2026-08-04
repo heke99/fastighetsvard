@@ -15,8 +15,9 @@ describe("Supabase-native projekt", () => {
       .filter((name) => name.endsWith(".sql"))
       .sort();
 
-    expect(files.length).toBeGreaterThanOrEqual(33);
+    expect(files.length).toBeGreaterThanOrEqual(35);
     expect(files).toContain("20260804090000_faddebo_account_lifecycle.sql");
+    expect(files).toContain("20260804113000_login_dashboard_repair.sql");
 
     const sql = files
       .map((file) => readFileSync(resolve(migrationDir, file), "utf8"))
@@ -28,5 +29,8 @@ describe("Supabase-native projekt", () => {
     expect(sql).toContain('CREATE TABLE public."Organization"');
     expect(sql).toContain('CREATE TABLE public."Counter"');
     expect(sql).toContain('CREATE TABLE public."Brand"');
+    expect(sql).toContain('FUNCTION public.assert_service_role()');
+    expect(sql).toContain('FUNCTION public.record_current_login(p_ip text DEFAULT NULL)');
+    expect(sql).toContain('FUNCTION public.admin_dashboard_metrics(');
   });
 });

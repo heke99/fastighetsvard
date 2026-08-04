@@ -48,7 +48,9 @@ BEGIN
     ('confirm_contract_termination'), ('cancel_contract_termination'),
     ('complete_internal_transfer'), ('complete_move_in'), ('complete_move_out'),
     ('claim_outbox_jobs'), ('claim_idempotent_operation'), ('complete_idempotent_operation'), ('fail_idempotent_operation'),
-    ('create_signing_challenge'), ('verify_signing_challenge'), ('claim_invitation'), ('consume_rate_limit')
+    ('create_signing_challenge'), ('verify_signing_challenge'), ('claim_invitation'), ('consume_rate_limit'),
+    ('assert_service_role'), ('current_user_context'), ('record_current_login'),
+    ('admin_dashboard_metrics'), ('provision_verified_self_signup'), ('reconcile_verified_auth_user')
   ) AS required(name)
   WHERE NOT EXISTS (
     SELECT 1 FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace

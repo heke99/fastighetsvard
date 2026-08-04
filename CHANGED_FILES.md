@@ -123,3 +123,23 @@ Den tidigare leveransrapporten bevaras under
 - `src/app/(public)/parkering/page.tsx`
 - `src/app/(public)/aterstall-losenord/[token]/page.tsx`
 - `src/app/(public)/aterstall-losenord/[token]/ResetPasswordForm.tsx`
+
+# Tillägg — login och dashboards — 2026-08-04
+
+## Runtime och databas
+
+- `supabase/migrations/20260804113000_login_dashboard_repair.sql`
+- `src/lib/repositories/admin-records.ts`
+
+## Verifiering
+
+- `scripts/lint.mjs`
+- `scripts/verify-account-lifecycle.mjs`
+- `scripts/verify-login-dashboard.mjs`
+- `supabase/tests/verify_schema.sql`
+- `tests/supabase-schema.test.ts`
+- `package.json`
+
+## Dokumentation
+
+- `FADDEBO_LOGIN_DASHBOARD_FIX.md`
