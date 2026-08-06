@@ -6,6 +6,7 @@ const root = process.cwd();
 const read = (path: string) => readFileSync(resolve(root, path), "utf8");
 
 const helper = read("src/lib/api/helpers.ts");
+const openApi = read("src/app/api/v1/openapi/route.ts");
 const migration = read("supabase/migrations/20260806143000_idempotency_outcome_hardening.sql");
 
 describe("API idempotency outcome hardening", () => {
@@ -30,5 +31,13 @@ describe("API idempotency outcome hardening", () => {
   it("tells clients not to create a duplicate retry with a new key", () => {
     expect(helper).toContain("idempotency_completion_uncertain");
     expect(helper).toContain("Skicka inte om operationen med en ny nyckel");
+  });
+
+  it("documents uncertain outcomes for every idempotent write", () => {
+    expect(openApi).toContain('version: "1.0.1"');
+    expect(openApi).toContain("idempotentWriteResponses");
+    expect(openApi).toContain('"409": idempotencyConflictResponse');
+    expect(openApi).toContain('"503": idempotencyUnavailableResponse');
+    expect(openApi).toContain("skicka då inte om operationen med en ny nyckel");
   });
 });
