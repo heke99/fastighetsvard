@@ -3,74 +3,81 @@
 ## TASK-0001
 
 Priority: P0  
-Status: COMPLETE (source/static)  
-Goal: separate FaddeBo brand from the legal organization.  
-Completed: model, forward migration, RLS/grants, seed/bootstrap, copy,
-configuration and automated assertions.  
-Next exact step: execute migration `20260725010000_faddebo_brand.sql` as part
-of the full chain in a real Supabase test database.
+Status: COMPLETE IN SOURCE; HOSTED VERIFICATION PENDING  
+Goal: keep FaddeBo brand, legal organization and contact identity canonical.  
+Completed: model, migrations, seed, copy, configuration, e-mail-domain lock and
+automated assertions. The 2026-08-06 audit aligned fallback values and removed
+ignored e-mail environment variables.  
+Next exact step: execute all 37 migrations and account/e-mail acceptance in
+approved Supabase/Vercel staging.
 
 ## TASK-0002
 
 Priority: P0  
-Status: COMPLETE (source/static)  
-Goal: replace multi-row fake transactions with locking RPC commands.  
-Completed: application, listing, contract, maintenance, portal, staff,
-payment, tenant, customer, supplier, invitation, webhook and invoice commands.  
-Next exact step: run rollback/idempotency and real parallel PostgreSQL tests.
+Status: COMPLETE IN SOURCE; DATABASE VERIFICATION PENDING  
+Goal: keep multi-row domain changes atomic and safely idempotent.  
+Completed: locking RPC commands plus the `UNCERTAIN` API idempotency outcome for
+successful writes whose response receipt cannot be confirmed.  
+Next exact step: run database verification and force a completion-response
+failure to confirm that the same key is blocked without re-executing the domain
+write.
 
 ## TASK-0003
 
 Priority: P0  
-Status: COMPLETE (source/static)  
-Goal: remove the full-table legacy query adapter.  
-Completed: all public, portal, auth, admin, API and integration callers now use
-scoped repositories; adapter, generated schema and counter shim were deleted.  
-Acceptance evidence: no source `@/lib/db`, `db.$transaction` or `select("*")`;
-lint/typecheck/40 tests/build pass.
+Status: COMPLETE IN SOURCE; REGRESSION PENDING  
+Goal: use scoped repositories instead of legacy full-table adapters.  
+Completed: active public, portal, auth, admin, API and integration callers use
+scoped repositories or RPCs.  
+Next exact step: obtain green CI and execute negative cross-organization tests.
 
 ## TASK-0004
 
 Priority: P0  
-Status: BLOCKED — DATABASE REQUIRED  
-Goal: prove the current 36-migration chain and authorization boundaries at runtime.  
-Exact commands: `supabase start`, `npm run db:reset`, `npm run db:verify`,
-`npm run test:rls`, then real parallel transaction tests.  
-Acceptance: clean install and upgrade, function signatures, negative
-cross-organization access, private Storage paths and concurrency invariants
-all pass.
+Status: PENDING CI / APPROVED DATABASE  
+Goal: prove the current 37-migration chain and authorization boundaries.  
+Exact commands: `supabase db reset`, `npm run db:verify`, `npm run test:rls`,
+`npm run test:concurrency`.  
+Acceptance: clean install and upgrade, canonical roles, uncertain idempotency,
+function grants, negative tenant access, private Storage paths and concurrency
+invariants all pass.
 
 ## TASK-0005
 
 Priority: P0  
-Status: BLOCKED BY TASK-0004  
+Status: BLOCKED BY TASK-0004 AND EXTERNAL PROVIDERS  
 Goal: run browser and provider release gates.  
-Scope: registration, application, offer/reservation, signing/activation,
-portal, notice/move-out, inbound/outbound webhook, outbox worker, accounting
-provider and deployment smoke tests.
+Scope: registration, staff invitation, password reset, application,
+offer/reservation, signing/activation, tenant maintenance, listing media,
+notice/move-out, webhook/outbox, accounting provider and deployment smoke.
 
 ## TASK-0006
 
 Priority: P0  
 Status: COMPLETE IN SOURCE; RUNTIME VERIFICATION PENDING  
-Goal: establish owner, fastighetsvärd, applicant and tenant account flows with
-FaddeBo branding and domain e-mail addresses.  
-Completed: centralized role routing, owner bootstrap, staff password setup,
-confirmation resend, password reset confirmation, role-aware dashboards and
-navigation, new logo assets, homepage copy, public route removal and forward
-migration.  
-Next exact step: run the commands and ten runtime checks in
-`docs/ACCOUNT_AND_EMAIL_SETUP.md` against Supabase staging.
+Goal: maintain owner, staff, applicant, tenant and contractor account routing.  
+Completed: centralized role routing, exact role display, owner bootstrap,
+staff password setup, confirmation/reset flows and role-aware navigation.  
+Next exact step: execute role-specific browser acceptance in staging.
 
 ## TASK-0007
 
 Priority: P0  
-Status: COMPLETE IN SOURCE; RUNTIME VERIFICATION PENDING  
-Goal: make staff roles, tenant/person views, apartment media and fault reports
-consistent across superadmin, property-manager and tenant portals.  
-Completed: exact role labels/descriptions/permissions, organization-scoped
-session roles, protected custom roles, person/staff role display, co-tenant unit
-views, listing media upload, fault-report attachments, e-mails and portal
-visibility, plus static regression verification.  
-Next exact step: apply `20260804120000_role_context_consistency.sql`, run
-`npm run ci`, then execute `FADDEBO_KONSEKVENSRAPPORT.md` in staging.
+Status: COMPLETE IN SOURCE; CI/RUNTIME VERIFICATION PENDING  
+Goal: keep roles, tenant/person views, listing media and maintenance consistent.  
+Completed: canonical seed roles, protected custom roles, co-tenant unit views,
+listing media, maintenance attachments/e-mail, one audience-aware status label
+source and expanded consistency checks.  
+Next exact step: review the draft PR, require green CI and execute the acceptance
+matrix in `docs/SYSTEM_CONSISTENCY_AUDIT_2026-08-06.md`.
+
+## TASK-0008
+
+Priority: P1  
+Status: OPEN — SEPARATE PR  
+Goal: replace permissive database compatibility types with generated Supabase
+TypeScript types.  
+Exact steps: generate types from the canonical schema, type all Supabase clients,
+migrate repositories by domain, remove `Record<string, any>` aliases and add a
+CI regeneration-diff check.  
+Acceptance: column/relation drift fails typecheck before deployment.
