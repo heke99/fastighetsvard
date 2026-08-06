@@ -34,7 +34,7 @@ export default async function MaintenanceDetailPage({
             {request.room ? ` · ${request.room}` : ""}
           </p>
         </div>
-        <MaintenanceStatusBadge status={request.status} />
+        <MaintenanceStatusBadge status={request.status} audience="tenant" />
       </header>
 
       <section aria-labelledby="beskrivning" className="card p-5">
@@ -106,7 +106,7 @@ export default async function MaintenanceDetailPage({
             <li key={e.id} className="flex items-center gap-3">
               <span className="h-2 w-2 shrink-0 rounded-full bg-brand-600" aria-hidden="true" />
               <span className="text-stone-500">{new Date(e.createdAt).toLocaleString("sv-SE")}</span>
-              <MaintenanceStatusBadge status={e.toStatus} />
+              <MaintenanceStatusBadge status={e.toStatus} audience="tenant" />
               {e.comment && <span className="text-stone-600">{e.comment}</span>}
             </li>
           ))}
