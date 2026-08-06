@@ -1,76 +1,67 @@
 # Current State
 
-Last updated: 2026-08-04 11:55 Europe/Stockholm  
-Last verified commit: UNVERIFIED — the supplied archive contains no `.git`  
-Current branch: UNVERIFIED  
-Current phase: role, tenant, listing-media and maintenance consistency  
-Current task: apply the latest migration and execute runtime acceptance tests
+Last updated: 2026-08-06 Europe/Stockholm  
+Last verified source commit: `806890e4732d1fd03cf088f2b977a14058d75b9f`  
+Current branch: `fix/revoke-anon-function-grants`  
+Current phase: acute function-ACL remediation  
+Current task: review and stage the function grant migration; do not apply it to production
 
 ## Production status
 
-Not production-verified. The requested role, tenant, apartment/listing and
-fault-report consistency changes are implemented and statically verified, but
-the new migration, Storage writes, Resend delivery, browser flows and deployed
-Supabase behavior have not been exercised in an approved runtime.
+Production was not changed. The source remediation for `FASTIGHET-001`,
+`FASTIGHET-002`, `FASTIGHET-004` and `FASTIGHET-008` is prepared as one
+forward-only migration. Runtime verification is blocked by `FASTIGHET-003`
+because the live migration ledger is not trustworthy, and the connected
+Supabase account does not have access to project `dmigdfbvudzexvdnbvrj`.
 
 ## Current source status
 
-STATICALLY VERIFIED in this environment:
+The remediation:
 
-- `node scripts/lint.mjs` passed and inspected 36 canonical migrations;
-- `node scripts/verify-account-lifecycle.mjs` passed 16 checks;
-- `node scripts/verify-login-dashboard.mjs` passed 10 checks;
-- `node scripts/verify-role-maintenance-consistency.mjs` passed 27 checks;
-- all 27 changed TypeScript/TSX files passed TypeScript syntax transpilation;
-- the 13 TypeScript system-role permission sets exactly match the latest SQL
-  synchronization migration;
-- logged-in staff see exact role names in the admin header and person lists;
-- organization-specific custom roles route to `/admin`, require a description,
-  accept only canonical permission identifiers, require an active same-organization actor with `roles:create`, and cannot receive global `*` unless created by a superadmin;
-- role names, permissions and person linkage in `current_user_context()` are organization-scoped, and person-list role hydration filters out roles from other organizations;
-- units display primary and co-tenants from active contracts;
-- apartment/listing administration supports organization-bound image and
-  floorplan uploads to canonical `UnitMedia`/`listing-media` storage;
-- tenant fault reports are written atomically before e-mail/webhook/attachment
-  side effects, appear in both portals, accept validated private attachments
-  and send receipt/internal/status e-mail notifications;
-- post-commit e-mail/webhook/media failures no longer report the already-saved
-  domain record as missing or encourage duplicate submissions.
-
-NOT RUN after the 2026-08-04 changes:
-
-- dependency installation, complete semantic typecheck, Vitest and Next build;
-- migration execution, DB/RLS/Storage suites and real browser/e-mail flows.
-
-Reason: `npm ci` is blocked by the environment's internal npm registry returning
-404 for the locked `zod-3.25.76.tgz` tarball. Running the global TypeScript
-compiler without installed dependencies produced expected missing Next/React/
-Zod/Node declarations and is not counted as a release typecheck.
+- revokes function execution from `PUBLIC`, `anon` and `authenticated` by exact
+  catalog identity, covering every overload;
+- restores exactly 28 authenticated portal/JWT RPC signatures;
+- grants the remaining public function surface to `service_role`;
+- changes `write_audit_event(...)` and `enqueue_outbox_event(...)` to
+  `SECURITY INVOKER` with an internal service-role/function-owner guard;
+- rejects NULL or mismatched actors and organizations in
+  `claim_idempotent_operation(...)`;
+- locks future default function privileges;
+- adds structural lint and SQL regression tests;
+- documents the verified RPC grant matrix.
 
 ## Database status
 
-The ordered source chain contains 36 forward migrations. The latest is:
+The ordered source chain contains 37 forward migrations after this remediation.
+The latest source migration is:
 
 ```text
-supabase/migrations/20260804120000_role_context_consistency.sql
+supabase/migrations/20260806190000_lock_function_grants.sql
 ```
 
-It synchronizes canonical role labels/permissions, protects privileged custom
-roles and adds organization-scoped role names to the authenticated context. It
-has not been applied in this environment.
+It has not been applied to staging or production.
 
-## External configuration still required
+## Verification status
 
-- Supabase Site URL and callback URL for `https://faddebo.se`;
-- production-like Supabase database with all 36 migrations;
-- verified Resend domain, `RESEND_API_KEY` and `EMAIL_FROM=FaddeBo <info@faddebo.se>`;
-- `listing-media` public bucket and `maintenance-files` private bucket created by
-  the existing storage migration;
-- Vercel environment variables from `.env.example`.
+Source-only checks completed:
+
+- migration transaction, function signatures and dollar-quote structure reviewed;
+- `node --check scripts/verify-function-grants.mjs` passed;
+- package scripts remain dependency-neutral;
+- the GitHub diff is restricted to one migration, grant tests, lint wiring and
+  remediation documentation.
+
+Blocked until an approved local or staging database is available:
+
+- `npm ci` and the full npm verification gate;
+- `npm run db:verify`;
+- `npm run test:rls`;
+- runtime portal acceptance tests;
+- Supabase security/performance advisors after migration application.
 
 ## Exact resume point
 
-In the canonical clone with working npm access and approved Supabase staging:
+After resolving `FASTIGHET-003`, use an isolated staging environment and run:
 
 ```bash
 npm ci
@@ -81,10 +72,11 @@ npm run verify:consistency
 npm run typecheck
 npm run test:unit
 npm run build
-supabase db push
 npm run db:verify
 npm run test:rls
 ```
 
-Then execute the manual role, listing-media and maintenance acceptance matrix in
-`FADDEBO_KONSEKVENSRAPPORT.md` and verify real Resend delivery and Storage URLs.
+Then verify tenant application, offer acceptance/decline, viewing
+booking/cancellation, current-user context, service-role administration, and
+rejection of forged audit/outbox events and NULL-actor idempotency calls.
+Production migration remains a separate, explicitly approved operation.

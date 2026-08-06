@@ -1,254 +1,229 @@
 import { readFileSync, readdirSync } from "node:fs";
 import { resolve } from "node:path";
 
-const HARDENING_MIGRATION = "20260806190000_lock_function_grants.sql";
-const migrationsDir = resolve("supabase/migrations");
+const root = resolve(".");
+const migrationsDir = resolve(root, "supabase/migrations");
+const lockMigrationName = "20260806190000_lock_function_grants.sql";
+const errors = [];
+
+const read = (path) => readFileSync(resolve(root, path), "utf8");
 const migrationFiles = readdirSync(migrationsDir)
   .filter((name) => name.endsWith(".sql"))
   .sort();
 
-const hardeningIndex = migrationFiles.indexOf(HARDENING_MIGRATION);
-if (hardeningIndex < 0) {
-  console.error(`ERROR: Säkerhetsmigrationen ${HARDENING_MIGRATION} saknas.`);
-  process.exit(1);
+const lockIndex = migrationFiles.indexOf(lockMigrationName);
+if (lockIndex === -1) {
+  errors.push(`Säkerhetsmigrationen saknas: ${lockMigrationName}.`);
 }
 
-const errors = [];
-const readMigration = (name) =>
-  readFileSync(resolve(migrationsDir, name), "utf8");
-const hardeningSql = readMigration(HARDENING_MIGRATION);
+const postLockMigrations = lockIndex === -1 ? [] : migrationFiles.slice(lockIndex);
+for (const name of postLockMigrations) {
+  const sql = read(`supabase/migrations/${name}`);
 
-const serviceOnlyFunctions = new Set([
-  "write_audit_event",
-  "enqueue_outbox_event",
-  "claim_outbox_jobs",
-  "claim_idempotent_operation",
-  "complete_idempotent_operation",
-  "fail_idempotent_operation",
-]);
+  for (const statement of sql.matchAll(/REVOKE\s+[\s\S]*?\s+FROM\s+([^;]+);/gi)) {
+    const roles = statement[1].toLowerCase();
+    if (roles.includes("public") && (!roles.includes("anon") || !roles.includes("authenticated"))) {
+      errors.push(`${name} har REVOKE från PUBLIC utan både anon och authenticated.`);
+    }
+  }
 
-const authenticatedFunctionAllowlist = new Set([
+  const grantStatements = [
+    ...sql.matchAll(/GRANT\s+EXECUTE\s+ON\s+FUNCTION[^;]+;/gi),
+  ].map((match) => match[0]);
+
+  for (const grant of grantStatements) {
+    if (/\bTO\b[^;]*\banon\b/i.test(grant)) {
+      errors.push(`${name} får inte ge EXECUTE på public-funktioner till anon.`);
+    }
+
+    if (/\bTO\b[^;]*\bauthenticated\b/i.test(grant)) {
+      for (const sensitive of [
+        "write_audit_event",
+        "enqueue_outbox_event",
+        "claim_outbox_jobs",
+        "claim_idempotent_operation",
+        "complete_idempotent_operation",
+        "fail_idempotent_operation",
+      ]) {
+        if (new RegExp(`\\bpublic\\.${sensitive}\\s*\\(`, "i").test(grant)) {
+          errors.push(`${name} exponerar service-only-funktionen ${sensitive} för authenticated.`);
+        }
+      }
+    }
+  }
+
+  const functionStarts = [...sql.matchAll(/CREATE(?:\s+OR\s+REPLACE)?\s+FUNCTION\s+public\.[A-Za-z0-9_]+\s*\(/gi)];
+  for (let index = 0; index < functionStarts.length; index += 1) {
+    const start = functionStarts[index].index ?? 0;
+    const end = functionStarts[index + 1]?.index ?? sql.length;
+    const block = sql.slice(start, end);
+    if (/SECURITY\s+DEFINER/i.test(block) && !/SET\s+search_path\s*=/i.test(block)) {
+      const nameMatch = block.match(/FUNCTION\s+public\.([A-Za-z0-9_]+)/i);
+      errors.push(`${name} definierar SECURITY DEFINER-funktionen ${nameMatch?.[1] ?? "okänd"} utan låst search_path.`);
+    }
+  }
+}
+
+if (lockIndex !== -1) {
+  const lockSql = read(`supabase/migrations/${lockMigrationName}`);
+  for (const required of [
+    "pg_get_function_identity_arguments",
+    "REVOKE ALL ON FUNCTION %I.%I(%s) FROM PUBLIC, anon, authenticated",
+    "ALTER DEFAULT PRIVILEGES IN SCHEMA public",
+    "REVOKE EXECUTE ON FUNCTIONS FROM PUBLIC, anon, authenticated",
+    "GRANT EXECUTE ON FUNCTIONS TO service_role",
+    "p_actor_id IS NULL",
+    "current_app_organization_id() IS NULL",
+    "SECURITY INVOKER",
+  ]) {
+    if (!lockSql.includes(required)) {
+      errors.push(`${lockMigrationName} saknar strukturellt skydd: ${required}.`);
+    }
+  }
+
+  const expectedAuthenticatedSignatures = [
+    "public.current_app_organization_id()",
+    "public.current_app_person_id()",
+    "public.current_app_user_id()",
+    "public.app_has_permission(text)",
+    "public.current_user_context()",
+    "public.record_current_login(text)",
+    "public.current_active_tenancy_summary()",
+    "public.current_person_has_active_application(text)",
+    "public.current_person_contract_catalog(text,public.\"ContractStatus\"[],public.\"ContractPartyRole\"[])",
+    "public.current_person_application_catalog(public.\"ApplicationStatus\"[],integer)",
+    "public.current_person_upcoming_viewings(integer)",
+    "public.toggle_favorite(text)",
+    "public.submit_rental_application(text,text,jsonb,text,text)",
+    "public.withdraw_rental_application(text,text,text)",
+    "public.create_viewing_booking(text,text,text)",
+    "public.cancel_viewing_booking(text,text)",
+    "public.send_rental_offer(text,timestamp without time zone,integer)",
+    "public.accept_rental_offer(text,text,timestamp without time zone,text,text)",
+    "public.decline_rental_offer(text,text,text,text)",
+    "public.request_contract_termination(text,text,timestamp without time zone,text,boolean,text,text,text)",
+    "public.cancel_contract_termination(text,text)",
+    "public.verify_signing_challenge(text,text,text,text,text)",
+    "public.change_application_status(text,public.\"ApplicationStatus\",public.\"ApplicationStatus\",text)",
+    "public.change_listing_status(text,public.\"ListingStatus\",public.\"ListingStatus\")",
+    "public.complete_unit_listings(text,text)",
+    "public.change_contract_status(text,public.\"ContractStatus\",public.\"ContractStatus\",text)",
+    "public.create_contract_version(text,jsonb,text,integer)",
+    "public.activate_signed_contract(text,text,text)"
+  ];
+  for (const signature of expectedAuthenticatedSignatures) {
+    if (!lockSql.includes(`'${signature}'`)) {
+      errors.push(`${lockMigrationName} saknar verifierad authenticated-signatur: ${signature}.`);
+    }
+  }
+}
+
+const authenticatedRpcNames = new Set([
+  "accept_rental_offer",
+  "activate_signed_contract",
+  "app_has_permission",
+  "cancel_contract_termination",
+  "cancel_viewing_booking",
+  "change_application_status",
+  "change_contract_status",
+  "change_listing_status",
+  "complete_unit_listings",
+  "create_contract_version",
+  "create_viewing_booking",
+  "current_active_tenancy_summary",
   "current_app_organization_id",
   "current_app_person_id",
   "current_app_user_id",
-  "app_has_permission",
-  "current_user_context",
-  "record_current_login",
-  "toggle_favorite",
-  "current_active_tenancy_summary",
-  "current_person_has_active_application",
-  "current_person_contract_catalog",
   "current_person_application_catalog",
+  "current_person_contract_catalog",
+  "current_person_has_active_application",
   "current_person_upcoming_viewings",
-  "submit_rental_application",
-  "withdraw_rental_application",
-  "create_viewing_booking",
-  "cancel_viewing_booking",
-  "send_rental_offer",
-  "accept_rental_offer",
+  "current_user_context",
   "decline_rental_offer",
-  "record_contract_signature",
+  "record_current_login",
   "request_contract_termination",
-  "cancel_contract_termination",
-  "complete_internal_transfer",
-  "create_contract_version",
-  "create_signing_session",
-  "countersign_contract",
-  "activate_signed_contract",
-  "confirm_contract_termination",
+  "send_rental_offer",
+  "submit_rental_application",
+  "toggle_favorite",
+  "verify_signing_challenge",
+  "withdraw_rental_application"
+]);
+const serviceOnlyRpcNames = new Set([
+  "assert_service_role",
+  "admin_dashboard_metrics",
+  "admin_report_metrics",
+  "apply_external_payment",
+  "bootstrap_faddebo_owner",
+  "change_maintenance_status",
+  "change_work_order_status",
+  "claim_idempotent_operation",
+  "claim_invitation",
+  "claim_outbox_jobs",
+  "claim_webhook_deliveries",
+  "complete_idempotent_operation",
   "complete_move_in",
   "complete_move_out",
-  "verify_signing_challenge",
-  "change_application_status",
-  "change_listing_status",
-  "complete_unit_listings",
-  "change_contract_status",
+  "confirm_contract_termination",
+  "consume_rate_limit",
+  "create_custom_role",
+  "create_maintenance_request",
+  "create_person_invitation",
+  "create_signing_challenge",
+  "create_work_order",
+  "enqueue_outbox_event",
+  "fail_idempotent_operation",
+  "persist_external_invoice",
+  "provision_staff_user",
+  "provision_supplier",
+  "queue_sync_review",
+  "reconcile_verified_auth_user",
+  "record_contract_signature",
+  "record_webhook_delivery_attempt",
+  "register_existing_tenant",
+  "upsert_external_customer",
+  "write_audit_event"
 ]);
-
-function normalizeSql(value) {
-  return value.replace(/\s+/g, " ").trim().toLowerCase();
+for (const name of authenticatedRpcNames) {
+  if (serviceOnlyRpcNames.has(name)) errors.push(`RPC ${name} finns i både authenticated- och service-only-matrisen.`);
 }
 
-function functionDefinitions(sql) {
-  const starts = [
-    ...sql.matchAll(
-      /CREATE\s+(?:OR\s+REPLACE\s+)?FUNCTION\s+public\.([A-Za-z0-9_]+)\s*\(/gi
-    ),
-  ];
-  return starts.map((match, index) => ({
-    name: match[1].toLowerCase(),
-    body: sql.slice(
-      match.index,
-      index + 1 < starts.length ? starts[index + 1].index : sql.length
-    ),
-  }));
-}
-
-function grantedFunctions(sql, role) {
-  const names = new Set();
-  for (const match of sql.matchAll(
-    /GRANT\s+EXECUTE\s+ON\s+FUNCTION\s+public\.([A-Za-z0-9_]+)\s*\([\s\S]*?\)\s+TO\s+([^;]+);/gi
-  )) {
-    const grantees = match[2].toLowerCase();
-    if (new RegExp(`\\b${role}\\b`, "i").test(grantees)) {
-      names.add(match[1].toLowerCase());
-    }
+const sourceFiles = [];
+const collect = (directory) => {
+  for (const entry of readdirSync(resolve(root, directory), { withFileTypes: true })) {
+    if (["node_modules", ".next", ".git"].includes(entry.name)) continue;
+    const relative = `${directory}/${entry.name}`;
+    if (entry.isDirectory()) collect(relative);
+    else if (/\.(?:ts|tsx|js|mjs|cjs)$/.test(entry.name)) sourceFiles.push(relative);
   }
-  return names;
-}
+};
+for (const directory of ["src", "tests", "scripts"]) collect(directory);
 
-const hardeningNormalized = normalizeSql(hardeningSql);
-for (const required of [
-  "alter default privileges for role postgres in schema public revoke execute on functions from public, anon, authenticated",
-  "revoke execute on function %s from public, anon, authenticated",
-  "alter function public.write_audit_event",
-  "alter function public.enqueue_outbox_event",
-  "security invoker",
-  "coalesce(auth.role(), '') <> 'service_role'",
-  "nullif(trim(p_actor_id), '') is null",
-  "p_organization_id is distinct from v_current_organization_id",
-]) {
-  if (!hardeningNormalized.includes(required)) {
-    errors.push(
-      `${HARDENING_MIGRATION} saknar obligatoriskt skydd: ${required}`
-    );
+const literalRpcNames = new Set();
+const rpcPatterns = [
+  /\.rpc\(\s*["'`]([A-Za-z0-9_]+)["'`]/g,
+  /\brpc\(\s*[^,]+,\s*["'`]([A-Za-z0-9_]+)["'`]/g,
+  /\bcommand\(\s*["'`]([A-Za-z0-9_]+)["'`]/g,
+];
+for (const path of sourceFiles) {
+  if (path === "scripts/verify-function-grants.mjs") continue;
+  const source = read(path);
+  for (const pattern of rpcPatterns) {
+    for (const match of source.matchAll(pattern)) literalRpcNames.add(match[1]);
   }
 }
 
-const hardeningAuthenticatedGrants = grantedFunctions(
-  hardeningSql,
-  "authenticated"
-);
-for (const functionName of authenticatedFunctionAllowlist) {
-  if (!hardeningAuthenticatedGrants.has(functionName)) {
-    errors.push(
-      `${HARDENING_MIGRATION} återger inte authenticated till verifierad RPC ${functionName}.`
-    );
-  }
-}
-for (const functionName of hardeningAuthenticatedGrants) {
-  if (!authenticatedFunctionAllowlist.has(functionName)) {
-    errors.push(
-      `${HARDENING_MIGRATION} ger authenticated till ej allow-listad RPC ${functionName}.`
-    );
+for (const name of [...literalRpcNames].sort()) {
+  if (!authenticatedRpcNames.has(name) && !serviceOnlyRpcNames.has(name)) {
+    errors.push(`Statiskt RPC-anrop saknar rollklassificering: ${name}.`);
   }
 }
 
-for (const functionName of serviceOnlyFunctions) {
-  const escaped = functionName.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-  const revokePattern = new RegExp(
-    `REVOKE\\s+ALL\\s+ON\\s+FUNCTION\\s+public\\.${escaped}\\s*\\([\\s\\S]*?\\)\\s+FROM\\s+PUBLIC\\s*,\\s*anon\\s*,\\s*authenticated\\s*;`,
-    "i"
-  );
-  const grantPattern = new RegExp(
-    `GRANT\\s+EXECUTE\\s+ON\\s+FUNCTION\\s+public\\.${escaped}\\s*\\([\\s\\S]*?\\)\\s+TO\\s+service_role\\s*;`,
-    "i"
-  );
-  if (!revokePattern.test(hardeningSql)) {
-    errors.push(
-      `${HARDENING_MIGRATION} saknar exakt PUBLIC/anon/authenticated-revoke för ${functionName}.`
-    );
-  }
-  if (!grantPattern.test(hardeningSql)) {
-    errors.push(
-      `${HARDENING_MIGRATION} saknar explicit service_role-grant för ${functionName}.`
-    );
-  }
-}
-
-for (const name of migrationFiles.slice(hardeningIndex)) {
-  const sql = readMigration(name);
-  const sqlWithoutLineComments = sql.replace(/--[^\n]*/g, "");
-
-  for (const match of sqlWithoutLineComments.matchAll(
-    /REVOKE[\s\S]*?\sFROM\s+([^;]+);/gi
-  )) {
-    const grantees = match[1].toLowerCase();
-    if (
-      /\bpublic\b/.test(grantees) &&
-      !/\banon\b/.test(grantees) &&
-      !/\bauthenticated\b/.test(grantees)
-    ) {
-      const statement = match[0].replace(/\s+/g, " ").slice(0, 180);
-      errors.push(
-        `${name} har PUBLIC-revoke utan både anon och authenticated: ${statement}`
-      );
-    }
-  }
-
-  for (const match of sql.matchAll(
-    /GRANT\s+EXECUTE\s+ON\s+FUNCTION\s+public\.([A-Za-z0-9_]+)\s*\([\s\S]*?\)\s+TO\s+([^;]+);/gi
-  )) {
-    const functionName = match[1].toLowerCase();
-    const statement = match[0];
-    const grantees = match[2].toLowerCase();
-
-    if (/\banon\b/.test(grantees)) {
-      errors.push(
-        `${name} ger EXECUTE till anon: ${statement.replace(/\s+/g, " ")}`
-      );
-    }
-
-    if (
-      /\bauthenticated\b/.test(grantees) &&
-      !authenticatedFunctionAllowlist.has(functionName)
-    ) {
-      errors.push(
-        `${name} ger authenticated till ej allow-listad RPC ${functionName}.`
-      );
-    }
-
-    if (
-      /\bauthenticated\b/.test(grantees) &&
-      serviceOnlyFunctions.has(functionName)
-    ) {
-      errors.push(
-        `${name} ger en service-only-funktion till authenticated: ${statement.replace(/\s+/g, " ")}`
-      );
-    }
-  }
-
-  for (const definition of functionDefinitions(sql)) {
-    if (!/\bSECURITY\s+DEFINER\b/i.test(definition.body)) continue;
-
-    if (!/\bSET\s+search_path\s*=/i.test(definition.body)) {
-      errors.push(
-        `${name} skapar SECURITY DEFINER-funktionen ${definition.name} utan låst search_path.`
-      );
-    }
-    if (
-      /\bSET\s+search_path\s+FROM\s+CURRENT\b/i.test(definition.body) ||
-      /\$user/i.test(definition.body)
-    ) {
-      errors.push(
-        `${name} använder muterbar search_path i SECURITY DEFINER-funktionen ${definition.name}.`
-      );
-    }
-
-    const escaped = definition.name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-    const explicitAnonRevoke = new RegExp(
-      `REVOKE[\\s\\S]*?FUNCTION\\s+public\\.${escaped}\\s*\\([\\s\\S]*?\\)[\\s\\S]*?FROM\\s+[^;]*\\banon\\b`,
-      "i"
-    );
-    const coveredByStructuralRevoke =
-      name === HARDENING_MIGRATION &&
-      /pg_proc[\s\S]*p\.prosecdef[\s\S]*REVOKE EXECUTE ON FUNCTION %s FROM PUBLIC, anon, authenticated/i.test(
-        sql
-      );
-
-    if (!explicitAnonRevoke.test(sql) && !coveredByStructuralRevoke) {
-      errors.push(
-        `${name} skapar SECURITY DEFINER-funktionen ${definition.name} utan verifierbar anon-revoke.`
-      );
-    }
-  }
-}
-
-if (errors.length > 0) {
+if (errors.length) {
   for (const error of errors) console.error(`ERROR: ${error}`);
   process.exit(1);
 }
 
 console.log(
-  `Function grant hardening checks passed (${authenticatedFunctionAllowlist.size} authenticated RPCs; ${migrationFiles.length - hardeningIndex} guarded migrations).`
+  `Function grant checks passed (${literalRpcNames.size} static RPC names; ` +
+  `${authenticatedRpcNames.size} authenticated; ${serviceOnlyRpcNames.size} service-only; 0 anon).`,
 );

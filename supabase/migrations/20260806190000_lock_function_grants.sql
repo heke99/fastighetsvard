@@ -1,143 +1,95 @@
--- Lock privileged database functions and prevent Supabase role defaults from
--- re-exposing SECURITY DEFINER entry points.
---
--- Scope: FASTIGHET-001, FASTIGHET-002, FASTIGHET-004, FASTIGHET-008.
--- This migration is forward-only and must not be applied to production until
--- FASTIGHET-003 (the unverifiable migration ledger) has been resolved.
+-- Lock privileged function execution to verified callers.
+-- Resolves FASTIGHET-001, FASTIGHET-002, FASTIGHET-004 and FASTIGHET-008.
+-- Source-only migration: do not apply to production until FASTIGHET-003 is resolved.
 
 BEGIN;
-SET LOCAL search_path = public, auth, extensions, pg_temp;
 
--- PostgreSQL grants EXECUTE on new functions to PUBLIC by default. Supabase can
--- also carry explicit grants for anon/authenticated. Remove both sources of
--- implicit access for future functions owned by postgres.
-ALTER DEFAULT PRIVILEGES FOR ROLE postgres IN SCHEMA public
-  REVOKE EXECUTE ON FUNCTIONS FROM PUBLIC, anon, authenticated;
-
--- Establish a deterministic deny-by-default baseline. Every existing public
--- SECURITY DEFINER overload loses PUBLIC/anon/authenticated execution by exact
--- regprocedure identity. Legitimate authenticated entry points are restored
--- explicitly below from the verified source caller and RLS-helper inventory.
-DO $lock_security_definer_grants$
+CREATE OR REPLACE FUNCTION public.write_audit_event(
+  p_organization_id text,
+  p_action text,
+  p_entity_type text,
+  p_entity_id text,
+  p_before jsonb DEFAULT NULL,
+  p_after jsonb DEFAULT NULL,
+  p_actor_type text DEFAULT 'user',
+  p_actor_id text DEFAULT NULL,
+  p_correlation_id text DEFAULT NULL
+)
+RETURNS text
+LANGUAGE plpgsql
+SECURITY INVOKER
+SET search_path = pg_catalog, public, auth, extensions, pg_temp
+AS $function$
 DECLARE
-  v_function regprocedure;
+  v_id text := extensions.gen_random_uuid()::text;
+  v_owner name;
 BEGIN
-  FOR v_function IN
-    SELECT p.oid::regprocedure
-    FROM pg_proc p
-    JOIN pg_namespace n ON n.oid = p.pronamespace
-    WHERE n.nspname = 'public'
-      AND p.prosecdef
-    ORDER BY p.oid::regprocedure::text
-  LOOP
-    EXECUTE format(
-      'REVOKE EXECUTE ON FUNCTION %s FROM PUBLIC, anon, authenticated',
-      v_function
-    );
-  END LOOP;
-END
-$lock_security_definer_grants$;
+  SELECT pg_catalog.pg_get_userbyid(p.proowner)
+  INTO v_owner
+  FROM pg_catalog.pg_proc p
+  WHERE p.oid = 'public.write_audit_event(text,text,text,text,jsonb,jsonb,text,text,text)'::regprocedure;
 
--- Verified authenticated entry points. These functions are called through the
--- request-scoped server client, are needed by RLS policies, or are canonical
--- authenticated portal commands. No service-only function appears here.
-GRANT EXECUTE ON FUNCTION public.current_app_organization_id() TO authenticated, service_role;
-GRANT EXECUTE ON FUNCTION public.current_app_person_id() TO authenticated, service_role;
-GRANT EXECUTE ON FUNCTION public.current_app_user_id() TO authenticated, service_role;
-GRANT EXECUTE ON FUNCTION public.app_has_permission(text) TO authenticated, service_role;
-GRANT EXECUTE ON FUNCTION public.current_user_context() TO authenticated, service_role;
-GRANT EXECUTE ON FUNCTION public.record_current_login(text) TO authenticated, service_role;
-GRANT EXECUTE ON FUNCTION public.toggle_favorite(text) TO authenticated, service_role;
-GRANT EXECUTE ON FUNCTION public.current_active_tenancy_summary() TO authenticated, service_role;
-GRANT EXECUTE ON FUNCTION public.current_person_has_active_application(text) TO authenticated, service_role;
-GRANT EXECUTE ON FUNCTION public.current_person_contract_catalog(text, public."ContractStatus"[], public."ContractPartyRole"[]) TO authenticated, service_role;
-GRANT EXECUTE ON FUNCTION public.current_person_application_catalog(public."ApplicationStatus"[], integer) TO authenticated, service_role;
-GRANT EXECUTE ON FUNCTION public.current_person_upcoming_viewings(integer) TO authenticated, service_role;
-GRANT EXECUTE ON FUNCTION public.submit_rental_application(text, text, jsonb, text, text) TO authenticated, service_role;
-GRANT EXECUTE ON FUNCTION public.withdraw_rental_application(text, text, text) TO authenticated, service_role;
-GRANT EXECUTE ON FUNCTION public.create_viewing_booking(text, text, text) TO authenticated, service_role;
-GRANT EXECUTE ON FUNCTION public.cancel_viewing_booking(text, text) TO authenticated, service_role;
-GRANT EXECUTE ON FUNCTION public.send_rental_offer(text, timestamp, integer) TO authenticated, service_role;
-GRANT EXECUTE ON FUNCTION public.accept_rental_offer(text, text, timestamp, text, text) TO authenticated, service_role;
-GRANT EXECUTE ON FUNCTION public.decline_rental_offer(text, text, text, text) TO authenticated, service_role;
-GRANT EXECUTE ON FUNCTION public.record_contract_signature(text, text, text, text, text, text, text, jsonb) TO authenticated, service_role;
-GRANT EXECUTE ON FUNCTION public.request_contract_termination(text, text, timestamp, text, boolean, text, text, text) TO authenticated, service_role;
-GRANT EXECUTE ON FUNCTION public.cancel_contract_termination(text, text) TO authenticated, service_role;
-GRANT EXECUTE ON FUNCTION public.complete_internal_transfer(text, text, text, timestamp) TO authenticated, service_role;
-GRANT EXECUTE ON FUNCTION public.create_contract_version(text, jsonb, text, integer) TO authenticated, service_role;
-GRANT EXECUTE ON FUNCTION public.create_signing_session(text, text, timestamp) TO authenticated, service_role;
-GRANT EXECUTE ON FUNCTION public.countersign_contract(text, text, text, text, text, jsonb) TO authenticated, service_role;
-GRANT EXECUTE ON FUNCTION public.activate_signed_contract(text, text, text) TO authenticated, service_role;
-GRANT EXECUTE ON FUNCTION public.confirm_contract_termination(text, integer, text) TO authenticated, service_role;
-GRANT EXECUTE ON FUNCTION public.complete_move_in(text, jsonb, integer) TO authenticated, service_role;
-GRANT EXECUTE ON FUNCTION public.complete_move_out(text, jsonb, public."UnitStatus") TO authenticated, service_role;
-GRANT EXECUTE ON FUNCTION public.verify_signing_challenge(text, text, text, text, text) TO authenticated, service_role;
-GRANT EXECUTE ON FUNCTION public.change_application_status(text, public."ApplicationStatus", public."ApplicationStatus", text) TO authenticated, service_role;
-GRANT EXECUTE ON FUNCTION public.change_listing_status(text, public."ListingStatus", public."ListingStatus") TO authenticated, service_role;
-GRANT EXECUTE ON FUNCTION public.complete_unit_listings(text, text) TO authenticated, service_role;
-GRANT EXECUTE ON FUNCTION public.change_contract_status(text, public."ContractStatus", public."ContractStatus", text) TO authenticated, service_role;
+  IF COALESCE(auth.role(), '') <> 'service_role'
+     AND current_user IS DISTINCT FROM v_owner THEN
+    RAISE EXCEPTION 'service_role_required' USING ERRCODE = '42501';
+  END IF;
 
--- These helpers are implementation details. Direct callers must use the
--- service role; trusted SECURITY DEFINER commands continue to call them as the
--- function owner.
-REVOKE ALL ON FUNCTION public.write_audit_event(
-  text, text, text, text, jsonb, jsonb, text, text, text
-) FROM PUBLIC, anon, authenticated;
-REVOKE ALL ON FUNCTION public.enqueue_outbox_event(
-  text, text, text, text, text, jsonb, text
-) FROM PUBLIC, anon, authenticated;
-REVOKE ALL ON FUNCTION public.claim_outbox_jobs(
-  text, integer, integer
-) FROM PUBLIC, anon, authenticated;
-REVOKE ALL ON FUNCTION public.claim_idempotent_operation(
-  text, text, text, text, text, text, integer
-) FROM PUBLIC, anon, authenticated;
-REVOKE ALL ON FUNCTION public.complete_idempotent_operation(
-  text, integer, jsonb
-) FROM PUBLIC, anon, authenticated;
-REVOKE ALL ON FUNCTION public.fail_idempotent_operation(
-  text, text
-) FROM PUBLIC, anon, authenticated;
+  INSERT INTO public."AuditEvent" (
+    "id", "organizationId", "userId", "actorType", "actorId", "action",
+    "entityType", "entityId", "before", "after", "correlationId"
+  ) VALUES (
+    v_id, p_organization_id, public.current_app_user_id(), p_actor_type,
+    COALESCE(p_actor_id, public.current_app_user_id()), p_action,
+    p_entity_type, p_entity_id, p_before, p_after, p_correlation_id
+  );
 
-GRANT EXECUTE ON FUNCTION public.write_audit_event(
-  text, text, text, text, jsonb, jsonb, text, text, text
-) TO service_role;
-GRANT EXECUTE ON FUNCTION public.enqueue_outbox_event(
-  text, text, text, text, text, jsonb, text
-) TO service_role;
-GRANT EXECUTE ON FUNCTION public.claim_outbox_jobs(
-  text, integer, integer
-) TO service_role;
-GRANT EXECUTE ON FUNCTION public.claim_idempotent_operation(
-  text, text, text, text, text, text, integer
-) TO service_role;
-GRANT EXECUTE ON FUNCTION public.complete_idempotent_operation(
-  text, integer, jsonb
-) TO service_role;
-GRANT EXECUTE ON FUNCTION public.fail_idempotent_operation(
-  text, text
-) TO service_role;
+  RETURN v_id;
+END;
+$function$;
 
--- A direct PostgREST invocation of either writer must never inherit the
--- function owner's table privileges. Trusted parent SECURITY DEFINER commands
--- still execute these helpers with the parent's effective owner.
-ALTER FUNCTION public.write_audit_event(
-  text, text, text, text, jsonb, jsonb, text, text, text
-) SECURITY INVOKER;
-ALTER FUNCTION public.write_audit_event(
-  text, text, text, text, jsonb, jsonb, text, text, text
-) SET search_path = public, extensions;
+CREATE OR REPLACE FUNCTION public.enqueue_outbox_event(
+  p_organization_id text,
+  p_event_type text,
+  p_aggregate_type text,
+  p_aggregate_id text,
+  p_recipient text,
+  p_payload jsonb,
+  p_idempotency_key text
+)
+RETURNS text
+LANGUAGE plpgsql
+SECURITY INVOKER
+SET search_path = pg_catalog, public, auth, extensions, pg_temp
+AS $function$
+DECLARE
+  v_id text;
+  v_owner name;
+BEGIN
+  SELECT pg_catalog.pg_get_userbyid(p.proowner)
+  INTO v_owner
+  FROM pg_catalog.pg_proc p
+  WHERE p.oid = 'public.enqueue_outbox_event(text,text,text,text,text,jsonb,text)'::regprocedure;
 
-ALTER FUNCTION public.enqueue_outbox_event(
-  text, text, text, text, text, jsonb, text
-) SECURITY INVOKER;
-ALTER FUNCTION public.enqueue_outbox_event(
-  text, text, text, text, text, jsonb, text
-) SET search_path = public, extensions;
+  IF COALESCE(auth.role(), '') <> 'service_role'
+     AND current_user IS DISTINCT FROM v_owner THEN
+    RAISE EXCEPTION 'service_role_required' USING ERRCODE = '42501';
+  END IF;
 
--- Keep the existing contract and SQLSTATEs, but make actor and organization
--- checks fail closed for every non-service-role execution context. COALESCE is
--- intentional: a missing JWT role must never be treated as privileged.
+  INSERT INTO public."OutboxEvent" (
+    "organizationId", "eventType", "aggregateType", "aggregateId",
+    "recipient", "payload", "idempotencyKey"
+  ) VALUES (
+    p_organization_id, p_event_type, p_aggregate_type, p_aggregate_id,
+    p_recipient, p_payload, p_idempotency_key
+  )
+  ON CONFLICT ("idempotencyKey") DO UPDATE
+    SET "idempotencyKey" = EXCLUDED."idempotencyKey"
+  RETURNING "id" INTO v_id;
+
+  RETURN v_id;
+END;
+$function$;
+
 CREATE OR REPLACE FUNCTION public.claim_idempotent_operation(
   p_organization_id text,
   p_actor_type text,
@@ -155,38 +107,35 @@ RETURNS TABLE (
 )
 LANGUAGE plpgsql
 SECURITY DEFINER
-SET search_path = public, auth, extensions, pg_temp
+SET search_path = pg_catalog, public, auth, extensions, pg_temp
 AS $function$
 DECLARE
   v_row public."OperationIdempotency"%ROWTYPE;
   v_inserted_id text;
-  v_current_actor_id text;
-  v_current_organization_id text;
+  v_expected_actor_id text;
 BEGIN
   IF NULLIF(trim(p_idempotency_key), '') IS NULL THEN
     RAISE EXCEPTION 'idempotency_key_required' USING ERRCODE = '22023';
   END IF;
 
   IF COALESCE(auth.role(), '') <> 'service_role' THEN
-    IF NULLIF(trim(p_actor_id), '') IS NULL THEN
+    IF p_actor_type = 'person' THEN
+      v_expected_actor_id := public.current_app_person_id();
+    ELSIF p_actor_type = 'user' THEN
+      v_expected_actor_id := public.current_app_user_id();
+    ELSE
       RAISE EXCEPTION 'actor_mismatch' USING ERRCODE = '42501';
     END IF;
 
-    v_current_actor_id := CASE p_actor_type
-      WHEN 'person' THEN public.current_app_person_id()
-      WHEN 'user' THEN public.current_app_user_id()
-      ELSE NULL
-    END;
-
-    IF v_current_actor_id IS NULL
-       OR p_actor_id IS DISTINCT FROM v_current_actor_id THEN
+    IF p_actor_id IS NULL
+       OR v_expected_actor_id IS NULL
+       OR p_actor_id IS DISTINCT FROM v_expected_actor_id THEN
       RAISE EXCEPTION 'actor_mismatch' USING ERRCODE = '42501';
     END IF;
 
-    v_current_organization_id := public.current_app_organization_id();
-    IF NULLIF(trim(p_organization_id), '') IS NULL
-       OR v_current_organization_id IS NULL
-       OR p_organization_id IS DISTINCT FROM v_current_organization_id THEN
+    IF p_organization_id IS NULL
+       OR public.current_app_organization_id() IS NULL
+       OR p_organization_id IS DISTINCT FROM public.current_app_organization_id() THEN
       RAISE EXCEPTION 'organization_mismatch' USING ERRCODE = '42501';
     END IF;
   END IF;
@@ -196,14 +145,12 @@ BEGIN
     "requestHash", "leaseExpiresAt"
   ) VALUES (
     p_organization_id, p_actor_type, p_actor_id, p_operation, p_idempotency_key,
-    p_request_hash,
-    CURRENT_TIMESTAMP + make_interval(secs => GREATEST(p_lease_seconds, 1))
+    p_request_hash, CURRENT_TIMESTAMP + make_interval(secs => GREATEST(p_lease_seconds, 1))
   )
   ON CONFLICT DO NOTHING
   RETURNING "id" INTO v_inserted_id;
 
-  SELECT *
-  INTO v_row
+  SELECT * INTO v_row
   FROM public."OperationIdempotency"
   WHERE "organizationId" = p_organization_id
     AND "actorType" = p_actor_type
@@ -213,13 +160,11 @@ BEGIN
   FOR UPDATE;
 
   IF v_row."requestHash" <> p_request_hash THEN
-    RAISE EXCEPTION 'idempotency_key_reused_with_different_request'
-      USING ERRCODE = '23505';
+    RAISE EXCEPTION 'idempotency_key_reused_with_different_request' USING ERRCODE = '23505';
   END IF;
 
   IF v_inserted_id IS NULL AND v_row."status" = 'COMPLETED' THEN
-    RETURN QUERY
-    SELECT v_row."id", true, v_row."responseStatus", v_row."responseBody";
+    RETURN QUERY SELECT v_row."id", true, v_row."responseStatus", v_row."responseBody";
     RETURN;
   END IF;
 
@@ -231,31 +176,111 @@ BEGIN
 
   UPDATE public."OperationIdempotency"
   SET "status" = 'PROCESSING',
-      "leaseExpiresAt" =
-        CURRENT_TIMESTAMP + make_interval(secs => GREATEST(p_lease_seconds, 1)),
+      "leaseExpiresAt" = CURRENT_TIMESTAMP + make_interval(secs => GREATEST(p_lease_seconds, 1)),
       "error" = NULL
   WHERE "id" = v_row."id";
 
-  RETURN QUERY
-  SELECT v_row."id", false, NULL::integer, NULL::jsonb;
-END
+  RETURN QUERY SELECT v_row."id", false, NULL::integer, NULL::jsonb;
+END;
 $function$;
 
-REVOKE ALL ON FUNCTION public.claim_idempotent_operation(
-  text, text, text, text, text, text, integer
-) FROM PUBLIC, anon, authenticated;
-GRANT EXECUTE ON FUNCTION public.claim_idempotent_operation(
-  text, text, text, text, text, text, integer
-) TO service_role;
+DO $acl$
+DECLARE
+  v_function record;
+BEGIN
+  FOR v_function IN
+    SELECT n.nspname, p.proname,
+      pg_catalog.pg_get_function_identity_arguments(p.oid) AS identity_arguments
+    FROM pg_catalog.pg_proc p
+    JOIN pg_catalog.pg_namespace n ON n.oid = p.pronamespace
+    WHERE n.nspname = 'public' AND p.prokind = 'f'
+    ORDER BY p.proname, pg_catalog.pg_get_function_identity_arguments(p.oid)
+  LOOP
+    EXECUTE format(
+      'REVOKE ALL ON FUNCTION %I.%I(%s) FROM PUBLIC, anon, authenticated',
+      v_function.nspname, v_function.proname, v_function.identity_arguments
+    );
+    EXECUTE format(
+      'GRANT EXECUTE ON FUNCTION %I.%I(%s) TO service_role',
+      v_function.nspname, v_function.proname, v_function.identity_arguments
+    );
+  END LOOP;
+END;
+$acl$;
 
-COMMENT ON FUNCTION public.write_audit_event(
-  text, text, text, text, jsonb, jsonb, text, text, text
-) IS 'Internal audit writer. Direct EXECUTE is service_role-only; trusted SECURITY DEFINER commands may invoke it as owner.';
-COMMENT ON FUNCTION public.enqueue_outbox_event(
-  text, text, text, text, text, jsonb, text
-) IS 'Internal outbox writer. Direct EXECUTE is service_role-only; trusted SECURITY DEFINER commands may invoke it as owner.';
-COMMENT ON FUNCTION public.claim_idempotent_operation(
-  text, text, text, text, text, text, integer
-) IS 'Internal idempotency guard. Direct EXECUTE is service_role-only and non-service contexts fail closed on actor and organization identity.';
+DO $authenticated_acl$
+DECLARE
+  v_signature text;
+  v_function regprocedure;
+BEGIN
+  FOREACH v_signature IN ARRAY ARRAY[
+    'public.current_app_organization_id()',
+    'public.current_app_person_id()',
+    'public.current_app_user_id()',
+    'public.app_has_permission(text)',
+    'public.current_user_context()',
+    'public.record_current_login(text)',
+    'public.current_active_tenancy_summary()',
+    'public.current_person_has_active_application(text)',
+    'public.current_person_contract_catalog(text,public."ContractStatus"[],public."ContractPartyRole"[])',
+    'public.current_person_application_catalog(public."ApplicationStatus"[],integer)',
+    'public.current_person_upcoming_viewings(integer)',
+    'public.toggle_favorite(text)',
+    'public.submit_rental_application(text,text,jsonb,text,text)',
+    'public.withdraw_rental_application(text,text,text)',
+    'public.create_viewing_booking(text,text,text)',
+    'public.cancel_viewing_booking(text,text)',
+    'public.send_rental_offer(text,timestamp without time zone,integer)',
+    'public.accept_rental_offer(text,text,timestamp without time zone,text,text)',
+    'public.decline_rental_offer(text,text,text,text)',
+    'public.request_contract_termination(text,text,timestamp without time zone,text,boolean,text,text,text)',
+    'public.cancel_contract_termination(text,text)',
+    'public.verify_signing_challenge(text,text,text,text,text)',
+    'public.change_application_status(text,public."ApplicationStatus",public."ApplicationStatus",text)',
+    'public.change_listing_status(text,public."ListingStatus",public."ListingStatus")',
+    'public.complete_unit_listings(text,text)',
+    'public.change_contract_status(text,public."ContractStatus",public."ContractStatus",text)',
+    'public.create_contract_version(text,jsonb,text,integer)',
+    'public.activate_signed_contract(text,text,text)'
+  ]
+  LOOP
+    v_function := pg_catalog.to_regprocedure(v_signature);
+    IF v_function IS NULL THEN
+      RAISE EXCEPTION 'authenticated_rpc_signature_missing: %', v_signature;
+    END IF;
+    EXECUTE format('GRANT EXECUTE ON FUNCTION %s TO authenticated', v_function);
+  END LOOP;
+END;
+$authenticated_acl$;
+
+ALTER DEFAULT PRIVILEGES IN SCHEMA public
+  REVOKE EXECUTE ON FUNCTIONS FROM PUBLIC, anon, authenticated;
+ALTER DEFAULT PRIVILEGES IN SCHEMA public
+  GRANT EXECUTE ON FUNCTIONS TO service_role;
+
+DO $sensitive_assertions$
+DECLARE
+  v_signature text;
+  v_function regprocedure;
+BEGIN
+  FOREACH v_signature IN ARRAY ARRAY[
+    'public.write_audit_event(text,text,text,text,jsonb,jsonb,text,text,text)',
+    'public.enqueue_outbox_event(text,text,text,text,text,jsonb,text)',
+    'public.claim_outbox_jobs(text,integer,integer)',
+    'public.claim_idempotent_operation(text,text,text,text,text,text,integer)'
+  ]
+  LOOP
+    v_function := pg_catalog.to_regprocedure(v_signature);
+    IF v_function IS NULL THEN
+      RAISE EXCEPTION 'sensitive_rpc_signature_missing: %', v_signature;
+    END IF;
+    IF has_function_privilege('anon', v_function, 'EXECUTE')
+       OR has_function_privilege('authenticated', v_function, 'EXECUTE')
+       OR NOT has_function_privilege('service_role', v_function, 'EXECUTE') THEN
+      RAISE EXCEPTION 'sensitive_rpc_acl_invalid: %', v_signature;
+    END IF;
+  END LOOP;
+END;
+$sensitive_assertions$;
 
 COMMIT;

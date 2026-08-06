@@ -1,168 +1,99 @@
-# Function grant remediation — FASTIGHET-001/002/004/008
+# Function grant matrix
 
 Date: 2026-08-06  
 Branch: `fix/revoke-anon-function-grants`  
-Start commit: `806890e4732d1fd03cf088f2b977a14058d75b9f`
+Findings: `FASTIGHET-001`, `FASTIGHET-002`, `FASTIGHET-004`, `FASTIGHET-008`
 
-## Scope
+## Resulting policy
 
-This change only remediates:
+- `anon`: no `EXECUTE` on functions in `public`.
+- `authenticated`: only the 28 exact signatures in the authenticated table.
+- `service_role`: `EXECUTE` on the complete `public` function surface.
+- Function owners retain PostgreSQL owner privileges, preserving trusted calls between database functions after the catalog-wide revoke.
+- Every overload is handled through `pg_get_function_identity_arguments()`.
+- Runtime application is blocked by `FASTIGHET-003`; the migration has not been applied to production.
 
-- `FASTIGHET-001` — unauthenticated writes to `AuditEvent`
-- `FASTIGHET-002` — unauthenticated writes to `OutboxEvent`
-- `FASTIGHET-004` — role-specific function grants survive `REVOKE ... FROM PUBLIC`
-- `FASTIGHET-008` — a NULL actor can pass the idempotency identity guard
+`SECURITY DEFINER` below describes the function mode after this migration. The two sensitive write helpers are deliberately changed to `SECURITY INVOKER` and protected by an internal service-role/function-owner guard.
 
-No UI, storage, outbox consumer, role routing, migration-ledger repair, or unrelated
-audit finding is changed.
+## Authenticated allow-list — 28 exact signatures
 
-## Root cause
+| Funktion och signatur | SECURITY DEFINER | Faktisk anropare | Klienttyp | Tillåten roll | Motivering |
+|---|---:|---|---|---|---|
+| `public.current_app_organization_id()` | Ja | RLS och intern SQL | JWT-kontext | authenticated | Organisationsbunden RLS. |
+| `public.current_app_person_id()` | Ja | RLS och domän-RPC | JWT-kontext | authenticated | Person- och aktörskontroll. |
+| `public.current_app_user_id()` | Ja | RLS och domän-RPC | JWT-kontext | authenticated | App user och audit-attribution. |
+| `public.app_has_permission(text)` | Ja | RLS och privilegierade domän-RPC | JWT-kontext | authenticated | Behörighetskontroll för inloggad användare. |
+| `public.current_user_context()` | Ja | `src/lib/repositories/auth-context.ts` | authenticated server client | authenticated | Login/dashboard behöver aktuell app-kontext. |
+| `public.record_current_login(text)` | Ja | `src/lib/repositories/auth-context.ts` | authenticated server client | authenticated | Registrerar den inloggade användarens login. |
+| `public.current_active_tenancy_summary()` | Ja | `src/lib/repositories/public-catalog.ts` | authenticated server client | authenticated | Portalens boendesammanfattning. |
+| `public.current_person_has_active_application(text)` | Ja | `src/lib/repositories/public-catalog.ts` | authenticated server client | authenticated | Personbunden ansökningskontroll. |
+| `public.current_person_contract_catalog(text,public."ContractStatus"[],public."ContractPartyRole"[])` | Ja | `src/lib/repositories/portal-records.ts` | authenticated server client | authenticated | Personens avtalskatalog. |
+| `public.current_person_application_catalog(public."ApplicationStatus"[],integer)` | Ja | `src/lib/repositories/portal-records.ts` | authenticated server client | authenticated | Personens ansökningskatalog. |
+| `public.current_person_upcoming_viewings(integer)` | Ja | `src/lib/repositories/portal-records.ts` | authenticated server client | authenticated | Personens visningar. |
+| `public.toggle_favorite(text)` | Ja | `src/lib/repositories/portal-records.ts` | authenticated server client | authenticated | Personbunden portalmUTATION. |
+| `public.submit_rental_application(text,text,jsonb,text,text)` | Ja | `src/lib/repositories/rental-operations.ts` | authenticated server client | authenticated | Ansökan verifierar person och organisation. |
+| `public.withdraw_rental_application(text,text,text)` | Ja | Portalens SQL-kommandoyta | authenticated JWT | authenticated | Personbunden återkallelse. |
+| `public.create_viewing_booking(text,text,text)` | Ja | Portalens SQL-kommandoyta | authenticated JWT | authenticated | Personbunden bokning. |
+| `public.cancel_viewing_booking(text,text)` | Ja | Portalens SQL-kommandoyta | authenticated JWT | authenticated | Personbunden avbokning. |
+| `public.send_rental_offer(text,timestamp without time zone,integer)` | Ja | `src/lib/repositories/rental-operations.ts` | authenticated server client | authenticated | Staff-flöde med intern permission guard. |
+| `public.accept_rental_offer(text,text,timestamp without time zone,text,text)` | Ja | `src/lib/repositories/rental-operations.ts` | authenticated server client | authenticated | Sökande accepterar eget erbjudande. |
+| `public.decline_rental_offer(text,text,text,text)` | Ja | `src/lib/repositories/rental-operations.ts` | authenticated server client | authenticated | Sökande avböjer eget erbjudande. |
+| `public.request_contract_termination(text,text,timestamp without time zone,text,boolean,text,text,text)` | Ja | `src/lib/repositories/rental-operations.ts` | authenticated server client | authenticated | Avtalspart begär uppsägning. |
+| `public.cancel_contract_termination(text,text)` | Ja | Portalens SQL-kommandoyta | authenticated JWT | authenticated | Avtalspart avbryter egen uppsägning. |
+| `public.verify_signing_challenge(text,text,text,text,text)` | Ja | `src/lib/repositories/rental-operations.ts` | authenticated server client | authenticated | Personbunden OTP-verifiering. |
+| `public.change_application_status(text,public."ApplicationStatus",public."ApplicationStatus",text)` | Ja | `src/lib/repositories/rental-operations.ts` | authenticated server client | authenticated | Staff-JWT med intern permission guard. |
+| `public.change_listing_status(text,public."ListingStatus",public."ListingStatus")` | Ja | `src/lib/repositories/rental-operations.ts` | authenticated server client | authenticated | Staff-JWT med intern permission guard. |
+| `public.complete_unit_listings(text,text)` | Ja | `src/lib/repositories/rental-operations.ts` | authenticated server client | authenticated | Staff-JWT med intern permission guard. |
+| `public.change_contract_status(text,public."ContractStatus",public."ContractStatus",text)` | Ja | `src/lib/repositories/rental-operations.ts` | authenticated server client | authenticated | Staff-JWT med intern permission guard. |
+| `public.create_contract_version(text,jsonb,text,integer)` | Ja | `src/lib/repositories/rental-operations.ts` | authenticated server client | authenticated | Staff-JWT och optimistic locking. |
+| `public.activate_signed_contract(text,text,text)` | Ja | `src/lib/repositories/rental-operations.ts` | authenticated server client | authenticated | Staff-aktivering; idempotenshelpers förblir privata. |
 
-PostgreSQL grants function execution to `PUBLIC` by default. Supabase also uses the
-explicit database roles `anon`, `authenticated`, and `service_role`. Several
-historical migrations only revoked `PUBLIC`, so explicit grants held by `anon`
-and `authenticated` remained effective.
+## Service-role och trusted-internal — 33 klassificerade funktioner
 
-`write_audit_event(...)` and `enqueue_outbox_event(...)` were `SECURITY DEFINER`
-without an internal caller guard. `claim_idempotent_operation(...)` compared a
-nullable supplied actor with two nullable current-actor helpers; three NULL
-values could therefore avoid the mismatch branch.
+| Funktion och signatur | SECURITY DEFINER | Faktisk anropare | Klienttyp | Tillåten roll | Motivering |
+|---|---:|---|---|---|---|
+| `public.write_audit_event(text,text,text,text,jsonb,jsonb,text,text,text)` | Nej | Domänkommandon och triggers | function owner/service-role | service_role/internal | Direkt PostgREST-anrop spärras; intern guard krävs. |
+| `public.enqueue_outbox_event(text,text,text,text,text,jsonb,text)` | Nej | Domänkommandon | function owner/service-role | service_role/internal | Direkt PostgREST-anrop spärras; intern guard krävs. |
+| `public.claim_outbox_jobs(text,integer,integer)` | Ja | Outbox worker | service-role client | service_role | Köclaim får inte vara användarstyrd. |
+| `public.claim_idempotent_operation(text,text,text,text,text,text,integer)` | Ja | Interna domänkommandon | internal SQL/service-role | service_role/internal | Direkt RPC nekas; NULL-aktör och org mismatch nekas. |
+| `public.complete_idempotent_operation(text,integer,jsonb)` | Ja | Interna domänkommandon | internal SQL/service-role | service_role/internal | Privat idempotensslutsteg. |
+| `public.fail_idempotent_operation(text,text)` | Ja | Interna domänkommandon | internal SQL/service-role | service_role/internal | Privat idempotensfelsteg. |
+| `public.create_signing_challenge(text,text,text,text,timestamp without time zone)` | Ja | `rental-operations.ts` | admin client | service_role | Secret-key serverflöde. |
+| `public.claim_invitation(text,uuid)` | Ja | `rental-operations.ts` | admin client | service_role | Verifierad Auth-aktivering. |
+| `public.provision_supplier(text,text,text,text,text,text,text,uuid,text)` | Ja | `admin-operations.ts` | admin client | service_role | Provisionerar identitet och roller. |
+| `public.create_custom_role(text,text,text,text,text[])` | Ja | `admin-operations.ts` | admin client | service_role | Privilegierad rollprovisionering. |
+| `public.create_maintenance_request(text,text,text,text,text,text,text,text,text,public."MaintenancePriority",timestamp without time zone,text,text,boolean,boolean,boolean,text)` | Ja | `maintenance-operations.ts` | admin client | service_role | Kanoniskt serverkommando. |
+| `public.change_maintenance_status(text,text,public."MaintenanceStatus",public."MaintenanceStatus",text,text)` | Ja | `maintenance-operations.ts` | admin client | service_role | Serverstyrd statusövergång. |
+| `public.create_work_order(text,text,text,text,text,text,public."MaintenancePriority",text,timestamp without time zone,text)` | Ja | `maintenance-operations.ts` | admin client | service_role | Serverstyrd arbetsorder. |
+| `public.change_work_order_status(text,text,public."WorkOrderStatus",public."WorkOrderStatus",text,text,numeric,text,numeric,text,timestamp without time zone)` | Ja | `maintenance-operations.ts` | admin client | service_role | Serverstyrd arbetsorderövergång. |
+| `public.provision_staff_user(uuid,text,text,text,text,text,text)` | Ja | `staff-operations.ts` | admin client | service_role | Hanterad Auth- och rollprovisionering. |
+| `public.register_existing_tenant(text,text,text,text,text,text,text,text,text,text,text,timestamp without time zone,timestamp without time zone,numeric,numeric,integer,text,text,text,text,text)` | Ja | `tenant-operations.ts` | admin client | service_role | Atomisk import av befintlig hyresgäst. |
+| `public.apply_external_payment(text,text,text,text,numeric,text,timestamp without time zone,text,text)` | Ja | `integration-operations.ts` | admin client | service_role | Extern betalningsintegration. |
+| `public.reconcile_verified_auth_user(uuid)` | Ja | `auth-reconciliation.ts` | admin client | service_role | Server-only Auth-reparation. |
+| `public.create_person_invitation(text,text,text,timestamp without time zone,text)` | Ja | `tenant-import-records.ts` | admin client | service_role | Serverstyrd inbjudan. |
+| `public.record_webhook_delivery_attempt(text,integer,boolean,integer,text,timestamp without time zone)` | Ja | `webhook-records.ts` | admin client | service_role | Workeruppdatering. |
+| `public.claim_webhook_deliveries(integer)` | Ja | `webhook-records.ts` | admin client | service_role | Workerclaim. |
+| `public.consume_rate_limit(text,text,integer,integer)` | Ja | `src/lib/api/auth.ts` | admin client | service_role | Distribuerad server-rate-limit. |
+| `public.upsert_external_customer(text,text,text,text,text,boolean,text,text,text,text,text,text)` | Ja | `external-api-records.ts` | admin client | service_role | Extern kundimport. |
+| `public.queue_sync_review(text,text,text,text,text,jsonb,text)` | Ja | `integration-records.ts` | admin client | service_role | Intern granskningskö. |
+| `public.persist_external_invoice(text,text,text,text,text,text,text,text,public."InvoiceStatus",jsonb,text,timestamp without time zone)` | Ja | `integration-records.ts` | admin client | service_role | Extern fakturapersistens. |
+| `public.admin_dashboard_metrics(text,timestamp with time zone)` | Ja | `admin-records.ts` | admin client | service_role | Service-role-guardad statistik. |
+| `public.admin_report_metrics(text,timestamp with time zone)` | Ja | `admin-records.ts` | admin client | service_role | Service-role-guardad rapportering. |
+| `public.bootstrap_faddebo_owner(text,text,text)` | Ja | `scripts/bootstrap-admin.mjs` | service-role client | service_role | Engångsbootstrap. |
+| `public.confirm_contract_termination(text,integer,text)` | Ja | Ingen aktuell portal-anropare | internal SQL/service-role | service_role/internal | Privat tills verifierad caller införs. |
+| `public.complete_move_in(text,jsonb,integer)` | Ja | Ingen aktuell portal-anropare | internal SQL/service-role | service_role/internal | Privat tills verifierad caller införs. |
+| `public.complete_move_out(text,jsonb,public."UnitStatus")` | Ja | Ingen aktuell portal-anropare | internal SQL/service-role | service_role/internal | Privat tills verifierad caller införs. |
+| `public.record_contract_signature(text,text,text,text,text,text,text,jsonb)` | Ja | `verify_signing_challenge(...)` | internal SQL | service_role/internal | Ingen direkt browser/API-caller. |
+| `public.assert_service_role()` | Nej | Privilegierade SQL-funktioner | internal SQL | service_role/internal | Gemensam invoker-guard. |
 
-## Privileged function matrix
+## Call graph and enforcement
 
-| Function | Exact PostgreSQL signature | Before | After | Internal caller model |
-| --- | --- | --- | --- | --- |
-| `write_audit_event` | `(text,text,text,text,jsonb,jsonb,text,text,text)` | `SECURITY DEFINER`; effective `anon`/`authenticated` execution possible | `SECURITY INVOKER`; direct `EXECUTE` only for `service_role` | Trusted domain `SECURITY DEFINER` functions execute it with the parent function owner's privileges |
-| `enqueue_outbox_event` | `(text,text,text,text,text,jsonb,text)` | `SECURITY DEFINER`; effective `anon`/`authenticated` execution possible | `SECURITY INVOKER`; direct `EXECUTE` only for `service_role` | Trusted domain `SECURITY DEFINER` functions execute it with the parent function owner's privileges |
-| `claim_outbox_jobs` | `(text,integer,integer)` | Body guard existed, but ACL drift could expose the entry point | `SECURITY DEFINER`; direct `EXECUTE` only for `service_role` | Outbox worker/service client |
-| `claim_idempotent_operation` | `(text,text,text,text,text,text,integer)` | Service-only intent; NULL actor bypass in body | Direct `EXECUTE` only for `service_role`; non-service contexts require a typed non-NULL actor and matching organization | Trusted domain RPCs call it internally; service operations may call it directly |
-| `complete_idempotent_operation` | `(text,integer,jsonb)` | Service-only intent | Direct `EXECUTE` only for `service_role` | Trusted domain RPCs and service operations |
-| `fail_idempotent_operation` | `(text,text)` | Service-only intent | Direct `EXECUTE` only for `service_role` | Trusted domain RPCs and service operations |
+- `write_audit_event(...)` and `enqueue_outbox_event(...)` become `SECURITY INVOKER`. A direct call must use `service_role`; trusted nested calls continue under the common function owner.
+- `claim_idempotent_operation(...)` remains `SECURITY DEFINER` but rejects missing/mismatched actor and organization for every non-service-role context.
+- `verify_signing_challenge(...)` calls private `record_contract_signature(...)` internally.
+- Trigger execution is unaffected; trigger functions are not granted to `anon`.
+- `scripts/verify-function-grants.mjs` scans migrations and literal RPC names under `src/`, `tests/` and `scripts/`, and rejects unsafe grants, incomplete revokes, mutable `search_path` on new definers, or unclassified RPC names.
 
-All overloads of public `SECURITY DEFINER` functions are enumerated through
-`pg_proc` as `regprocedure` and lose `PUBLIC`, `anon`, and `authenticated`
-execution. The migration then restores exactly 35 authenticated signatures from
-the verified RLS-helper and portal-command allow-list. The six service-only
-function families are re-granted only to `service_role`.
+## Runtime status
 
-The anonymous `SECURITY DEFINER` allow-list is intentionally empty. No
-authenticated `SECURITY DEFINER` function may exist outside the explicit
-35-signature allow-list.
-
-## Authenticated RPC inventory retained
-
-The migration deliberately revokes `authenticated` from every public
-`SECURITY DEFINER` overload, then re-grants only the verified 35-signature
-allow-list. The following actual user-scoped calls are included and asserted in
-`supabase/tests/verify_rls.sql`.
-
-| Function | Exact signature | Source caller | Client |
-| --- | --- | --- | --- |
-| `current_user_context` | `()` | `src/lib/repositories/auth-context.ts` | request-scoped server client |
-| `record_current_login` | `(text)` | `src/lib/repositories/auth-context.ts` | request-scoped server client |
-| `toggle_favorite` | `(text)` | `src/lib/repositories/portal-records.ts` | request-scoped server client |
-| `current_person_contract_catalog` | `(text,public."ContractStatus"[],public."ContractPartyRole"[])` | `src/lib/repositories/portal-records.ts` | request-scoped server client |
-| `current_person_application_catalog` | `(public."ApplicationStatus"[],integer)` | `src/lib/repositories/portal-records.ts` | request-scoped server client |
-| `current_person_upcoming_viewings` | `(integer)` | `src/lib/repositories/portal-records.ts` | request-scoped server client |
-| `submit_rental_application` | `(text,text,jsonb,text,text)` | `src/lib/repositories/rental-operations.ts` | request-scoped server client |
-| `send_rental_offer` | `(text,timestamp,integer)` | `src/lib/repositories/rental-operations.ts` | request-scoped server client |
-| `accept_rental_offer` | `(text,text,timestamp,text,text)` | `src/lib/repositories/rental-operations.ts` | request-scoped server client |
-| `decline_rental_offer` | `(text,text,text,text)` | `src/lib/repositories/rental-operations.ts` | request-scoped server client |
-| `request_contract_termination` | `(text,text,timestamp,text,boolean,text,text,text)` | `src/lib/repositories/rental-operations.ts` | request-scoped server client |
-| `verify_signing_challenge` | `(text,text,text,text,text)` | `src/lib/repositories/rental-operations.ts` | request-scoped server client |
-| `change_application_status` | `(text,public."ApplicationStatus",public."ApplicationStatus",text)` | `src/lib/repositories/rental-operations.ts` | request-scoped server client with SQL permission guard |
-| `change_listing_status` | `(text,public."ListingStatus",public."ListingStatus")` | `src/lib/repositories/rental-operations.ts` | request-scoped server client with SQL permission guard |
-| `complete_unit_listings` | `(text,text)` | `src/lib/repositories/rental-operations.ts` | request-scoped server client with SQL permission guard |
-| `change_contract_status` | `(text,public."ContractStatus",public."ContractStatus",text)` | `src/lib/repositories/rental-operations.ts` | request-scoped server client with SQL permission guard |
-| `create_contract_version` | `(text,jsonb,text,integer)` | `src/lib/repositories/rental-operations.ts` | request-scoped server client with SQL permission guard |
-| `activate_signed_contract` | `(text,text,text)` | `src/lib/repositories/rental-operations.ts` | request-scoped server client with SQL permission guard |
-
-The complete authenticated allow-list also preserves the RLS identity helpers
-`current_app_organization_id()`, `current_app_person_id()`,
-`current_app_user_id()`, and `app_has_permission(text)`, plus the canonical
-portal commands needed for application withdrawal, viewing booking/cancellation,
-contract signing, termination cancellation/confirmation, internal transfer,
-move-in, and move-out. These signatures are restored explicitly:
-
-- `withdraw_rental_application(text,text,text)`
-- `create_viewing_booking(text,text,text)`
-- `cancel_viewing_booking(text,text)`
-- `record_contract_signature(text,text,text,text,text,text,text,jsonb)`
-- `cancel_contract_termination(text,text)`
-- `complete_internal_transfer(text,text,text,timestamp)`
-- `create_signing_session(text,text,timestamp)`
-- `countersign_contract(text,text,text,text,text,jsonb)`
-- `confirm_contract_termination(text,integer,text)`
-- `complete_move_in(text,jsonb,integer)`
-- `complete_move_out(text,jsonb,public."UnitStatus")`
-- `current_active_tenancy_summary()`
-- `current_person_has_active_application(text)`
-
-Every restored signature is also granted to `service_role` so trusted server
-flows keep the same execution capability.
-
-## Service-role RPC callers inventoried
-
-Static wrappers using `createAdminClient()` include:
-
-- `create_signing_challenge`
-- `claim_invitation`
-- `provision_supplier`
-- `create_custom_role`
-- `provision_staff_user`
-- `create_maintenance_request`
-- `change_maintenance_status`
-- `create_work_order`
-- `change_work_order_status`
-- `apply_external_payment`
-- `register_existing_tenant`
-
-These calls do not justify an `authenticated` grant. The security migration does
-not add one.
-
-No Supabase Edge Functions exist in the repository. SQL-to-SQL calls to
-`write_audit_event`, `enqueue_outbox_event`, and the idempotency helpers remain
-valid through trusted owner execution.
-
-## Static and database regression controls
-
-`scripts/verify-function-grants.mjs` is part of `npm run lint` and rejects, from
-this migration forward:
-
-- a `PUBLIC` revoke that omits both Supabase application roles
-- any function `EXECUTE` grant to `anon`
-- an `authenticated` grant outside the complete 35-function allow-list
-- an `authenticated` grant to the service-only function set
-- a new `SECURITY DEFINER` function without a locked `search_path`
-- a new `SECURITY DEFINER` function without a verifiable anonymous revoke
-- removal of the default-privilege hardening or NULL-actor guard
-
-`supabase/tests/verify_rls.sql` verifies role ACLs, every overload in the
-service-only families, the empty anonymous `SECURITY DEFINER` set, retained
-portal grants, writer security mode, and the NULL-actor failure contract.
-
-## Runtime verification blocker
-
-The audit was performed against Supabase project ref
-`dmigdfbvudzexvdnbvrj`. That project is not exposed by the currently connected
-Supabase integration. The accessible project named Bovaro has a different
-schema and is not a valid substitute.
-
-In addition, `FASTIGHET-003` states that the target live database lacks a
-verifiable migration ledger. Therefore:
-
-- the migration has not been applied to production
-- no write or attack simulation has been run against production
-- `db:push`, migration repair, and linked reset were not run
-- database/runtime assertions remain blocked until a disposable local/staging
-  database is built from the canonical migration chain and the production
-  ledger is repaired separately
-
-## Rollback
-
-Before production application, rollback is simply to close the PR.
-
-After a controlled application, rollback requires a new forward migration. It
-must restore only grants proven necessary by the source caller matrix. Reverting
-the two writer functions to `SECURITY DEFINER` or restoring `anon` execution is
-not an acceptable rollback.
+The source migration and regression tests are prepared. Runtime execution is blocked because the connected Supabase account cannot access project `dmigdfbvudzexvdnbvrj`, and production lacks a trustworthy migration ledger under `FASTIGHET-003`. No SQL was executed against the live database.
