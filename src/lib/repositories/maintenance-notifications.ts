@@ -1,4 +1,6 @@
 import "server-only";
+import type { MaintenanceStatus } from "@/lib/database-types";
+import { isMaintenanceStatus } from "@/lib/status-labels";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 export interface MaintenanceNotificationContext {
@@ -6,7 +8,7 @@ export interface MaintenanceNotificationContext {
   requestNumber: string;
   title: string;
   description: string;
-  status: string;
+  status: MaintenanceStatus;
   category: string;
   isEmergency: boolean;
   createdAt: string;
@@ -38,6 +40,9 @@ export async function getMaintenanceNotificationContext(
     .maybeSingle();
   if (error) throw new Error(`Felanmälans e-postunderlag kunde inte hämtas (${error.code}).`);
   if (!request) return null;
+  if (!isMaintenanceStatus(request.status)) {
+    throw new Error("Felanmälans status är inte en canonical MaintenanceStatus.");
+  }
 
   const [personResult, unitResult] = await Promise.all([
     request.personId
@@ -61,8 +66,15 @@ export async function getMaintenanceNotificationContext(
   if (unitResult.error) throw new Error(`Felanmälans objekt kunde inte hämtas (${unitResult.error.code}).`);
 
   return {
-    ...request,
-    person: personResult.data,
-    unit: unitResult.data,
-  } as MaintenanceNotificationContext;
+    id: String(request.id),
+    requestNumber: String(request.requestNumber),
+    title: String(request.title),
+    description: String(request.description),
+    status: request.status,
+    category: String(request.category),
+    isEmergency: Boolean(request.isEmergency),
+    createdAt: String(request.createdAt),
+    person: personResult.data as MaintenanceNotificationContext["person"],
+    unit: unitResult.data as MaintenanceNotificationContext["unit"],
+  };
 }
