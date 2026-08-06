@@ -154,9 +154,19 @@ jobs:
   refresh-security-lock:
     if: github.event_name == 'push' && github.ref == 'refs/heads/codex/system-consistency-audit-2026-08-06' && github.actor != 'github-actions[bot]'
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 25
     permissions:
       contents: write
+    env:
+      NEXT_PUBLIC_SUPABASE_URL: http://127.0.0.1:54321
+      NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: ci_publishable_key_not_for_production
+      SUPABASE_SECRET_KEY: ci_secret_key_not_for_production
+      APP_URL: http://127.0.0.1:3000
+      APP_ENCRYPTION_KEY: 0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef
+      SIGNING_OTP_PEPPER: ci-signing-otp-pepper-with-at-least-32-characters
+      CRON_SECRET: ci-only-secret-with-at-least-32-characters
+      TRUST_PROXY_HEADERS: "false"
+      EMAIL_LOG_LINKS: "true"
     steps:
       - uses: actions/checkout@v4
         with:
@@ -166,12 +176,14 @@ jobs:
         with:
           node-version-file: .node-version
           cache: npm
-      - name: Refresh vulnerable production dependencies
-        run: npm audit fix --force --package-lock-only
+      - name: Regenerate lockfile from patched dependency policy
+        run: npm install --package-lock-only --ignore-scripts
       - name: Verify deterministic install
         run: npm ci
       - name: Reject high or critical production vulnerabilities
         run: npm audit --omit=dev --audit-level=high
+      - name: Verify patched dependency graph
+        run: npm run ci
       - name: Remove temporary workflow code
         shell: bash
         run: |
@@ -192,7 +204,7 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add package.json package-lock.json .github/workflows/ci.yml .github/workflows/refresh-security-lock-once.yml
+          git add -A
           if git diff --cached --quiet; then
             echo "Dependency refresh generated no changes."
             exit 1
