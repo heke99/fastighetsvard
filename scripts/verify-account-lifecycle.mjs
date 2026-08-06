@@ -142,7 +142,6 @@ for (const item of visibleRoots) {
 const legacyEmailFiles = visibleFiles.filter((path) => read(path).toLowerCase().includes("info@ostgotaelteknik.se"));
 check("Gammal kontaktadress saknas i aktiv kod och dokumentation", legacyEmailFiles.length === 0, legacyEmailFiles.join(", "));
 
-
 const loginDashboardMigration = "supabase/migrations/20260804113000_login_dashboard_repair.sql";
 check("Login- och dashboardreparation finns", existsSync(resolve(root, loginDashboardMigration)));
 check(
@@ -166,7 +165,17 @@ check(
 const migrationFiles = readdirSync(resolve(root, "supabase/migrations"))
   .filter((name) => name.endsWith(".sql"))
   .sort();
-check("Migrationskedjan innehåller canonical slutmigration", migrationFiles.at(-1) === "20260804120000_role_context_consistency.sql");
+const accountMigrationName = "20260804090000_faddebo_account_lifecycle.sql";
+const roleMigrationName = "20260804120000_role_context_consistency.sql";
+const idempotencyMigrationName = "20260806143000_idempotency_outcome_hardening.sql";
+check(
+  "Migrationskedjan innehåller canonical konto-, roll- och idempotensmigration i ordning",
+  migrationFiles.includes(accountMigrationName)
+    && migrationFiles.includes(roleMigrationName)
+    && migrationFiles.includes(idempotencyMigrationName)
+    && migrationFiles.indexOf(accountMigrationName) < migrationFiles.indexOf(roleMigrationName)
+    && migrationFiles.indexOf(roleMigrationName) < migrationFiles.indexOf(idempotencyMigrationName)
+);
 
 for (const name of passes) console.log(`PASS  ${name}`);
 if (failures.length) {
