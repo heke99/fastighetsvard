@@ -123,8 +123,9 @@ interface AtomicIdempotencyClaim {
 }
 
 /**
- * Atomisk API-idempotens. Claim, request-hash-konflikt och replay avgörs av
- * PostgreSQL innan domänoperationen körs. Check-then-create används inte.
+ * Atomisk claim och replay för API-idempotens. Om domänoperationen lyckas men
+ * kvittot inte säkert kan lagras markeras utfallet UNCERTAIN. Samma nyckel får
+ * då inte automatiskt köra domänoperationen igen.
  */
 export async function withIdempotency(
   req: NextRequest,
@@ -159,6 +160,13 @@ export async function withIdempotency(
     if (error.message.includes("operation_already_processing")) {
       throw new ApiError(409, "idempotency_in_progress", "En identisk begäran behandlas redan.");
     }
+    if (error.message.includes("operation_outcome_uncertain")) {
+      throw new ApiError(
+        409,
+        "idempotency_outcome_uncertain",
+        "Den tidigare begäran kan ha slutförts. Skicka inte om operationen med en ny nyckel; kontrollera resultatet eller kontakta support med request-id."
+      );
+    }
     throw new ApiError(503, "idempotency_unavailable", "Idempotens kunde inte verifieras.");
   }
 
@@ -171,23 +179,48 @@ export async function withIdempotency(
     return apiJson(claim.responseBody, claim.responseStatus ?? 200, ctx);
   }
 
+  let result: { status: number; body: unknown };
   try {
-    const result = await execute();
-    const completion = await client.rpc("complete_idempotent_operation", {
+    result = await execute();
+  } catch (executionError) {
+    const failure = await client.rpc("fail_idempotent_operation", {
+      p_record_id: claim.recordId,
+      p_error: executionError instanceof Error ? executionError.message : "operation_failed",
+    });
+    if (failure.error) {
+      console.error("[api] Idempotency failure state could not be stored", {
+        recordId: claim.recordId,
+        error: failure.error.message,
+      });
+    }
+    throw executionError;
+  }
+
+  const completion = await client.rpc("complete_idempotent_operation", {
+    p_record_id: claim.recordId,
+    p_response_status: result.status,
+    p_response_body: result.body,
+  });
+  if (completion.error) {
+    const uncertain = await client.rpc("mark_idempotent_operation_uncertain", {
       p_record_id: claim.recordId,
       p_response_status: result.status,
       p_response_body: result.body,
+      p_error: completion.error.message,
     });
-    if (completion.error) {
-      throw new ApiError(503, "idempotency_completion_failed", "Svaret kunde inte lagras idempotent.");
+    if (uncertain.error) {
+      console.error("[api] Idempotency outcome could not be reconciled", {
+        recordId: claim.recordId,
+        completionError: completion.error.message,
+        reconciliationError: uncertain.error.message,
+      });
     }
-    return apiJson(result.body, result.status, ctx);
-  } catch (error) {
-    await client.rpc("fail_idempotent_operation", {
-      p_record_id: claim.recordId,
-      p_error: error instanceof Error ? error.message : "operation_failed",
-    });
-    throw error;
+    throw new ApiError(
+      503,
+      "idempotency_completion_uncertain",
+      "Operationen kan ha slutförts men svaret kunde inte bekräftas. Skicka inte om operationen med en ny nyckel; kontrollera resultatet eller kontakta support med request-id."
+    );
   }
-}
 
+  return apiJson(result.body, result.status, ctx);
+}

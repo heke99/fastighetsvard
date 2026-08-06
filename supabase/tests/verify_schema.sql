@@ -128,4 +128,109 @@ BEGIN
   END IF;
 END $$;
 
+DO $role_catalogue$
+DECLARE
+  role_mismatches text[];
+  permission_mismatches text[];
+BEGIN
+  WITH expected_roles(slug, name, description, permissions) AS (
+    VALUES
+      ('superadmin', 'Ägare / superadmin', 'Full ägarbehörighet i hela FaddeBo.', ARRAY['*']::text[]),
+      ('org-admin', 'Bolagsadmin', 'Administrerar bolagets användare och samtliga verksamhetsflöden.', ARRAY[
+        'persons:*','users:*','roles:*','properties:*','buildings:*','units:*','listings:*','applications:*','viewings:*','offers:*','contracts:*','terminations:*','inspections:*','invoices:*','payments:*','maintenance:*','workorders:*','suppliers:*','documents:*','messages:*','notifications:*','integrations:*','webhooks:*','apikeys:*','imports:*','reports:*','audit:read','settings:*'
+      ]::text[]),
+      ('property-owner', 'Fastighetsägare', 'Läs- och rapportbehörighet för fastighetsägare.', ARRAY[
+        'properties:read','buildings:read','units:read','listings:read','contracts:read','invoices:read','payments:read','reports:*','maintenance:read','workorders:read','audit:read'
+      ]::text[]),
+      ('property-manager', 'Fastighetsvärd / förvaltare', 'Operativ helhetsbehörighet för uthyrning och förvaltning.', ARRAY[
+        'persons:*','properties:*','buildings:*','units:*','listings:*','applications:*','viewings:*','offers:*','contracts:*','terminations:*','inspections:*','maintenance:*','workorders:*','suppliers:*','documents:*','messages:*','invoices:read','payments:read','imports:*','reports:read'
+      ]::text[]),
+      ('caretaker', 'Kvartersvärd', 'Boendeservice, felanmälningar och arbetsorder.', ARRAY[
+        'properties:read','buildings:read','units:read','maintenance:*','workorders:*','messages:*','persons:read','documents:read'
+      ]::text[]),
+      ('leasing-agent', 'Uthyrare', 'Annonser, ansökningar, visningar, erbjudanden och avtal.', ARRAY[
+        'persons:*','units:read','units:update','listings:*','applications:*','viewings:*','offers:*','contracts:*','documents:*','messages:*','reports:read'
+      ]::text[]),
+      ('sales-manager', 'Försäljningsansvarig', 'Försäljning och kommersiella objekt.', ARRAY[
+        'persons:read','units:read','units:update','listings:*','viewings:*','offers:*','contracts:*','documents:*','messages:*','reports:read'
+      ]::text[]),
+      ('finance', 'Ekonom', 'Fakturor, betalningar, integrationer och ekonomirapporter.', ARRAY[
+        'persons:read','contracts:read','invoices:*','payments:*','integrations:*','reports:*','audit:read'
+      ]::text[]),
+      ('customer-service', 'Kundtjänst', 'Kundservice, ärenden, meddelanden och läsbehörighet.', ARRAY[
+        'persons:read','persons:update','units:read','listings:read','applications:read','applications:update','contracts:read','invoices:read','maintenance:*','messages:*','documents:read'
+      ]::text[]),
+      ('facility-worker', 'Fastighetsskötare', 'Utför och uppdaterar felanmälningar och arbetsorder.', ARRAY[
+        'maintenance:read','maintenance:update','workorders:read','workorders:update','units:read'
+      ]::text[]),
+      ('inspector', 'Besiktningsman', 'Besiktningar och tillhörande dokument.', ARRAY[
+        'inspections:*','units:read','contracts:read','documents:create','documents:read'
+      ]::text[]),
+      ('contractor', 'Entreprenör', 'Ser och uppdaterar endast leverantörens egna arbetsorder.', ARRAY[
+        'workorders:read','workorders:update'
+      ]::text[]),
+      ('report-viewer', 'Rapportläsare', 'Läsbehörighet till rapporter.', ARRAY['reports:read']::text[])
+  )
+  SELECT array_agg(e.slug ORDER BY e.slug)
+  INTO role_mismatches
+  FROM expected_roles e
+  LEFT JOIN public."Role" r
+    ON r."organizationId" IS NULL
+   AND r."slug" = e.slug
+  WHERE r."id" IS NULL
+     OR r."name" IS DISTINCT FROM e.name
+     OR r."description" IS DISTINCT FROM e.description
+     OR r."isSystem" IS DISTINCT FROM true;
+
+  WITH expected_roles(slug, permissions) AS (
+    VALUES
+      ('superadmin', ARRAY['*']::text[]),
+      ('org-admin', ARRAY['persons:*','users:*','roles:*','properties:*','buildings:*','units:*','listings:*','applications:*','viewings:*','offers:*','contracts:*','terminations:*','inspections:*','invoices:*','payments:*','maintenance:*','workorders:*','suppliers:*','documents:*','messages:*','notifications:*','integrations:*','webhooks:*','apikeys:*','imports:*','reports:*','audit:read','settings:*']::text[]),
+      ('property-owner', ARRAY['properties:read','buildings:read','units:read','listings:read','contracts:read','invoices:read','payments:read','reports:*','maintenance:read','workorders:read','audit:read']::text[]),
+      ('property-manager', ARRAY['persons:*','properties:*','buildings:*','units:*','listings:*','applications:*','viewings:*','offers:*','contracts:*','terminations:*','inspections:*','maintenance:*','workorders:*','suppliers:*','documents:*','messages:*','invoices:read','payments:read','imports:*','reports:read']::text[]),
+      ('caretaker', ARRAY['properties:read','buildings:read','units:read','maintenance:*','workorders:*','messages:*','persons:read','documents:read']::text[]),
+      ('leasing-agent', ARRAY['persons:*','units:read','units:update','listings:*','applications:*','viewings:*','offers:*','contracts:*','documents:*','messages:*','reports:read']::text[]),
+      ('sales-manager', ARRAY['persons:read','units:read','units:update','listings:*','viewings:*','offers:*','contracts:*','documents:*','messages:*','reports:read']::text[]),
+      ('finance', ARRAY['persons:read','contracts:read','invoices:*','payments:*','integrations:*','reports:*','audit:read']::text[]),
+      ('customer-service', ARRAY['persons:read','persons:update','units:read','listings:read','applications:read','applications:update','contracts:read','invoices:read','maintenance:*','messages:*','documents:read']::text[]),
+      ('facility-worker', ARRAY['maintenance:read','maintenance:update','workorders:read','workorders:update','units:read']::text[]),
+      ('inspector', ARRAY['inspections:*','units:read','contracts:read','documents:create','documents:read']::text[]),
+      ('contractor', ARRAY['workorders:read','workorders:update']::text[]),
+      ('report-viewer', ARRAY['reports:read']::text[])
+  ),
+  expected_permissions AS (
+    SELECT e.slug, unnest(e.permissions) AS permission
+    FROM expected_roles e
+  ),
+  actual_permissions AS (
+    SELECT r."slug" AS slug, rp."permission" AS permission
+    FROM public."Role" r
+    JOIN public."RolePermission" rp ON rp."roleId" = r."id"
+    JOIN expected_roles e ON e.slug = r."slug"
+    WHERE r."organizationId" IS NULL
+  ),
+  mismatches AS (
+    SELECT 'missing'::text AS kind, e.slug, e.permission
+    FROM expected_permissions e
+    LEFT JOIN actual_permissions a USING (slug, permission)
+    WHERE a.permission IS NULL
+    UNION ALL
+    SELECT 'extra'::text AS kind, a.slug, a.permission
+    FROM actual_permissions a
+    LEFT JOIN expected_permissions e USING (slug, permission)
+    WHERE e.permission IS NULL
+  )
+  SELECT array_agg(format('%s:%s:%s', kind, slug, permission) ORDER BY kind, slug, permission)
+  INTO permission_mismatches
+  FROM mismatches;
+
+  IF role_mismatches IS NOT NULL THEN
+    RAISE EXCEPTION 'Canonical system role metadata mismatch: %', role_mismatches;
+  END IF;
+  IF permission_mismatches IS NOT NULL THEN
+    RAISE EXCEPTION 'Canonical system role permissions mismatch: %', permission_mismatches;
+  END IF;
+END
+$role_catalogue$;
+
 SELECT 'schema_verification_ok' AS result;

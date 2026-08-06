@@ -5,6 +5,10 @@ import type {
   MaintenanceStatus,
   WorkOrderStatus,
 } from "@/lib/database-types";
+import {
+  getMaintenanceStatusLabel,
+  type MaintenanceStatusAudience,
+} from "@/lib/status-labels";
 
 const contractLabels: Record<ContractStatus, [string, string]> = {
   DRAFT: ["Utkast", "bg-stone-100 text-stone-700"],
@@ -67,27 +71,36 @@ export function InvoiceStatusBadge({ status }: { status: InvoiceStatus }) {
   return <span className={`badge ${cls}`}>{label}</span>;
 }
 
-const maintenanceLabels: Record<MaintenanceStatus, [string, string]> = {
-  RECEIVED: ["Inkommen", "bg-brand-50 text-brand-800"],
-  CONFIRMED: ["Bekräftad", "bg-brand-50 text-brand-800"],
-  ASSESSING: ["Under bedömning", "bg-brand-50 text-brand-800"],
-  NEEDS_INFO: ["Komplettering krävs", "bg-accent-500/20 text-accent-600"],
-  ASSIGNED: ["Tilldelad", "bg-brand-50 text-brand-800"],
-  BOOKED: ["Bokad", "bg-brand-50 text-brand-800"],
-  IN_PROGRESS: ["Pågående", "bg-accent-500/20 text-accent-600"],
-  WAITING_TENANT: ["Väntar på dig", "bg-accent-500/20 text-accent-600"],
-  WAITING_CONTRACTOR: ["Väntar på entreprenör", "bg-stone-100 text-stone-700"],
-  WAITING_MATERIAL: ["Väntar på material", "bg-stone-100 text-stone-700"],
-  DONE: ["Färdig", "bg-brand-100 text-brand-800"],
-  QUALITY_CHECK: ["Kvalitetskontroll", "bg-brand-50 text-brand-800"],
-  CLOSED: ["Stängd", "bg-stone-100 text-stone-600"],
-  REJECTED: ["Avvisad", "bg-red-100 text-red-800"],
-  REOPENED: ["Återöppnad", "bg-orange-100 text-orange-800"],
+const maintenanceClasses: Record<MaintenanceStatus, string> = {
+  RECEIVED: "bg-brand-50 text-brand-800",
+  CONFIRMED: "bg-brand-50 text-brand-800",
+  ASSESSING: "bg-brand-50 text-brand-800",
+  NEEDS_INFO: "bg-accent-500/20 text-accent-600",
+  ASSIGNED: "bg-brand-50 text-brand-800",
+  BOOKED: "bg-brand-50 text-brand-800",
+  IN_PROGRESS: "bg-accent-500/20 text-accent-600",
+  WAITING_TENANT: "bg-accent-500/20 text-accent-600",
+  WAITING_CONTRACTOR: "bg-stone-100 text-stone-700",
+  WAITING_MATERIAL: "bg-stone-100 text-stone-700",
+  DONE: "bg-brand-100 text-brand-800",
+  QUALITY_CHECK: "bg-brand-50 text-brand-800",
+  CLOSED: "bg-stone-100 text-stone-600",
+  REJECTED: "bg-red-100 text-red-800",
+  REOPENED: "bg-orange-100 text-orange-800",
 };
 
-export function MaintenanceStatusBadge({ status }: { status: MaintenanceStatus }) {
-  const [label, cls] = maintenanceLabels[status];
-  return <span className={`badge ${cls}`}>{label}</span>;
+export function MaintenanceStatusBadge({
+  status,
+  audience = "staff",
+}: {
+  status: MaintenanceStatus;
+  audience?: MaintenanceStatusAudience;
+}) {
+  return (
+    <span className={`badge ${maintenanceClasses[status]}`}>
+      {getMaintenanceStatusLabel(status, audience)}
+    </span>
+  );
 }
 
 const workOrderLabels: Record<WorkOrderStatus, [string, string]> = {

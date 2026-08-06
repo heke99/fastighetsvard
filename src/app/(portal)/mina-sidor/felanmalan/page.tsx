@@ -57,7 +57,7 @@ export default async function MyMaintenancePage({
                     {new Date(r.createdAt).toLocaleDateString("sv-SE")}
                   </p>
                 </div>
-                <MaintenanceStatusBadge status={r.status} />
+                <MaintenanceStatusBadge status={r.status} audience="tenant" />
               </Link>
             </li>
           ))}

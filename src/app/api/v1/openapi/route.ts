@@ -29,12 +29,29 @@ const errorResponse = {
   },
 };
 
+const idempotencyConflictResponse = {
+  ...errorResponse,
+  description:
+    "Idempotenskonflikt, pågående begäran eller osäkert tidigare utfall. Vid osäkert utfall får operationen inte skickas om med en ny nyckel.",
+};
+
+const idempotencyUnavailableResponse = {
+  ...errorResponse,
+  description:
+    "Idempotenslagret kunde inte verifiera eller säkert lagra utfallet. Operationen kan ha slutförts; kontrollera resultatet innan någon ny begäran skickas.",
+};
+
+const idempotentWriteResponses = {
+  "409": idempotencyConflictResponse,
+  "503": idempotencyUnavailableResponse,
+};
+
 const brand = getBranding();
 const spec = {
   openapi: "3.0.3",
   info: {
     title: `${brand.brandName} Fastighets-API`,
-    version: "1.0.0",
+    version: "1.0.1",
     description:
       "REST API för externa system (bokföring m.m.). Autentisering via API-nyckel som Bearer-token. " +
       "Muterande anrop stöder Idempotency-Key-header. Alla svar innehåller X-Request-Id och X-Correlation-Id.",
@@ -48,8 +65,9 @@ const spec = {
       idempotencyKey: {
         name: "Idempotency-Key",
         in: "header",
-        schema: { type: "string" },
-        description: "Gör muterande anrop idempotenta. Samma nyckel + samma body ⇒ samma svar.",
+        schema: { type: "string", maxLength: 200 },
+        description:
+          "Gör muterande anrop idempotenta. Samma nyckel och body återspelar ett bekräftat svar. Om utfallet är osäkert returneras 409 eller 503; skicka då inte om operationen med en ny nyckel utan kontrollera resultatet med X-Request-Id.",
       },
     },
   },
@@ -92,7 +110,12 @@ const spec = {
             },
           },
         },
-        responses: { "201": { description: "Skapad" }, "200": { description: "Befintlig återanvänd" }, "422": errorResponse },
+        responses: {
+          "201": { description: "Skapad" },
+          "200": { description: "Befintlig återanvänd" },
+          "422": errorResponse,
+          ...idempotentWriteResponses,
+        },
       },
     },
     "/customers/{id}": {
@@ -142,7 +165,7 @@ const spec = {
           "Fakturor identifieras med (external_system, external_id). Befintliga uppdateras, nya skapas. " +
           "Fakturor utan matchad kund hamnar i granskningskön. Dubbletter skapas aldrig.",
         parameters: [{ $ref: "#/components/parameters/idempotencyKey" }],
-        responses: { "200": { description: "Resultat per faktura" }, "422": errorResponse },
+        responses: { "200": { description: "Resultat per faktura" }, "422": errorResponse, ...idempotentWriteResponses },
       },
     },
     "/payments": {
@@ -152,7 +175,7 @@ const spec = {
       post: {
         summary: "Pusha betalningar (idempotent per externt betalnings-ID)",
         parameters: [{ $ref: "#/components/parameters/idempotencyKey" }],
-        responses: { "200": { description: "Resultat per betalning" } },
+        responses: { "200": { description: "Resultat per betalning" }, ...idempotentWriteResponses },
       },
     },
     "/contracts": {
@@ -188,7 +211,7 @@ const spec = {
       post: {
         summary: "Skapa felanmälan",
         parameters: [{ $ref: "#/components/parameters/idempotencyKey" }],
-        responses: { "201": { description: "Skapad" } },
+        responses: { "201": { description: "Skapad" }, ...idempotentWriteResponses },
       },
     },
     "/webhook-subscriptions": {
