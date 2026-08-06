@@ -1,5 +1,7 @@
 import { getBranding } from "@/lib/branding";
+import type { MaintenanceStatus } from "@/lib/database-types";
 import { cleanEnvValue } from "@/lib/env-value";
+import { getMaintenanceStatusLabel } from "@/lib/status-labels";
 
 interface SendEmailInput {
   to: string;
@@ -14,7 +16,7 @@ export interface MaintenanceEmailInput {
   title: string;
   description: string;
   category: string;
-  status?: string;
+  status?: MaintenanceStatus;
   isEmergency: boolean;
   reporterName?: string;
   reporterEmail?: string | null;
@@ -183,24 +185,9 @@ export async function sendMaintenanceStatusEmail(
 ): Promise<void> {
   const brand = getBranding();
   const url = `${brand.appUrl}/mina-sidor/felanmalan/${input.requestId}`;
-  const statusLabels: Record<string, string> = {
-    RECEIVED: "Inkommen",
-    CONFIRMED: "Bekräftad",
-    ASSESSING: "Under bedömning",
-    NEEDS_INFO: "Komplettering krävs",
-    ASSIGNED: "Tilldelad",
-    BOOKED: "Bokad",
-    IN_PROGRESS: "Pågående",
-    WAITING_TENANT: "Väntar på hyresgäst",
-    WAITING_CONTRACTOR: "Väntar på entreprenör",
-    WAITING_MATERIAL: "Väntar på material",
-    DONE: "Färdig",
-    QUALITY_CHECK: "Kvalitetskontroll",
-    CLOSED: "Stängd",
-    REJECTED: "Avvisad",
-    REOPENED: "Återöppnad",
-  };
-  const status = statusLabels[input.status ?? ""] ?? input.status ?? "Uppdaterad";
+  const status = input.status
+    ? getMaintenanceStatusLabel(input.status, "tenant")
+    : "Uppdaterad";
   await sendEmail({
     to,
     subject: `Felanmälan #${input.requestNumber} har status ${status}`,
