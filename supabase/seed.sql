@@ -51,68 +51,66 @@ ON CONFLICT ("id") DO UPDATE SET
   "status" = 'ACTIVE',
   "updatedAt" = CURRENT_TIMESTAMP;
 
-CREATE TEMP TABLE _faddebo_seed_roles (
-  slug text PRIMARY KEY,
-  name text NOT NULL,
-  description text NOT NULL,
-  permissions text[] NOT NULL
-) ON COMMIT DROP;
-
-INSERT INTO _faddebo_seed_roles (slug, name, description, permissions) VALUES
-  ('superadmin', 'Ägare / superadmin', 'Full ägarbehörighet i hela FaddeBo.', ARRAY['*']),
-  ('org-admin', 'Bolagsadmin', 'Administrerar bolagets användare och samtliga verksamhetsflöden.', ARRAY[
-    'persons:*','users:*','roles:*','properties:*','buildings:*','units:*','listings:*',
-    'applications:*','viewings:*','offers:*','contracts:*','terminations:*','inspections:*',
-    'invoices:*','payments:*','maintenance:*','workorders:*','suppliers:*','documents:*',
-    'messages:*','notifications:*','integrations:*','webhooks:*','apikeys:*','imports:*',
-    'reports:*','audit:read','settings:*'
-  ]),
-  ('property-owner', 'Fastighetsägare', 'Läs- och rapportbehörighet för fastighetsägare.', ARRAY[
-    'properties:read','buildings:read','units:read','listings:read','contracts:read',
-    'invoices:read','payments:read','reports:*','maintenance:read','workorders:read','audit:read'
-  ]),
-  ('property-manager', 'Fastighetsvärd / förvaltare', 'Operativ helhetsbehörighet för uthyrning och förvaltning.', ARRAY[
-    'persons:*','properties:*','buildings:*','units:*','listings:*','applications:*',
-    'viewings:*','offers:*','contracts:*','terminations:*','inspections:*','maintenance:*',
-    'workorders:*','suppliers:*','documents:*','messages:*','invoices:read','payments:read',
-    'imports:*','reports:read'
-  ]),
-  ('caretaker', 'Kvartersvärd', 'Boendeservice, felanmälningar och arbetsorder.', ARRAY[
-    'properties:read','buildings:read','units:read','maintenance:*','workorders:*',
-    'messages:*','persons:read','documents:read'
-  ]),
-  ('leasing-agent', 'Uthyrare', 'Annonser, ansökningar, visningar, erbjudanden och avtal.', ARRAY[
-    'persons:*','units:read','units:update','listings:*','applications:*','viewings:*',
-    'offers:*','contracts:*','documents:*','messages:*','reports:read'
-  ]),
-  ('sales-manager', 'Försäljningsansvarig', 'Försäljning och kommersiella objekt.', ARRAY[
-    'persons:read','units:read','units:update','listings:*','viewings:*','offers:*',
-    'contracts:*','documents:*','messages:*','reports:read'
-  ]),
-  ('finance', 'Ekonom', 'Fakturor, betalningar, integrationer och ekonomirapporter.', ARRAY[
-    'persons:read','contracts:read','invoices:*','payments:*','integrations:*','reports:*','audit:read'
-  ]),
-  ('customer-service', 'Kundtjänst', 'Kundservice, ärenden, meddelanden och läsbehörighet.', ARRAY[
-    'persons:read','persons:update','units:read','listings:read','applications:read',
-    'applications:update','contracts:read','invoices:read','maintenance:*','messages:*','documents:read'
-  ]),
-  ('facility-worker', 'Fastighetsskötare', 'Utför och uppdaterar felanmälningar och arbetsorder.', ARRAY[
-    'maintenance:read','maintenance:update','workorders:read','workorders:update','units:read'
-  ]),
-  ('inspector', 'Besiktningsman', 'Besiktningar och tillhörande dokument.', ARRAY[
-    'inspections:*','units:read','contracts:read','documents:create','documents:read'
-  ]),
-  ('contractor', 'Entreprenör', 'Ser och uppdaterar endast leverantörens egna arbetsorder.', ARRAY[
-    'workorders:read','workorders:update'
-  ]),
-  ('report-viewer', 'Rapportläsare', 'Läsbehörighet till rapporter.', ARRAY['reports:read']);
-
+-- Keep the catalogue inside the same DO statement. Supabase CLI may execute
+-- seed statements in separate batches, so a temporary table is not reliable.
 DO $seed_roles$
 DECLARE
   v_seed record;
   v_role_id text;
 BEGIN
-  FOR v_seed IN SELECT * FROM _faddebo_seed_roles ORDER BY slug LOOP
+  FOR v_seed IN
+    SELECT *
+    FROM (VALUES
+      ('superadmin', 'Ägare / superadmin', 'Full ägarbehörighet i hela FaddeBo.', ARRAY['*']::text[]),
+      ('org-admin', 'Bolagsadmin', 'Administrerar bolagets användare och samtliga verksamhetsflöden.', ARRAY[
+        'persons:*','users:*','roles:*','properties:*','buildings:*','units:*','listings:*',
+        'applications:*','viewings:*','offers:*','contracts:*','terminations:*','inspections:*',
+        'invoices:*','payments:*','maintenance:*','workorders:*','suppliers:*','documents:*',
+        'messages:*','notifications:*','integrations:*','webhooks:*','apikeys:*','imports:*',
+        'reports:*','audit:read','settings:*'
+      ]::text[]),
+      ('property-owner', 'Fastighetsägare', 'Läs- och rapportbehörighet för fastighetsägare.', ARRAY[
+        'properties:read','buildings:read','units:read','listings:read','contracts:read',
+        'invoices:read','payments:read','reports:*','maintenance:read','workorders:read','audit:read'
+      ]::text[]),
+      ('property-manager', 'Fastighetsvärd / förvaltare', 'Operativ helhetsbehörighet för uthyrning och förvaltning.', ARRAY[
+        'persons:*','properties:*','buildings:*','units:*','listings:*','applications:*',
+        'viewings:*','offers:*','contracts:*','terminations:*','inspections:*','maintenance:*',
+        'workorders:*','suppliers:*','documents:*','messages:*','invoices:read','payments:read',
+        'imports:*','reports:read'
+      ]::text[]),
+      ('caretaker', 'Kvartersvärd', 'Boendeservice, felanmälningar och arbetsorder.', ARRAY[
+        'properties:read','buildings:read','units:read','maintenance:*','workorders:*',
+        'messages:*','persons:read','documents:read'
+      ]::text[]),
+      ('leasing-agent', 'Uthyrare', 'Annonser, ansökningar, visningar, erbjudanden och avtal.', ARRAY[
+        'persons:*','units:read','units:update','listings:*','applications:*','viewings:*',
+        'offers:*','contracts:*','documents:*','messages:*','reports:read'
+      ]::text[]),
+      ('sales-manager', 'Försäljningsansvarig', 'Försäljning och kommersiella objekt.', ARRAY[
+        'persons:read','units:read','units:update','listings:*','viewings:*','offers:*',
+        'contracts:*','documents:*','messages:*','reports:read'
+      ]::text[]),
+      ('finance', 'Ekonom', 'Fakturor, betalningar, integrationer och ekonomirapporter.', ARRAY[
+        'persons:read','contracts:read','invoices:*','payments:*','integrations:*','reports:*','audit:read'
+      ]::text[]),
+      ('customer-service', 'Kundtjänst', 'Kundservice, ärenden, meddelanden och läsbehörighet.', ARRAY[
+        'persons:read','persons:update','units:read','listings:read','applications:read',
+        'applications:update','contracts:read','invoices:read','maintenance:*','messages:*','documents:read'
+      ]::text[]),
+      ('facility-worker', 'Fastighetsskötare', 'Utför och uppdaterar felanmälningar och arbetsorder.', ARRAY[
+        'maintenance:read','maintenance:update','workorders:read','workorders:update','units:read'
+      ]::text[]),
+      ('inspector', 'Besiktningsman', 'Besiktningar och tillhörande dokument.', ARRAY[
+        'inspections:*','units:read','contracts:read','documents:create','documents:read'
+      ]::text[]),
+      ('contractor', 'Entreprenör', 'Ser och uppdaterar endast leverantörens egna arbetsorder.', ARRAY[
+        'workorders:read','workorders:update'
+      ]::text[]),
+      ('report-viewer', 'Rapportläsare', 'Läsbehörighet till rapporter.', ARRAY['reports:read']::text[])
+    ) AS seed(slug, name, description, permissions)
+    ORDER BY slug
+  LOOP
     INSERT INTO public."Role" (
       "id", "organizationId", "name", "slug", "description", "isSystem", "updatedAt"
     ) VALUES (
