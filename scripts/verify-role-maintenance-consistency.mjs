@@ -16,6 +16,7 @@ const migrations = readdirSync(resolve(root, "supabase/migrations"))
   .filter((name) => name.endsWith(".sql"))
   .sort();
 const roleMigration = read("supabase/migrations/20260804120000_role_context_consistency.sql");
+const idempotencyMigration = read("supabase/migrations/20260806143000_idempotency_outcome_hardening.sql");
 const seed = read("supabase/seed.sql");
 const schemaVerification = read("supabase/tests/verify_schema.sql");
 const permissions = read("src/lib/permissions.ts");
@@ -40,6 +41,8 @@ const statusLabels = read("src/lib/status-labels.ts");
 const statusBadges = read("src/components/StatusBadges.tsx");
 const email = read("src/lib/email.ts");
 const statusLabelTests = read("tests/status-labels.test.ts");
+const apiHelpers = read("src/lib/api/helpers.ts");
+const idempotencyTests = read("tests/idempotency-hardening.test.ts");
 const branding = read("src/lib/branding.ts");
 const brandingTests = read("tests/branding.test.ts");
 const envExample = read(".env.example");
@@ -49,7 +52,7 @@ const listingMedia = read("src/lib/repositories/listing-media.ts");
 const publicListing = read("src/app/(public)/annons/[slug]/page.tsx");
 const adminRecords = read("src/lib/repositories/admin-records.ts");
 
-check("Rollmigrationen ligger sist", migrations.at(-1) === "20260804120000_role_context_consistency.sql");
+check("Canonical rollmigration finns i ordnad historik", migrations.includes("20260804120000_role_context_consistency.sql") && migrations.indexOf("20260804120000_role_context_consistency.sql") < migrations.indexOf("20260806143000_idempotency_outcome_hardening.sql"));
 check("Sessionen innehåller rollnamn", roleMigration.includes("'roleNames'") && authContext.includes("roleNames:"));
 check("Sessionroller är organisationsavgränsade", (roleMigration.match(/r\."organizationId" IS NULL OR r\."organizationId" = u\."organizationId"/g) ?? []).length >= 3 && roleMigration.includes('p."organizationId" = u."organizationId"'));
 check("Superadminhuvudet visar exakta rollnamn", adminLayout.includes("getRoleDisplayNames") && adminLayout.includes('aria-label="Dina roller"'));
@@ -78,6 +81,9 @@ check("Felanmälans statusnamn har en canonical källa", statusLabels.includes("
 check("Personal och hyresgäst får korrekt målgruppstext", statusLabels.includes('WAITING_TENANT: "Väntar på hyresgäst"') && statusLabels.includes('return "Väntar på dig"'));
 check("Hyresgästportalens statusytor markerar tenant audience", portalMaintenanceList.includes('audience="tenant"') && (portalMaintenance.match(/audience="tenant"/g) ?? []).length >= 2);
 check("Statusnamn har typad regressionstäckning", statusLabelTests.includes("covers every canonical maintenance status") && statusLabelTests.includes('"WAITING_TENANT"'));
+check("Osäkra idempotensutfall kan inte köras om automatiskt", idempotencyMigration.includes("operation_outcome_uncertain") && idempotencyMigration.includes("mark_idempotent_operation_uncertain"));
+check("API skiljer domänfel från osäkert kvitto", apiHelpers.includes('client.rpc("fail_idempotent_operation"') && apiHelpers.includes('client.rpc("mark_idempotent_operation_uncertain"') && apiHelpers.indexOf('client.rpc("complete_idempotent_operation"') < apiHelpers.indexOf('client.rpc("mark_idempotent_operation_uncertain"'));
+check("Idempotenshärdning har regressionstest", idempotencyTests.includes("cannot be claimed for automatic replay") && idempotencyTests.includes("Skicka inte om operationen med en ny nyckel"));
 check("Brandingfallback matchar dokumenterad driftkonfiguration", branding.includes('value("BRAND_TAGLINE", "Tryggt boende")') && branding.includes('value("BRAND_PHONE", "070-065 06 90")') && branding.includes('"Vasavägen 19, 595 40 Mjölby"'));
 check("Miljöexemplet annonserar inte ignorerade e-postvariabler", !envExample.includes("SUPPORT_EMAIL=") && envExample.includes("Kontaktadresserna är canonical i src/lib/branding.ts"));
 check("Brandingens canonical värden är testlåsta", brandingTests.includes('expect(brand.tagline).toBe("Tryggt boende")') && brandingTests.includes("keeps canonical contact addresses"));
