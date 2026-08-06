@@ -32,9 +32,16 @@ const missingFunctions = [...calls].filter((name) => !definitions.has(name)).sor
 check("Alla public-funktionsanrop i migrationskedjan har en definition", missingFunctions.length === 0);
 if (missingFunctions.length) console.error(`Saknade funktioner: ${missingFunctions.join(", ")}`);
 
+const accountMigrationName = "20260804090000_faddebo_account_lifecycle.sql";
+const loginMigrationName = "20260804113000_login_dashboard_repair.sql";
+const roleMigrationName = "20260804120000_role_context_consistency.sql";
 check(
-  "Canonical roll- och användarkontextmigration ligger sist",
-  migrationFiles.at(-1) === "20260804120000_role_context_consistency.sql"
+  "Canonical konto-, login- och rollkontextmigration finns i rätt ordning",
+  migrationFiles.includes(accountMigrationName)
+    && migrationFiles.includes(loginMigrationName)
+    && migrationFiles.includes(roleMigrationName)
+    && migrationFiles.indexOf(accountMigrationName) < migrationFiles.indexOf(loginMigrationName)
+    && migrationFiles.indexOf(loginMigrationName) < migrationFiles.indexOf(roleMigrationName)
 );
 check("assert_service_role finns", definitions.has("assert_service_role"));
 check("record_current_login finns", definitions.has("record_current_login"));
