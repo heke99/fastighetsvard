@@ -25,7 +25,7 @@ BEGIN
   JOIN pg_namespace n ON n.oid = p.pronamespace
   WHERE n.nspname = 'public'
     AND p.proname = 'claim_idempotent_operation'
-    AND pg_get_function_identity_arguments(p.oid) = 'p_organization_id text, p_actor_type text, p_actor_id text, p_operation text, p_idempotency_key text, p_request_hash text, p_lease_seconds integer';
+    AND p.pronargs = 7;
 
   IF v_claim_definition IS NULL OR position('operation_outcome_uncertain' IN v_claim_definition) = 0 THEN
     RAISE EXCEPTION 'claim_idempotent_operation does not block uncertain outcomes';
@@ -37,7 +37,7 @@ BEGIN
   JOIN pg_namespace n ON n.oid = p.pronamespace
   WHERE n.nspname = 'public'
     AND p.proname = 'mark_idempotent_operation_uncertain'
-    AND pg_get_function_identity_arguments(p.oid) = 'p_record_id text, p_response_status integer, p_response_body jsonb, p_error text';
+    AND p.pronargs = 4;
 
   IF v_mark_definition IS NULL OR position('COMPLETED' IN v_mark_definition) = 0 THEN
     RAISE EXCEPTION 'mark_idempotent_operation_uncertain is missing or cannot tolerate a completed race';
