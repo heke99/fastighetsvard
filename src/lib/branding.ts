@@ -47,7 +47,7 @@ export function getBranding(): BrandingConfig {
     ),
     organizationNumber,
     portalName: value("BRAND_PORTAL_NAME", "Mina sidor"),
-    tagline: value("BRAND_TAGLINE", "Boende nära dig"),
+    tagline: value("BRAND_TAGLINE", "Tryggt boende"),
     description: value(
       "BRAND_DESCRIPTION",
       `${brandName} förvaltar bostäder och lokaler i Vadstena, Boxholm och Skänninge.`
@@ -59,10 +59,10 @@ export function getBranding(): BrandingConfig {
     privacyEmail: GENERAL_EMAIL,
     leasingEmail: GENERAL_EMAIL,
     faultReportEmail: FAULT_REPORT_EMAIL,
-    phone: value("BRAND_PHONE", "070-000 00 00"),
-    phoneHref: value("BRAND_PHONE_HREF", "+46700000000"),
+    phone: value("BRAND_PHONE", "070-065 06 90"),
+    phoneHref: value("BRAND_PHONE_HREF", "+46700650690"),
     emergencyPhone: value("BRAND_EMERGENCY_PHONE", "013-000 00"),
     emergencyPhoneHref: value("BRAND_EMERGENCY_PHONE_HREF", "+461300000"),
-    postalAddress: value("BRAND_POSTAL_ADDRESS", "Vadstenagatan 5A, 596 33, Skänninge"),
+    postalAddress: value("BRAND_POSTAL_ADDRESS", "Vasavägen 19, 595 40 Mjölby"),
   };
 }
