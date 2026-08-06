@@ -109,7 +109,6 @@ BEGIN
       ]::text[]),
       ('report-viewer', 'Rapportläsare', 'Läsbehörighet till rapporter.', ARRAY['reports:read']::text[])
     ) AS seed(slug, name, description, permissions)
-    ORDER BY slug
   LOOP
     INSERT INTO public."Role" (
       "id", "organizationId", "name", "slug", "description", "isSystem", "updatedAt"
