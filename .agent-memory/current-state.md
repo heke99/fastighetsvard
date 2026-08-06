@@ -1,76 +1,83 @@
 # Current State
 
-Last updated: 2026-08-04 11:55 Europe/Stockholm  
-Last verified commit: UNVERIFIED — the supplied archive contains no `.git`  
-Current branch: UNVERIFIED  
-Current phase: role, tenant, listing-media and maintenance consistency  
-Current task: apply the latest migration and execute runtime acceptance tests
+Last updated: 2026-08-06 Europe/Stockholm  
+Verified baseline: `main` at `d9c7cfe5c78272f76af5ace23dee0c647c66d489`  
+Current branch: `codex/system-consistency-audit-2026-08-06`  
+Current phase: full-system consistency and API idempotency hardening  
+Current task: review the draft PR, obtain green CI and execute staging acceptance
 
 ## Production status
 
-Not production-verified. The requested role, tenant, apartment/listing and
-fault-report consistency changes are implemented and statically verified, but
-the new migration, Storage writes, Resend delivery, browser flows and deployed
-Supabase behavior have not been exercised in an approved runtime.
+Not production-verified. The repository source has been reviewed from the
+verified GitHub baseline and confirmed consistency defects have been remediated,
+but the branch still requires CI and approved Supabase/Vercel staging evidence.
 
-## Current source status
+## Current source changes
 
-STATICALLY VERIFIED in this environment:
+Implemented on the audit branch:
 
-- `node scripts/lint.mjs` passed and inspected 36 canonical migrations;
-- `node scripts/verify-account-lifecycle.mjs` passed 16 checks;
-- `node scripts/verify-login-dashboard.mjs` passed 10 checks;
-- `node scripts/verify-role-maintenance-consistency.mjs` passed 27 checks;
-- all 27 changed TypeScript/TSX files passed TypeScript syntax transpilation;
-- the 13 TypeScript system-role permission sets exactly match the latest SQL
-  synchronization migration;
-- logged-in staff see exact role names in the admin header and person lists;
-- organization-specific custom roles route to `/admin`, require a description,
-  accept only canonical permission identifiers, require an active same-organization actor with `roles:create`, and cannot receive global `*` unless created by a superadmin;
-- role names, permissions and person linkage in `current_user_context()` are organization-scoped, and person-list role hydration filters out roles from other organizations;
-- units display primary and co-tenants from active contracts;
-- apartment/listing administration supports organization-bound image and
-  floorplan uploads to canonical `UnitMedia`/`listing-media` storage;
-- tenant fault reports are written atomically before e-mail/webhook/attachment
-  side effects, appear in both portals, accept validated private attachments
-  and send receipt/internal/status e-mail notifications;
-- post-commit e-mail/webhook/media failures no longer report the already-saved
-  domain record as missing or encourage duplicate submissions.
+- canonical, idempotent role seed catalogue with exact role metadata and
+  permission cleanup;
+- database verification of all 13 canonical system roles;
+- one typed maintenance-status label source with explicit staff and tenant
+  audiences, reused by portal badges and status e-mail;
+- canonical branding fallbacks aligned with `.env.example`, with misleading
+  ignored e-mail variables removed;
+- API idempotency outcome hardening: successful domain writes with an uncertain
+  response receipt are marked `UNCERTAIN` and blocked from automatic replay;
+- OpenAPI `1.0.1` documentation for idempotency 409/503 outcomes;
+- new unit and PostgreSQL verification for status labels, branding and
+  idempotency behavior;
+- full audit and 36-skill routing matrix in
+  `docs/SYSTEM_CONSISTENCY_AUDIT_2026-08-06.md`.
 
-NOT RUN after the 2026-08-04 changes:
+## Verification state
 
-- dependency installation, complete semantic typecheck, Vitest and Next build;
-- migration execution, DB/RLS/Storage suites and real browser/e-mail flows.
+SOURCE REVIEWED:
 
-Reason: `npm ci` is blocked by the environment's internal npm registry returning
-404 for the locked `zod-3.25.76.tgz` tarball. Running the global TypeScript
-compiler without installed dependencies produced expected missing Next/React/
-Zod/Node declarations and is not counted as a release typecheck.
+- role, organization and supplier context paths;
+- applicant/tenant, staff and contractor portal routing;
+- maintenance persistence, attachment and notification flow;
+- API authentication, rate limiting, idempotency and OpenAPI contract;
+- seed/migration ordering, function grants and database verification scripts;
+- CI, dependency, secret and deployment gates.
+
+PENDING ON THE BRANCH:
+
+- GitHub Actions lint, consistency checks, typecheck, unit tests and build;
+- local Supabase reset, schema/idempotency verification and negative RLS tests;
+- E2E smoke workflow.
+
+EXTERNAL RUNTIME EVIDENCE STILL REQUIRED:
+
+- hosted Supabase migration application and upgrade path;
+- private Storage upload/download policies;
+- real Resend/Auth SMTP delivery and callback URLs;
+- browser acceptance for staff roles, tenant maintenance, listing media,
+  invitations, password reset, webhook/accounting flows and deployment smoke.
 
 ## Database status
 
-The ordered source chain contains 36 forward migrations. The latest is:
+The ordered source chain now contains 37 forward migrations. The latest is:
 
 ```text
-supabase/migrations/20260804120000_role_context_consistency.sql
+supabase/migrations/20260806143000_idempotency_outcome_hardening.sql
 ```
 
-It synchronizes canonical role labels/permissions, protects privileged custom
-roles and adds organization-scoped role names to the authenticated context. It
-has not been applied in this environment.
+It adds the `UNCERTAIN` idempotency state, blocks automatic replay of an
+uncertain successful write and installs a service-role-only reconciliation
+function. It has not yet been proven against the target hosted database.
 
-## External configuration still required
+## Known open technical debt
 
-- Supabase Site URL and callback URL for `https://faddebo.se`;
-- production-like Supabase database with all 36 migrations;
-- verified Resend domain, `RESEND_API_KEY` and `EMAIL_FROM=FaddeBo <info@faddebo.se>`;
-- `listing-media` public bucket and `maintenance-files` private bucket created by
-  the existing storage migration;
-- Vercel environment variables from `.env.example`.
+`src/lib/database-types.ts` remains a permissive compatibility layer containing
+`Record<string, any>` and `any` payload aliases. A dedicated follow-up should
+generate Supabase TypeScript types and migrate repositories incrementally.
 
 ## Exact resume point
 
-In the canonical clone with working npm access and approved Supabase staging:
+After the draft PR is open, inspect GitHub Actions. In an approved clone/staging
+environment run:
 
 ```bash
 npm ci
@@ -81,10 +88,12 @@ npm run verify:consistency
 npm run typecheck
 npm run test:unit
 npm run build
-supabase db push
+supabase db reset
 npm run db:verify
 npm run test:rls
+npm run test:concurrency
+npm run test:e2e
 ```
 
-Then execute the manual role, listing-media and maintenance acceptance matrix in
-`FADDEBO_KONSEKVENSRAPPORT.md` and verify real Resend delivery and Storage URLs.
+Then complete the provider and browser acceptance matrix described in the audit
+report before merge or production release.
