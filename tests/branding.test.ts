@@ -7,6 +7,10 @@ const original = {
   BRAND_COMPANY_NAME: process.env.BRAND_COMPANY_NAME,
   BRAND_LEGAL_NAME: process.env.BRAND_LEGAL_NAME,
   BRAND_ORGANIZATION_NUMBER: process.env.BRAND_ORGANIZATION_NUMBER,
+  BRAND_TAGLINE: process.env.BRAND_TAGLINE,
+  BRAND_PHONE: process.env.BRAND_PHONE,
+  BRAND_PHONE_HREF: process.env.BRAND_PHONE_HREF,
+  BRAND_POSTAL_ADDRESS: process.env.BRAND_POSTAL_ADDRESS,
   APP_URL: process.env.APP_URL,
   SUPPORT_EMAIL: process.env.SUPPORT_EMAIL,
   PRIVACY_EMAIL: process.env.PRIVACY_EMAIL,
@@ -23,16 +27,7 @@ afterEach(() => {
 
 describe("FaddeBo identity", () => {
   it("keeps customer brand and legal entity separate", () => {
-    delete process.env.BRAND_NAME;
-    delete process.env.BRAND_SLUG;
-    delete process.env.BRAND_COMPANY_NAME;
-    delete process.env.BRAND_LEGAL_NAME;
-    delete process.env.BRAND_ORGANIZATION_NUMBER;
-    delete process.env.APP_URL;
-    delete process.env.SUPPORT_EMAIL;
-    delete process.env.PRIVACY_EMAIL;
-    delete process.env.LEASING_EMAIL;
-    delete process.env.FAULT_REPORT_EMAIL;
+    for (const key of Object.keys(original)) delete process.env[key];
 
     const brand = getBranding();
     expect(brand.brandName).toBe("FaddeBo");
@@ -42,6 +37,10 @@ describe("FaddeBo identity", () => {
     expect(brand.legalDisplayName).toContain("FaddeBo");
     expect(brand.legalDisplayName).toContain(brand.legalName);
     expect(brand.appUrl).toBe("https://faddebo.se");
+    expect(brand.tagline).toBe("Tryggt boende");
+    expect(brand.phone).toBe("070-065 06 90");
+    expect(brand.phoneHref).toBe("+46700650690");
+    expect(brand.postalAddress).toBe("Vasavägen 19, 595 40 Mjölby");
     expect(brand.supportEmail).toBe("info@faddebo.se");
     expect(brand.privacyEmail).toBe("info@faddebo.se");
     expect(brand.leasingEmail).toBe("info@faddebo.se");
@@ -59,11 +58,23 @@ describe("FaddeBo identity", () => {
     expect(brand.legalDisplayName).toContain("556000-0000");
   });
 
+  it("keeps canonical contact addresses despite stale environment variables", () => {
+    process.env.SUPPORT_EMAIL = "legacy@example.com";
+    process.env.PRIVACY_EMAIL = "legacy@example.com";
+    process.env.LEASING_EMAIL = "legacy@example.com";
+    process.env.FAULT_REPORT_EMAIL = "legacy@example.com";
+
+    const brand = getBranding();
+    expect(brand.supportEmail).toBe("info@faddebo.se");
+    expect(brand.privacyEmail).toBe("info@faddebo.se");
+    expect(brand.leasingEmail).toBe("info@faddebo.se");
+    expect(brand.faultReportEmail).toBe("felanmalan@faddebo.se");
+  });
+
   it("normalizes quoted Vercel URL values", () => {
     process.env.APP_URL = '"https://faddebo.se"';
     const brand = getBranding();
     expect(brand.appUrl).toBe("https://faddebo.se");
     expect(() => new URL(brand.appUrl)).not.toThrow();
   });
-
 });
