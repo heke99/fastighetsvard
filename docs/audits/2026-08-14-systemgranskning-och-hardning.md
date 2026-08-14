@@ -117,7 +117,52 @@ tom, eftersom migrationerna körts som skript. `supabase db push` hade därför
 försökt köra om hela kedjan. Historiken är nu backfilld för samtliga 36
 tidigare migrationer, och de fyra nya ligger på sina egna versioner.
 
-## Medvetna avvägningar
+## Körd verifiering
+
+`npm run ci` (lint, tre verify-skript, typecheck, 66 Vitest-tester, Next-build)
+är grönt. Preview-deployen på Vercel för branchen byggde `READY`.
+
+Mot den körande databasen kördes fyra behörighetskontroller och fem
+raderingskontroller. Testtransaktionen rullades tillbaka och lämnade inga rader
+kvar.
+
+| Kontroll | Resultat |
+| --- | --- |
+| `anon` kan exekvera någon applikationsfunktion | Inga |
+| `authenticated` exekverar utanför listan | Inga |
+| `anon` har tabellrättigheter utanför de fyra vyerna | Inga |
+| `authenticated` skriver utan RLS-policy bakom | Inga |
+| Radera aktivt avtal | Nekas: `contract_delete_forbidden` |
+| Radera objekt med avtalshistorik | Nekas: `unit_delete_forbidden_contract_history` |
+| Kaskadradera fastighet med aktivt avtal | Nekas |
+| Radera utkastavtal | Tillåts |
+| Tom anteckning | Nekas av CHECK-villkoret |
+
+Kontrollerna är repeterbara: `npm run test:grants` kör
+`supabase/tests/verify_grants_and_guards.sql` mot en installerad databas.
+
+Negativa körningar mot det publika REST-API:t med den publika nyckeln gav
+`401` för `write_audit_event`, `enqueue_outbox_event`, `change_listing_status`,
+läsning av `Person` och INSERT i `Brand`, medan `published_listing_catalog` gav
+`200`.
+
+## Överlappande arbete i PR #4
+
+`fix/revoke-anon-function-grants` (PR #4, öppen sedan 2026-08-06) angriper samma
+rotorsak från andra hållet: den lägger interna `service_role`-kontroller i
+funktionskropparna för bland andra `write_audit_event`, `enqueue_outbox_event`
+och `claim_idempotent_operation`, medan denna gren tar bort själva
+EXECUTE-rättigheten. Ansatserna är komplementära och bör båda finnas – grants
+och interna kontroller skyddar mot olika misstag.
+
+Att observera vid sammanslagning:
+
+- PR #4:s migration har versionen `20260806190000`, alltså före denna grens
+  migrationer. På en ren databas körs den först och denna grens grants vinner,
+  vilket är rätt ordning. På den befintliga databasen ligger den före redan
+  registrerade versioner, så `supabase db push` behöver köras med medvetenhet om
+  det;
+- båda grenarna ändrar `package.json` och `.agent-memory/current-state.md`.
 
 - **De fyra katalogvyerna behålls som SECURITY DEFINER.** Advisorn flaggar det
   som ERROR, men vyerna är avsiktliga publika projektioner av publicerade
