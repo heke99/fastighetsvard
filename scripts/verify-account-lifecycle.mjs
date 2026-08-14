@@ -166,7 +166,16 @@ check(
 const migrationFiles = readdirSync(resolve(root, "supabase/migrations"))
   .filter((name) => name.endsWith(".sql"))
   .sort();
-check("Migrationskedjan innehåller canonical slutmigration", migrationFiles.at(-1) === "20260804120000_role_context_consistency.sql");
+// Kedjan får växa, men rollkontextmigrationen måste finnas kvar och
+// migrationerna måste vara versionsordnade.
+check(
+  "Migrationskedjan innehåller canonical rollkontextmigration",
+  migrationFiles.includes("20260804120000_role_context_consistency.sql")
+);
+check(
+  "Migrationskedjan är versionsordnad",
+  migrationFiles.every((name, index) => index === 0 || name > migrationFiles[index - 1])
+);
 
 for (const name of passes) console.log(`PASS  ${name}`);
 if (failures.length) {

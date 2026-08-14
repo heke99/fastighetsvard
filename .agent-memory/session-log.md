@@ -1,5 +1,71 @@
 # Session Log
 
+## 2026-08-14 08:30 — Behörighetshärdning, radering, anteckningar och index
+
+### Goal
+
+Full systemgranskning mot repository och den körande Supabase-databasen
+(`dmigdfbvudzexvdnbvrj`), följt av remediation.
+
+### Inspected
+
+Alla 36 migrationer, databasens faktiska ACL:er, RLS-policyer, Storage-policyer,
+vydefinitioner, främmande nycklar och index, Supabase security advisor,
+samtliga RPC-anropsställen i `src/` och deras klientval (service role kontra
+användarens JWT), samt admin- och portalsidorna.
+
+### Changes
+
+Fyra nya migrationer, applicerade mot databasen:
+
+- `20260814083350_least_privilege_grants.sql` – återkallar EXECUTE från `anon`
+  och `authenticated` på alla public-funktioner och återger den till 27
+  namngivna funktioner; `anon` får bara SELECT på de fyra katalogvyerna;
+  `authenticated` behåller SELECT plus de skrivningar som har RLS-policy;
+  `ALTER DEFAULT PRIVILEGES` stänger källan; `set_updated_at` fick fast
+  `search_path`.
+- `20260814083604_foreign_key_indexes.sql` – 72 index för främmande nycklar som
+  faktiskt joinas, filtreras eller kaskadraderas.
+- `20260814094000_notes_and_media_lifecycle.sql` – canonical `Note` med
+  personal-RLS via `note_entity_permission`, samt `UnitMedia."storageKey"`.
+- `20260814095000_deletion_guards.sql` – BEFORE DELETE-triggers som gör det
+  omöjligt att radera avtal som lämnat `DRAFT`, även via kaskad från fastighet.
+
+Kod: radering av annons/objekt/fastighet med beroendekontroll och bekräftelse,
+bildhantering med omslagsbild och borttagning ur Storage, MIME-validering på
+filens magiska bytes, interna anteckningar på sex admin-ytor, samt
+`server-only`-alias i Vitest så serverkod kan enhetstestas.
+
+Migrationshistoriken i `supabase_migrations.schema_migrations` backfilldes för
+de 36 tidigare migrationerna; den var tom och `supabase db push` hade annars
+kört om hela kedjan.
+
+### Decisions
+
+Katalogvyerna behålls som SECURITY DEFINER (avsiktliga publika projektioner).
+`Note` följer schemats `TIMESTAMP(3)`-konvention. Behörighet för anteckningar
+ärvs från objektet i stället för att införa en ny RBAC-resurs, vilket hade
+krävt omsynkronisering av 13 systemroller.
+
+### Verification performed
+
+`npm run ci` (lint, tre verify-skript, typecheck, 66 Vitest-tester, Next-build).
+Negativa körningar mot det publika API:t med den publika nyckeln.
+Supabase security advisor före och efter.
+
+### Verification result
+
+Allt grönt. `write_audit_event`, `enqueue_outbox_event`, `change_listing_status`,
+läsning av `Person` och INSERT i `Brand` svarar `401` för `anon`, medan
+`published_listing_catalog` svarar `200`. Advisor: 119 -> 62 poster; samtliga
+anon-anropbara definer-funktioner borta.
+
+### Not verified
+
+Inloggade rollflöden, Resend-leverans och browserflöden kräver riktiga konton
+och är inte körda i denna session.
+
+
 ## 2026-07-25 14:45 — Bootstrap and verified baseline
 
 ### Goal

@@ -3,8 +3,25 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
-import { requirePermission, AuthError } from "@/lib/auth";
+import { requirePermission, requireStaff, AuthError } from "@/lib/auth";
 import { isValidPermission } from "@/lib/permissions";
+import { deleteUnitMedia, setUnitMediaCover } from "@/lib/repositories/media-operations";
+import {
+  deleteDraftListing,
+  deleteProperty,
+  deleteUnit,
+  describeBlockers,
+} from "@/lib/repositories/deletion-operations";
+import {
+  assertNoteTargetExists,
+  createNote,
+  getNoteEntity,
+  isNoteEntityType,
+  noteResource,
+  softDeleteNote,
+  NOTE_WRITE_ACTION,
+  type NoteEntityType,
+} from "@/lib/repositories/notes";
 import {
   getOwnedListingForMedia,
   readListingMedia,
@@ -346,6 +363,243 @@ export async function changeListingStatusAction(formData: FormData): Promise<voi
   const toStatus = String(formData.get("toStatus")) as ListingStatus;
   await changeListingStatus(user.organizationId!, listingId, toStatus, expectedStatus);
   revalidatePath("/admin/annonser");
+}
+
+// ---------------------------------------------------------------------------
+// Media: borttagning och omslagsbild
+// ---------------------------------------------------------------------------
+
+export async function deleteListingMediaAction(
+  _prev: AdminFormState,
+  formData: FormData
+): Promise<AdminFormState> {
+  try {
+    const user = await requirePermission("listings", "update");
+    const mediaId = String(formData.get("mediaId") ?? "");
+    if (!mediaId) return { status: "error", message: "Bilden saknas." };
+
+    const result = await deleteUnitMedia({ organizationId: user.organizationId!, mediaId });
+    if (!result.deleted) return { status: "error", message: "Bilden hittades inte." };
+
+    await audit({
+      organizationId: user.organizationId,
+      userId: user.id,
+      action: "delete",
+      entityType: "unit_media",
+      entityId: mediaId,
+      before: { unitId: result.unitId, storageRemoved: result.storageRemoved },
+    });
+    revalidatePath("/admin/annonser");
+    revalidatePath("/admin/objekt");
+    return { status: "success", message: "Bilden togs bort." };
+  } catch (e) {
+    return errState(e);
+  }
+}
+
+export async function setListingMediaCoverAction(
+  _prev: AdminFormState,
+  formData: FormData
+): Promise<AdminFormState> {
+  try {
+    const user = await requirePermission("listings", "update");
+    const mediaId = String(formData.get("mediaId") ?? "");
+    if (!mediaId) return { status: "error", message: "Bilden saknas." };
+
+    const result = await setUnitMediaCover({ organizationId: user.organizationId!, mediaId });
+    if (!result.updated) return { status: "error", message: "Bilden hittades inte." };
+
+    revalidatePath("/admin/annonser");
+    revalidatePath("/admin/objekt");
+    return { status: "success", message: "Bilden är nu omslagsbild." };
+  } catch (e) {
+    return errState(e);
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Radering av annons, objekt och fastighet
+// ---------------------------------------------------------------------------
+
+export async function deleteListingAction(
+  _prev: AdminFormState,
+  formData: FormData
+): Promise<AdminFormState> {
+  try {
+    const user = await requirePermission("listings", "delete");
+    const listingId = String(formData.get("listingId") ?? "");
+    if (!listingId) return { status: "error", message: "Annonsen saknas." };
+
+    const result = await deleteDraftListing({ organizationId: user.organizationId!, listingId });
+    if (result.notFound) return { status: "error", message: "Annonsen hittades inte." };
+    if (!result.deleted) {
+      return {
+        status: "error",
+        message: `Annonsen kan inte raderas eftersom den har ${describeBlockers(result.blockers)}. Avpublicera den i stället.`,
+      };
+    }
+
+    await audit({
+      organizationId: user.organizationId,
+      userId: user.id,
+      action: "delete",
+      entityType: "listing",
+      entityId: listingId,
+    });
+    revalidatePath("/admin/annonser");
+    return { status: "success", message: "Annonsutkastet raderades." };
+  } catch (e) {
+    return errState(e);
+  }
+}
+
+export async function deleteUnitAction(
+  _prev: AdminFormState,
+  formData: FormData
+): Promise<AdminFormState> {
+  try {
+    const user = await requirePermission("units", "delete");
+    const unitId = String(formData.get("unitId") ?? "");
+    if (!unitId) return { status: "error", message: "Objektet saknas." };
+
+    const result = await deleteUnit({ organizationId: user.organizationId!, unitId });
+    if (result.notFound) return { status: "error", message: "Objektet hittades inte." };
+    if (!result.deleted) {
+      return {
+        status: "error",
+        message: `Objektet kan inte raderas eftersom det har ${describeBlockers(result.blockers)}. Historiken måste bevaras.`,
+      };
+    }
+
+    await audit({
+      organizationId: user.organizationId,
+      userId: user.id,
+      action: "delete",
+      entityType: "unit",
+      entityId: unitId,
+    });
+    revalidatePath("/admin/objekt");
+    revalidatePath("/admin/fastigheter");
+    return { status: "success", message: "Objektet raderades." };
+  } catch (e) {
+    return errState(e);
+  }
+}
+
+export async function deletePropertyAction(
+  _prev: AdminFormState,
+  formData: FormData
+): Promise<AdminFormState> {
+  try {
+    const user = await requirePermission("properties", "delete");
+    const propertyId = String(formData.get("propertyId") ?? "");
+    if (!propertyId) return { status: "error", message: "Fastigheten saknas." };
+
+    const result = await deleteProperty({ organizationId: user.organizationId!, propertyId });
+    if (result.notFound) return { status: "error", message: "Fastigheten hittades inte." };
+    if (!result.deleted) {
+      return {
+        status: "error",
+        message: `Fastigheten kan inte raderas eftersom den har ${describeBlockers(result.blockers)}. Ta bort eller flytta dem först.`,
+      };
+    }
+
+    await audit({
+      organizationId: user.organizationId,
+      userId: user.id,
+      action: "delete",
+      entityType: "property",
+      entityId: propertyId,
+    });
+    revalidatePath("/admin/fastigheter");
+    return { status: "success", message: "Fastigheten raderades." };
+  } catch (e) {
+    return errState(e);
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Interna anteckningar
+// ---------------------------------------------------------------------------
+
+const noteSchema = z.object({
+  entityType: z.string().refine(isNoteEntityType, "Okänd objektstyp."),
+  entityId: z.string().min(1, "Objektet saknas."),
+  body: z.string().trim().min(1, "Skriv en anteckning.").max(8000, "Anteckningen är för lång."),
+});
+
+export async function createNoteAction(
+  _prev: AdminFormState,
+  formData: FormData
+): Promise<AdminFormState> {
+  try {
+    const input = noteSchema.parse({
+      entityType: String(formData.get("entityType") ?? ""),
+      entityId: String(formData.get("entityId") ?? ""),
+      body: String(formData.get("body") ?? ""),
+    });
+    const entityType = input.entityType as NoteEntityType;
+    const user = await requirePermission(noteResource(entityType), NOTE_WRITE_ACTION);
+
+    await assertNoteTargetExists({
+      organizationId: user.organizationId!,
+      entityType,
+      entityId: input.entityId,
+    });
+    const note = await createNote({
+      organizationId: user.organizationId!,
+      entityType,
+      entityId: input.entityId,
+      body: input.body,
+      authorUserId: user.id,
+    });
+
+    await audit({
+      organizationId: user.organizationId,
+      userId: user.id,
+      action: "create",
+      entityType: "note",
+      entityId: note.id,
+      after: { entityType, entityId: input.entityId },
+    });
+    revalidatePath("/admin", "layout");
+    return { status: "success", message: "Anteckningen sparades." };
+  } catch (e) {
+    return errState(e);
+  }
+}
+
+export async function deleteNoteAction(
+  _prev: AdminFormState,
+  formData: FormData
+): Promise<AdminFormState> {
+  try {
+    const noteId = String(formData.get("noteId") ?? "");
+    if (!noteId) return { status: "error", message: "Anteckningen saknas." };
+
+    // Behörigheten avgörs av anteckningens egen entitetstyp, inte av vad
+    // formuläret påstår.
+    const staff = await requireStaff();
+    const existing = await getNoteEntity({ organizationId: staff.organizationId!, noteId });
+    if (!existing) return { status: "error", message: "Anteckningen hittades inte." };
+
+    const user = await requirePermission(noteResource(existing.entityType), NOTE_WRITE_ACTION);
+    const removed = await softDeleteNote({ organizationId: user.organizationId!, noteId });
+    if (!removed) return { status: "error", message: "Anteckningen hittades inte." };
+
+    await audit({
+      organizationId: user.organizationId,
+      userId: user.id,
+      action: "delete",
+      entityType: "note",
+      entityId: noteId,
+      before: { entityType: removed.entityType, entityId: removed.entityId },
+    });
+    revalidatePath("/admin", "layout");
+    return { status: "success", message: "Anteckningen togs bort." };
+  } catch (e) {
+    return errState(e);
+  }
 }
 
 // ---------------------------------------------------------------------------

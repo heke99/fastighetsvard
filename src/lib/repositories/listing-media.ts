@@ -23,10 +23,40 @@ function isFile(value: FormDataEntryValue): value is File {
   return typeof value !== "string" && typeof value.arrayBuffer === "function";
 }
 
-function extensionFor(file: File): string {
-  const fromName = file.name.split(".").pop()?.toLowerCase().replace(/[^a-z0-9]/g, "");
-  if (fromName && fromName.length <= 8) return fromName;
-  return file.type.split("/")[1] || "bin";
+const EXTENSION_BY_MIME: Record<string, string> = {
+  "image/jpeg": "jpg",
+  "image/png": "png",
+  "image/webp": "webp",
+  "image/avif": "avif",
+};
+
+/**
+ * Ändelsen härleds ur den verifierade bildtypen, aldrig ur filnamnet. Ett
+ * uppladdat `bild.php.jpg` får därmed alltid en säker nyckel i Storage.
+ */
+function extensionFor(mimeType: string): string {
+  return EXTENSION_BY_MIME[mimeType] ?? "bin";
+}
+
+function startsWith(bytes: Uint8Array, signature: number[], offset = 0): boolean {
+  return signature.every((byte, index) => bytes[offset + index] === byte);
+}
+
+/**
+ * Bestämmer bildtypen ur filens innehåll. `File.type` sätts av webbläsaren och
+ * kan förfalskas, så den används bara som en första gallring i klienten.
+ */
+export function detectImageMimeType(bytes: Uint8Array): string | null {
+  if (startsWith(bytes, [0xff, 0xd8, 0xff])) return "image/jpeg";
+  if (startsWith(bytes, [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a])) return "image/png";
+  if (startsWith(bytes, [0x52, 0x49, 0x46, 0x46]) && startsWith(bytes, [0x57, 0x45, 0x42, 0x50], 8)) {
+    return "image/webp";
+  }
+  if (startsWith(bytes, [0x66, 0x74, 0x79, 0x70], 4)) {
+    const brand = String.fromCharCode(...bytes.slice(8, 12));
+    if (brand === "avif" || brand === "avis") return "image/avif";
+  }
+  return null;
 }
 
 function readFiles(formData: FormData, name: string, kind: ListingMediaKind): ListingMediaUpload[] {
@@ -42,6 +72,12 @@ export function readListingMedia(formData: FormData): ListingMediaUpload[] {
     ...readFiles(formData, "images", "IMAGE"),
     ...readFiles(formData, "floorplans", "FLOORPLAN"),
   ];
+}
+
+/** Bildtexten visas publikt. Originalfilnamnet städas från sökväg och ändelse. */
+function sanitizeCaption(fileName: string): string {
+  const base = fileName.split(/[\\/]/).pop() ?? fileName;
+  return base.replace(/\.[a-z0-9]+$/i, "").slice(0, 120) || "Bild";
 }
 
 export function validateListingMedia(media: ListingMediaUpload[]): string | null {
@@ -101,11 +137,17 @@ export async function uploadListingMedia(input: {
   const failed: string[] = [];
 
   for (const { file, kind } of input.media) {
-    const storageKey = `${input.organizationId}/${input.unitId}/${kind.toLowerCase()}/${randomUUID()}.${extensionFor(file)}`;
     const buffer = Buffer.from(await file.arrayBuffer());
+    const detectedType = detectImageMimeType(buffer);
+    if (!detectedType || !ALLOWED_MIME_TYPES.has(detectedType)) {
+      failed.push(file.name);
+      continue;
+    }
+
+    const storageKey = `${input.organizationId}/${input.unitId}/${kind.toLowerCase()}/${randomUUID()}.${extensionFor(detectedType)}`;
     const { error: uploadError } = await admin.storage
       .from(BUCKET)
-      .upload(storageKey, buffer, { contentType: file.type, upsert: false });
+      .upload(storageKey, buffer, { contentType: detectedType, upsert: false });
     if (uploadError) {
       failed.push(file.name);
       continue;
@@ -116,7 +158,8 @@ export async function uploadListingMedia(input: {
       unitId: input.unitId,
       kind,
       url: publicUrl.publicUrl,
-      caption: file.name,
+      storageKey,
+      caption: sanitizeCaption(file.name),
       sortOrder,
     });
     if (mediaError) {

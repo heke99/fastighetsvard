@@ -39,7 +39,7 @@ const listingMedia = read("src/lib/repositories/listing-media.ts");
 const publicListing = read("src/app/(public)/annons/[slug]/page.tsx");
 const adminRecords = read("src/lib/repositories/admin-records.ts");
 
-check("Rollmigrationen ligger sist", migrations.at(-1) === "20260804120000_role_context_consistency.sql");
+check("Rollmigrationen finns i kedjan", migrations.includes("20260804120000_role_context_consistency.sql"));
 check("Sessionen innehåller rollnamn", roleMigration.includes("'roleNames'") && authContext.includes("roleNames:"));
 check("Sessionroller är organisationsavgränsade", (roleMigration.match(/r\."organizationId" IS NULL OR r\."organizationId" = u\."organizationId"/g) ?? []).length >= 3 && roleMigration.includes('p."organizationId" = u."organizationId"'));
 check("Superadminhuvudet visar exakta rollnamn", adminLayout.includes("getRoleDisplayNames") && adminLayout.includes('aria-label="Dina roller"'));

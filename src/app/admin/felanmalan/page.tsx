@@ -3,9 +3,11 @@ import { getCurrentUser } from "@/lib/auth";
 import { hasPermission } from "@/lib/permissions";
 import { MaintenanceStatusBadge } from "@/components/StatusBadges";
 import { ActionForm } from "@/components/admin/ActionForm";
+import { NotesPanel } from "@/components/admin/NotesPanel";
 import { changeMaintenanceStatusAction, createWorkOrderAction } from "../actions";
 import { maintenanceTransitions } from "@/lib/state-machines";
 import { listAdminMaintenance } from "@/lib/repositories/admin-records";
+import { listNotesForEntities } from "@/lib/repositories/notes";
 
 export const metadata = { title: "Admin – Felanmälningar" };
 
@@ -33,6 +35,12 @@ export default async function AdminMaintenancePage() {
   }
 
   const { requests, suppliers } = await listAdminMaintenance(user.organizationId);
+
+  const notesByRequest = await listNotesForEntities({
+    organizationId: user.organizationId,
+    entityType: "MAINTENANCE_REQUEST",
+    entityIds: requests.map((request) => request.id),
+  });
 
   const canUpdate = hasPermission(user.permissions, "maintenance", "update");
   const canCreateWO = hasPermission(user.permissions, "workorders", "create");
@@ -107,6 +115,20 @@ export default async function AdminMaintenancePage() {
                   ))}
                 </div>
               )}
+
+              <details className="mt-3">
+                <summary className="cursor-pointer text-sm font-semibold text-brand-700">
+                  Interna anteckningar ({notesByRequest.get(r.id)?.length ?? 0})
+                </summary>
+                <div className="mt-3">
+                  <NotesPanel
+                    entityType="MAINTENANCE_REQUEST"
+                    entityId={r.id}
+                    notes={notesByRequest.get(r.id) ?? []}
+                    canWrite={canUpdate}
+                  />
+                </div>
+              </details>
 
               {canCreateWO && r.workOrders.length === 0 && !["CLOSED", "REJECTED"].includes(r.status) && (
                 <details className="mt-3">

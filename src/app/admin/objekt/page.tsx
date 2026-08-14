@@ -3,8 +3,11 @@ import { getCurrentUser } from "@/lib/auth";
 import { hasPermission } from "@/lib/permissions";
 import { formatSek } from "@/components/ListingCard";
 import { ActionForm } from "@/components/admin/ActionForm";
-import { createUnitAction } from "../actions";
+import { DangerActionForm } from "@/components/admin/DangerActionForm";
+import { NotesPanel } from "@/components/admin/NotesPanel";
+import { createUnitAction, deleteUnitAction } from "../actions";
 import { listAdminUnits } from "@/lib/repositories/admin-records";
+import { listNotesForEntities } from "@/lib/repositories/notes";
 
 export const metadata = { title: "Admin – Objekt" };
 
@@ -32,7 +35,15 @@ export default async function AdminUnitsPage({
     status && status in statusLabels ? status : undefined
   );
 
+  const notesByUnit = await listNotesForEntities({
+    organizationId: user.organizationId,
+    entityType: "UNIT",
+    entityIds: units.map((unit) => unit.id),
+  });
+
   const canCreate = hasPermission(user.permissions, "units", "create");
+  const canUpdate = hasPermission(user.permissions, "units", "update");
+  const canDelete = hasPermission(user.permissions, "units", "delete");
 
   return (
     <div className="space-y-6">
@@ -62,11 +73,14 @@ export default async function AdminUnitsPage({
               <th scope="col" className="px-4 py-3 text-right">Hyra/Pris</th>
               <th scope="col" className="px-4 py-3">Status</th>
               <th scope="col" className="px-4 py-3">Hyresgäst</th>
+              <th scope="col" className="px-4 py-3">Åtgärder</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-stone-100">
             {units.length === 0 && (
-              <tr><td colSpan={7} className="px-4 py-8 text-center text-stone-500">Inga objekt matchade.</td></tr>
+              <tr><td colSpan={8} className="px-4 py-8 text-center text-stone-500">
+                Inga objekt matchade filtret.{canCreate ? " Skapa ett nytt objekt nedan." : ""}
+              </td></tr>
             )}
             {units.map((u) => {
               const tenants = u.contracts.flatMap((contract) =>
@@ -75,7 +89,7 @@ export default async function AdminUnitsPage({
                   .map((party) => ({ ...party.person, role: party.role }))
               );
               return (
-                <tr key={u.id} className="hover:bg-stone-50">
+                <tr key={u.id} className="align-top hover:bg-stone-50">
                   <td className="px-4 py-3 font-medium text-stone-900">{u.unitNumber}</td>
                   <td className="px-4 py-3">{u.type}</td>
                   <td className="px-4 py-3">{u.address}, {u.city}</td>
@@ -90,6 +104,32 @@ export default async function AdminUnitsPage({
                     {tenants.length > 0
                       ? tenants.map((tenant) => `${tenant.firstName} ${tenant.lastName}${tenant.role === "CO_TENANT" ? " (medhyresgäst)" : ""}`).join(", ")
                       : "–"}
+                  </td>
+                  <td className="px-4 py-3">
+                    <div className="space-y-3">
+                      <details>
+                        <summary className="cursor-pointer text-xs font-semibold text-brand-700">
+                          Anteckningar ({notesByUnit.get(u.id)?.length ?? 0})
+                        </summary>
+                        <div className="mt-2 min-w-[280px]">
+                          <NotesPanel
+                            entityType="UNIT"
+                            entityId={u.id}
+                            notes={notesByUnit.get(u.id) ?? []}
+                            canWrite={canUpdate}
+                          />
+                        </div>
+                      </details>
+                      {canDelete && (
+                        <DangerActionForm
+                          action={deleteUnitAction}
+                          label="Radera"
+                          confirmTitle={`Radera objektet ${u.unitNumber}?`}
+                          confirmDescription="Objektet kan bara raderas utan avtalshistorik, annonser, felanmälningar och fakturor. Bilder tas bort ur lagringen. Åtgärden går inte att ångra."
+                          fields={{ unitId: u.id }}
+                        />
+                      )}
+                    </div>
                   </td>
                 </tr>
               );

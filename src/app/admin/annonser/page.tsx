@@ -3,11 +3,16 @@ import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth";
 import { hasPermission } from "@/lib/permissions";
 import { ActionForm } from "@/components/admin/ActionForm";
+import { DangerActionForm } from "@/components/admin/DangerActionForm";
+import { ListingMediaManager } from "@/components/admin/ListingMediaManager";
+import { NotesPanel } from "@/components/admin/NotesPanel";
 import {
   createListingAction,
   changeListingStatusAction,
+  deleteListingAction,
   uploadListingMediaAction,
 } from "../actions";
+import { listNotesForEntities } from "@/lib/repositories/notes";
 import { listingTransitions } from "@/lib/state-machines";
 import { listAdminListings } from "@/lib/repositories/admin-records";
 
@@ -26,8 +31,15 @@ export default async function AdminListingsPage() {
 
   const { listings, units } = await listAdminListings(user.organizationId);
 
+  const notesByListing = await listNotesForEntities({
+    organizationId: user.organizationId,
+    entityType: "LISTING",
+    entityIds: listings.map((listing) => listing.id),
+  });
+
   const canUpdate = hasPermission(user.permissions, "listings", "update");
   const canCreate = hasPermission(user.permissions, "listings", "create");
+  const canDelete = hasPermission(user.permissions, "listings", "delete");
 
   return (
     <div className="space-y-6">
@@ -99,6 +111,38 @@ export default async function AdminListingsPage() {
                           </ActionForm>
                         </div>
                       </details>
+                      <details>
+                        <summary className="cursor-pointer text-xs font-semibold text-brand-700">
+                          Hantera bilder ({l.unit.media.length})
+                        </summary>
+                        <div className="mt-2 min-w-[280px]">
+                          <ListingMediaManager media={l.unit.media} />
+                        </div>
+                      </details>
+                      <details>
+                        <summary className="cursor-pointer text-xs font-semibold text-brand-700">
+                          Anteckningar ({notesByListing.get(l.id)?.length ?? 0})
+                        </summary>
+                        <div className="mt-2 min-w-[280px]">
+                          <NotesPanel
+                            entityType="LISTING"
+                            entityId={l.id}
+                            notes={notesByListing.get(l.id) ?? []}
+                            canWrite={canUpdate}
+                          />
+                        </div>
+                      </details>
+                    </div>
+                  )}
+                  {canDelete && l.status === "DRAFT" && (
+                    <div className="mt-2">
+                      <DangerActionForm
+                        action={deleteListingAction}
+                        label="Radera utkast"
+                        confirmTitle={`Radera annonsutkastet ${l.title}?`}
+                        confirmDescription="Endast utkast utan ansökningar, visningar, erbjudanden och reservationer kan raderas. Publicerade annonser avpubliceras i stället."
+                        fields={{ listingId: l.id }}
+                      />
                     </div>
                   )}
                 </td>

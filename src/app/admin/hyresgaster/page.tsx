@@ -2,8 +2,10 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth";
 import { getPersonRoleLabels, hasPermission } from "@/lib/permissions";
+import { NotesPanel } from "@/components/admin/NotesPanel";
 import { sendInvitationAction } from "../actions";
 import { listAdminPersons } from "@/lib/repositories/admin-records";
+import { listNotesForEntities } from "@/lib/repositories/notes";
 
 export const metadata = { title: "Admin – Hyresgäster & personer" };
 
@@ -20,7 +22,14 @@ export default async function AdminTenantsPage({
 
   const persons = await listAdminPersons(user.organizationId, q);
 
+  const notesByPerson = await listNotesForEntities({
+    organizationId: user.organizationId,
+    entityType: "PERSON",
+    entityIds: persons.map((person) => person.id),
+  });
+
   const canImport = hasPermission(user.permissions, "imports", "create");
+  const canAnnotate = hasPermission(user.permissions, "persons", "update");
   const canCreateTenant = hasPermission(user.permissions, "contracts", "create");
   const canInvite = hasPermission(user.permissions, "persons", "update");
 
@@ -52,14 +61,17 @@ export default async function AdminTenantsPage({
               <th scope="col" className="px-4 py-3">Aktivt boende</th>
               <th scope="col" className="px-4 py-3">Externt kund-ID</th>
               <th scope="col" className="px-4 py-3">Mina sidor</th>
+              <th scope="col" className="px-4 py-3">Anteckningar</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-stone-100">
             {persons.length === 0 && (
-              <tr><td colSpan={7} className="px-4 py-8 text-center text-stone-500">Inga personer hittades.</td></tr>
+              <tr><td colSpan={8} className="px-4 py-8 text-center text-stone-500">
+                Inga personer hittades. Justera sökningen eller lägg till en hyresgäst.
+              </td></tr>
             )}
             {persons.map((p) => (
-              <tr key={p.id} className="hover:bg-stone-50">
+              <tr key={p.id} className="align-top hover:bg-stone-50">
                 <td className="px-4 py-3 font-medium text-stone-900">
                   {p.firstName} {p.lastName}
                   {p.protectedIdentity && <span className="badge ml-2 bg-red-100 text-red-800">Skyddad</span>}
@@ -108,6 +120,21 @@ export default async function AdminTenantsPage({
                   ) : (
                     <span className="text-xs text-stone-400">Saknar e-post</span>
                   )}
+                </td>
+                <td className="px-4 py-3">
+                  <details>
+                    <summary className="cursor-pointer text-xs font-semibold text-brand-700">
+                      Visa ({notesByPerson.get(p.id)?.length ?? 0})
+                    </summary>
+                    <div className="mt-2 min-w-[280px]">
+                      <NotesPanel
+                        entityType="PERSON"
+                        entityId={p.id}
+                        notes={notesByPerson.get(p.id) ?? []}
+                        canWrite={canAnnotate}
+                      />
+                    </div>
+                  </details>
                 </td>
               </tr>
             ))}
