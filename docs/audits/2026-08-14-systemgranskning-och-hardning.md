@@ -146,23 +146,40 @@ Negativa körningar mot det publika REST-API:t med den publika nyckeln gav
 läsning av `Person` och INSERT i `Brand`, medan `published_listing_catalog` gav
 `200`.
 
-## Överlappande arbete i PR #4
+## Sammanslagning med PR #4
 
-`fix/revoke-anon-function-grants` (PR #4, öppen sedan 2026-08-06) angriper samma
-rotorsak från andra hållet: den lägger interna `service_role`-kontroller i
-funktionskropparna för bland andra `write_audit_event`, `enqueue_outbox_event`
-och `claim_idempotent_operation`, medan denna gren tar bort själva
-EXECUTE-rättigheten. Ansatserna är komplementära och bör båda finnas – grants
-och interna kontroller skyddar mot olika misstag.
+`fix/revoke-anon-function-grants` (PR #4) angrep samma rotorsak från andra
+hållet: interna `service_role`-kontroller i funktionskropparna för
+`write_audit_event`, `enqueue_outbox_event` och `claim_idempotent_operation`,
+plus en strukturell lint över migrationskedjan. Ansatserna är komplementära –
+grants skyddar mot att fel roll når funktionen, de interna kontrollerna mot att
+den ändå anropas – så PR #4 är sammanslagen i sin helhet och applicerad.
 
-Att observera vid sammanslagning:
+Så här löstes de konkreta krockarna:
 
-- PR #4:s migration har versionen `20260806190000`, alltså före denna grens
-  migrationer. På en ren databas körs den först och denna grens grants vinner,
-  vilket är rätt ordning. På den befintliga databasen ligger den före redan
-  registrerade versioner, så `supabase db push` behöver köras med medvetenhet om
-  det;
-- båda grenarna ändrar `package.json` och `.agent-memory/current-state.md`.
+- **Kedjeordning.** PR #4:s `20260806190000_lock_function_grants.sql` ligger före
+  den här grenens migrationer. På en ren databas kör den först och de senare
+  migrationerna kompletterar den, vilket är rätt ordning. På den befintliga
+  databasen kördes den sist, och dess ACL-slinga återkallade då grantet för
+  `note_entity_permission`, som tillkom efter att låsmigrationen skrevs.
+  `20260814100000_note_permission_realignment.sql` återställer det och är en
+  no-op på en ren databas. Utan grantet kan `authenticated` inte utvärdera
+  policyn `note_staff_read`.
+- **Migrationsliggaren.** Versionerna i `schema_migrations` är justerade så att
+  de exakt motsvarar filnamnen i `supabase/migrations/`.
+- **`package.json`.** `lint` kör både `lint.mjs` och `verify-function-grants.mjs`;
+  `test:rls` kör både RLS- och funktionsgrant-sviten; `test:grants` behålls.
+
+Tre äkta buggar i `scripts/verify-function-grants.mjs` rättades i samma veva:
+kontrollen av låst `search_path` godtog bara `SET search_path =` och inte den
+likvärdiga `SET search_path TO`; RPC-detekteringens andra mönster matchade det
+andra elementet i en stränglista som råkade innehålla ordet `rpc`, vilket gav ett
+falskt fynd för `listUsers`; och regeln om `REVOKE ... FROM PUBLIC` tog inte
+hänsyn till att samma migration kan ge tillbaka grantet till `authenticated` för
+just den funktionen. Matrisen har dessutom fått en uttrycklig lista för
+authenticated-funktioner som tillkommit efter låsmigrationen, eftersom
+låsmigrationens `to_regprocedure`-slinga inte kan räkna upp funktioner som inte
+fanns när den skrevs.
 
 - **De fyra katalogvyerna behålls som SECURITY DEFINER.** Advisorn flaggar det
   som ERROR, men vyerna är avsiktliga publika projektioner av publicerade

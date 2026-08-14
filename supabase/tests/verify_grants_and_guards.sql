@@ -47,9 +47,9 @@ DECLARE
     'current_person_contract_catalog','current_person_upcoming_viewings','current_person_has_active_application',
     'record_current_login','toggle_favorite','submit_rental_application','withdraw_rental_application',
     'create_viewing_booking','cancel_viewing_booking','accept_rental_offer','decline_rental_offer',
-    'request_contract_termination','verify_signing_challenge','send_rental_offer','change_application_status',
-    'change_listing_status','complete_unit_listings','change_contract_status','create_contract_version',
-    'activate_signed_contract','note_entity_permission'
+    'request_contract_termination','cancel_contract_termination','verify_signing_challenge',
+    'send_rental_offer','change_application_status','change_listing_status','complete_unit_listings',
+    'change_contract_status','create_contract_version','activate_signed_contract','note_entity_permission'
   ];
 BEGIN
   SELECT string_agg(p.proname, ', ' ORDER BY p.proname)

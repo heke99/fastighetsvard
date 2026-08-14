@@ -40,16 +40,25 @@ supabase/migrations/20260814094000_notes_and_media_lifecycle.sql
 supabase/migrations/20260814095000_deletion_guards.sql
 ```
 
+Dessutom `20260806190000_lock_function_grants.sql` från PR #4, som låser samma
+behörighetsyta med exakta signaturer och lägger interna `service_role`-kontroller
+i `write_audit_event`, `enqueue_outbox_event` och `claim_idempotent_operation`.
+
 Samtliga är applicerade i `dmigdfbvudzexvdnbvrj`.
 
-## External configuration still required
+## Verification status
 
-- Supabase Site URL and callback URL for `https://faddebo.se`;
-- production-like Supabase database with all 36 migrations;
-- verified Resend domain, `RESEND_API_KEY` and `EMAIL_FROM=FaddeBo <info@faddebo.se>`;
-- `listing-media` public bucket and `maintenance-files` private bucket created by
-  the existing storage migration;
-- Vercel environment variables from `.env.example`.
+Kört och grönt 2026-08-14:
+
+- `npm run ci` inklusive `scripts/verify-function-grants.mjs`;
+- behörighets- och raderingskontroller mot den aktiva databasen, i en
+  transaktion som rullades tillbaka;
+- negativa körningar mot det publika REST-API:t med den publika nyckeln.
+
+Kräver psql eller riktiga konton:
+
+- `npm run db:verify`, `npm run test:rls`, `npm run test:grants`;
+- runtime-acceptans i portalerna och Resend-leverans.
 
 ## Exact resume point
 
