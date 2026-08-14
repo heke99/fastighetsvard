@@ -1,63 +1,46 @@
 # Current State
 
-Last updated: 2026-08-04 11:55 Europe/Stockholm  
-Last verified commit: UNVERIFIED — the supplied archive contains no `.git`  
-Current branch: UNVERIFIED  
-Current phase: role, tenant, listing-media and maintenance consistency  
-Current task: apply the latest migration and execute runtime acceptance tests
+Last updated: 2026-08-14 08:50 Europe/Stockholm
+Last verified commit: branch `claude/system-audit-hardening-rl6mgs`
+Current phase: behörighetshärdning, radering, anteckningar och index
+Current task: runtime-acceptans med riktiga konton
 
 ## Production status
 
-Not production-verified. The requested role, tenant, apartment/listing and
-fault-report consistency changes are implemented and statically verified, but
-the new migration, Storage writes, Resend delivery, browser flows and deployed
-Supabase behavior have not been exercised in an approved runtime.
+Databasen `Fastighetsvard` (`dmigdfbvudzexvdnbvrj`) kör hela migrationskedjan.
+Migrationshistoriken är backfilld, så `supabase db push` fungerar framåt.
+Behörighetsytan i PostgREST är verifierad mot det publika API:t: `anon` når
+enbart de fyra katalogvyerna, och samtliga administrativa RPC:er svarar `401`.
+
+Kvar innan skarpa personuppgifter hanteras: inloggade rollflöden per roll,
+Resend-leverans och browserflöden enligt `docs/TEST_AND_RELEASE_GATE.md`.
 
 ## Current source status
 
-STATICALLY VERIFIED in this environment:
+VERIFIED 2026-08-14 i denna miljö:
 
-- `node scripts/lint.mjs` passed and inspected 36 canonical migrations;
-- `node scripts/verify-account-lifecycle.mjs` passed 16 checks;
-- `node scripts/verify-login-dashboard.mjs` passed 10 checks;
-- `node scripts/verify-role-maintenance-consistency.mjs` passed 27 checks;
-- all 27 changed TypeScript/TSX files passed TypeScript syntax transpilation;
-- the 13 TypeScript system-role permission sets exactly match the latest SQL
-  synchronization migration;
-- logged-in staff see exact role names in the admin header and person lists;
-- organization-specific custom roles route to `/admin`, require a description,
-  accept only canonical permission identifiers, require an active same-organization actor with `roles:create`, and cannot receive global `*` unless created by a superadmin;
-- role names, permissions and person linkage in `current_user_context()` are organization-scoped, and person-list role hydration filters out roles from other organizations;
-- units display primary and co-tenants from active contracts;
-- apartment/listing administration supports organization-bound image and
-  floorplan uploads to canonical `UnitMedia`/`listing-media` storage;
-- tenant fault reports are written atomically before e-mail/webhook/attachment
-  side effects, appear in both portals, accept validated private attachments
-  and send receipt/internal/status e-mail notifications;
-- post-commit e-mail/webhook/media failures no longer report the already-saved
-  domain record as missing or encourage duplicate submissions.
+- `npm ci`, `npm run ci` (lint, tre verify-skript, typecheck, 66 Vitest-tester,
+  Next-build) – allt grönt;
+- fyra nya migrationer applicerade mot databasen och verifierade med
+  introspektion av ACL:er, policyer och index;
+- negativa säkerhetstester mot det publika API:t med den publika nyckeln;
+- Supabase security advisor: 119 -> 62 poster.
 
-NOT RUN after the 2026-08-04 changes:
-
-- dependency installation, complete semantic typecheck, Vitest and Next build;
-- migration execution, DB/RLS/Storage suites and real browser/e-mail flows.
-
-Reason: `npm ci` is blocked by the environment's internal npm registry returning
-404 for the locked `zod-3.25.76.tgz` tarball. Running the global TypeScript
-compiler without installed dependencies produced expected missing Next/React/
-Zod/Node declarations and is not counted as a release typecheck.
+Detaljerad granskningsrapport:
+`docs/audits/2026-08-14-systemgranskning-och-hardning.md`.
 
 ## Database status
 
-The ordered source chain contains 36 forward migrations. The latest is:
+40 forward-migrationer. De fyra senaste:
 
 ```text
-supabase/migrations/20260804120000_role_context_consistency.sql
+supabase/migrations/20260814083350_least_privilege_grants.sql
+supabase/migrations/20260814083604_foreign_key_indexes.sql
+supabase/migrations/20260814094000_notes_and_media_lifecycle.sql
+supabase/migrations/20260814095000_deletion_guards.sql
 ```
 
-It synchronizes canonical role labels/permissions, protects privileged custom
-roles and adds organization-scoped role names to the authenticated context. It
-has not been applied in this environment.
+Samtliga är applicerade i `dmigdfbvudzexvdnbvrj`.
 
 ## External configuration still required
 
@@ -70,21 +53,17 @@ has not been applied in this environment.
 
 ## Exact resume point
 
-In the canonical clone with working npm access and approved Supabase staging:
+`npm ci` och `npm run ci` är körda och gröna 2026-08-14. Nästa steg kräver
+riktiga konton och en körande app:
 
-```bash
-npm ci
-npm run lint
-npm run verify:accounts
-npm run verify:login-dashboard
-npm run verify:consistency
-npm run typecheck
-npm run test:unit
-npm run build
-supabase db push
-npm run db:verify
-npm run test:rls
-```
-
-Then execute the manual role, listing-media and maintenance acceptance matrix in
-`FADDEBO_KONSEKVENSRAPPORT.md` and verify real Resend delivery and Storage URLs.
+1. Logga in som ägare, fastighetsvärd och hyresgäst och verifiera att varje roll
+   landar på rätt dashboard.
+2. Skapa fastighet, objekt och annonsutkast, ladda upp bilder, sätt omslagsbild,
+   ta bort en bild och kontrollera att filen försvinner ur `listing-media`.
+3. Skriv en intern anteckning på fastighet, objekt, person och felanmälan och
+   bekräfta i hyresgästportalen att den inte syns någonstans.
+4. Skicka en felanmälan som hyresgäst och kontrollera post i båda portalerna
+   samt Resend-leverans.
+5. Försök radera en fastighet med objekt och ett objekt med avtal – båda ska
+   nekas med begriplig förklaring.
+6. Kör `npm run db:verify` och `npm run test:rls` mot en miljö med psql.

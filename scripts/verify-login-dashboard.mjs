@@ -33,8 +33,8 @@ check("Alla public-funktionsanrop i migrationskedjan har en definition", missing
 if (missingFunctions.length) console.error(`Saknade funktioner: ${missingFunctions.join(", ")}`);
 
 check(
-  "Canonical roll- och användarkontextmigration ligger sist",
-  migrationFiles.at(-1) === "20260804120000_role_context_consistency.sql"
+  "Canonical roll- och användarkontextmigration finns i kedjan",
+  migrationFiles.includes("20260804120000_role_context_consistency.sql")
 );
 check("assert_service_role finns", definitions.has("assert_service_role"));
 check("record_current_login finns", definitions.has("record_current_login"));

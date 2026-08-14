@@ -22,24 +22,23 @@ Remaining gate: execute and verify the forward migration against Supabase.
 
 ## BLOCKER-0003
 
-Severity: P0  
-Status: BLOCKED  
+Severity: P1  
+Status: PARTIALLY RESOLVED 2026-08-14  
 Affected flow: DB/RLS/Storage/concurrency production gate  
-Problem: no Docker/PostgreSQL or approved remote DB credentials.  
-Evidence: Docker is unavailable and no test/staging connection was provided.  
-Required resolution: execute migrations and SQL suites in test/staging.  
-Acceptance criteria: fresh install and upgrade pass; negative RLS/Storage and
-true parallel tests pass.  
-Dependencies: external test database.
+Resolved: hela kedjan är applicerad i `dmigdfbvudzexvdnbvrj`, migrationshistoriken
+är registrerad, och behörighetsytan är verifierad med negativa körningar mot det
+publika API:t (`anon` nekas samtliga administrativa RPC:er och all tabelläsning,
+katalogvyerna svarar `200`).  
+Remaining: `npm run db:verify` och `npm run test:rls` kräver psql, och äkta
+parallellitetstester kräver en separat testdatabas som kan skrivas sönder.
 
 ## BLOCKER-0004
 
 Severity: P0  
-Status: BLOCKED  
+Status: RESOLVED 2026-08-14  
 Affected flow: release traceability and deployment  
-Problem: the supplied archive has no `.git`, remote, branch or commit.  
-Required resolution: apply this source to the canonical clone, inspect its Git
-identity, review the diff, commit and deploy through the approved pipeline.
+Resolution: arbetet sker i den canonical klonen `heke99/fastighetsvard` på
+branchen `claude/system-audit-hardening-rl6mgs` med fullständig Git-historik.
 
 ## BLOCKER-0005
 

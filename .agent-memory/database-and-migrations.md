@@ -2,7 +2,18 @@
 
 Current source state:
 
-- 29 ordered forward SQL migrations, `20260720000100`–`20260725140000`;
+- 40 ordered forward SQL migrations, `20260720000100`–`20260814095000`, samtliga
+  applicerade i `dmigdfbvudzexvdnbvrj` och registrerade i
+  `supabase_migrations.schema_migrations`;
+- least-privilege-grants: `anon` har enbart SELECT på de fyra katalogvyerna,
+  `authenticated` har EXECUTE på 27 namngivna funktioner och de skrivningar som
+  har RLS-policy. `ALTER DEFAULT PRIVILEGES` hindrar att nya objekt ärver
+  Supabases standardrättigheter – nya migrationer måste därför ge grants
+  explicit;
+- BEFORE DELETE-triggers hindrar radering av avtal som lämnat `DRAFT`, även via
+  kaskad från fastighet eller objekt;
+- `Note` är canonical för interna anteckningar, `UnitMedia."storageKey"` är
+  canonical för filens plats i `listing-media`;
 - core schema, Auth/RBAC, RLS/Storage, rate limiting and canonical command RPCs;
 - direct, organization-scoped repositories with explicit projections;
 - RPCs for application/offer/signing/contract, maintenance, portal, staff,
